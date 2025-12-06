@@ -16,10 +16,9 @@ A simple and intuitive expense tracker app for Android, built with modern Androi
 - **Asset Management**: Attach images or other assets to your expenses for detailed records.
 - **Modern & Aesthetic UI**: A clean and responsive user interface built entirely with Jetpack Compose, featuring a smooth, animated bottom navigation bar and custom dialogs.
 
-## 🛠️ Tech Stack & Architecture
+## 🛠️ Tech Stack
 
 - **UI**: 100% Kotlin with [Jetpack Compose](https://developer.android.com/jetpack/compose) for a declarative and modern UI.
-- **Architecture**: MVVM (Model-View-ViewModel) to ensure a clean separation of concerns.
 - **Asynchronous Programming**: [Kotlin Coroutines](https://kotlinlang.org/docs/coroutines-overview.html) for managing background threads and asynchronous operations.
 - **Database**: [Room](https://developer.android.com/training/data-storage/room) for robust and persistent local data storage.
 - **Navigation**: [Jetpack Navigation](https://developer.android.com/guide/navigation) for Compose to handle all in-app navigation.
@@ -33,11 +32,11 @@ This app follows the **MVVM (Model-View-ViewModel)** architecture pattern. This 
 
 ```mermaid
 graph TD
-    A[UI / View <br> (Jetpack Compose)] -- User Actions --> B[ViewModel];
+    A["UI / View (Compose)"] -- User Actions --> B[ViewModel];
     B -- Observes State --> A;
     B -- Calls --> C[Repository];
     C -- Returns Data --> B;
-    C -- Accesses --> D[Data Source <br> (Room Database)];
+    C -- Accesses --> D["Data Source (Room DB)"];
     D -- Provides Data --> C;
 ```
 
