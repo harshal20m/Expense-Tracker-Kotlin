@@ -45,7 +45,7 @@
 <p align="center">
   <img src="screenshots/Export.jpg" width="200" alt="Export">
   <img src="screenshots/Settings.jpg" width="200" alt="Settings">
-  <img src="screenshots/About_modal.jpg" width="200" alt="About">
+  <img src="https://github.com/harshal20m/PaisaTracker/blob/master/src/main/res/screenshots/About_modal.jpg" width="200" alt="About">
   <img src="screenshots/AppLock_modal.jpg" width="200" alt="App Lock">
 </p>
 
