@@ -51,6 +51,8 @@ interface CategoryDao {
 """)
     fun getCategoriesWithTotalForProject(projectId: Long): Flow<List<CategoryWithTotal>>
 
+    @Query("SELECT COUNT(*) FROM categories")
+    suspend fun getCategoryCount(): Int
 
 
 }

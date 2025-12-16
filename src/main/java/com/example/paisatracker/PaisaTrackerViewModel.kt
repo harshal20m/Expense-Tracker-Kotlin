@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.paisatracker.data.Asset
+import com.example.paisatracker.data.BackupMetadata
 import com.example.paisatracker.data.Category
 import com.example.paisatracker.data.CategoryExpense
 import com.example.paisatracker.data.CategoryWithTotal
@@ -24,6 +25,45 @@ import java.util.Date
 import java.util.Locale
 
 class PaisaTrackerViewModel(private val repository: PaisaTrackerRepository) : ViewModel() {
+
+
+
+
+
+    //-----------------Backup----------------
+    fun getRecentBackups(): Flow<List<BackupMetadata>> {
+        return repository.getRecentBackups()
+    }
+
+    fun getAllBackups(): Flow<List<BackupMetadata>> {
+        return repository.getAllBackups()
+    }
+
+    suspend fun insertBackup(backup: BackupMetadata): Long {
+        return repository.insertBackup(backup)
+    }
+
+    suspend fun deleteBackup(backup: BackupMetadata) {
+        repository.deleteBackup(backup)
+    }
+
+    suspend fun getProjectCount(): Int {
+        return repository.getProjectCount()
+    }
+
+    suspend fun getCategoryCount(): Int {
+        return repository.getCategoryCount()
+    }
+
+    suspend fun getExpenseCount(): Int {
+        return repository.getExpenseCount()
+    }
+
+    suspend fun getTotalAmount(): Double {
+        return repository.getTotalAmount()
+    }
+
+
 
     // ---------------- Assets ----------------
 

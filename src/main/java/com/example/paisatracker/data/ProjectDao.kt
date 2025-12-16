@@ -54,5 +54,7 @@ interface ProjectDao {
     """)
     fun getCategoryExpenses(projectId: Long): Flow<List<CategoryExpense>>
 
+    @Query("SELECT COUNT(*) FROM projects")
+    suspend fun getProjectCount(): Int
 
 }

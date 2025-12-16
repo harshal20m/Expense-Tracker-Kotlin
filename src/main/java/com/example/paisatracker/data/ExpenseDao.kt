@@ -71,4 +71,10 @@ interface ExpenseDao {
 """)
     suspend fun getExportRows(projectId: Long? = null): List<ExportRow>
 
+    @Query("SELECT COUNT(*) FROM expenses")
+    suspend fun getExpenseCount(): Int
+
+    @Query("SELECT SUM(amount) FROM expenses")
+    suspend fun getTotalAmount(): Double?
+
 }

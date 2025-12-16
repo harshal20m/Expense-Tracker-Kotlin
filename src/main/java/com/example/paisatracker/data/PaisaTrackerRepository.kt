@@ -6,7 +6,8 @@ class PaisaTrackerRepository(
     private val projectDao: ProjectDao,
     private val categoryDao: CategoryDao,
     private val expenseDao: ExpenseDao,
-    private val assetDao: AssetDao
+    private val assetDao: AssetDao,
+    private val backupDao: BackupDao
 ) {
     fun getAllProjects(): Flow<List<Project>> = projectDao.getAllProjects()
 
@@ -117,4 +118,41 @@ class PaisaTrackerRepository(
     suspend fun insertAsset(asset: Asset) = assetDao.insertAsset(asset)
     suspend fun deleteAsset(asset: Asset) = assetDao.deleteAsset(asset)
 
+
+
+    //backup methods
+    // 2. ADD THESE METHODS TO YOUR PaisaTrackerRepository CLASS:
+
+    // Backup methods
+    fun getRecentBackups(): Flow<List<BackupMetadata>> {
+        return backupDao.getRecentBackups()
+    }
+
+    fun getAllBackups(): Flow<List<BackupMetadata>> {
+        return backupDao.getAllBackups()
+    }
+
+    suspend fun insertBackup(backup: BackupMetadata): Long {
+        return backupDao.insertBackup(backup)
+    }
+
+    suspend fun deleteBackup(backup: BackupMetadata) {
+        backupDao.deleteBackup(backup)
+    }
+
+    suspend fun getProjectCount(): Int {
+        return projectDao.getProjectCount()
+    }
+
+    suspend fun getCategoryCount(): Int {
+        return categoryDao.getCategoryCount()
+    }
+
+    suspend fun getExpenseCount(): Int {
+        return expenseDao.getExpenseCount()
+    }
+
+    suspend fun getTotalAmount(): Double {
+        return expenseDao.getTotalAmount() ?: 0.0
+    }
 }

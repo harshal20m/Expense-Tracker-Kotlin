@@ -1,7 +1,12 @@
 package com.example.paisatracker.ui.settings
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -17,6 +22,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -28,6 +36,7 @@ import com.example.paisatracker.R
 @Composable
 fun AboutBottomSheet(onDismiss: () -> Unit) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val context = LocalContext.current
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -105,7 +114,7 @@ fun AboutBottomSheet(onDismiss: () -> Unit) {
                 }
             }
 
-            // App Info Card - Compact Row Layout
+            // App Info Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
@@ -139,7 +148,7 @@ fun AboutBottomSheet(onDismiss: () -> Unit) {
                             painter = painterResource(id = R.drawable.ic_project_icon_header),
                             contentDescription = "App Logo",
                             modifier = Modifier.size(50.dp),
-                            tint = androidx.compose.ui.graphics.Color.Unspecified
+                            tint = Color.Unspecified
                         )
                     }
 
@@ -182,7 +191,7 @@ fun AboutBottomSheet(onDismiss: () -> Unit) {
                 }
             }
 
-            // Developer Card - Compact Row Layout
+            // Developer Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
@@ -190,75 +199,116 @@ fun AboutBottomSheet(onDismiss: () -> Unit) {
                 ),
                 shape = RoundedCornerShape(20.dp)
             ) {
-                Row(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(20.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Developer Avatar
-                    Box(
-                        modifier = Modifier
-                            .size(70.dp)
-                            .clip(CircleShape)
-                            .background(
-                                brush = Brush.linearGradient(
-                                    colors = listOf(
-                                        MaterialTheme.colorScheme.primary,
-                                        MaterialTheme.colorScheme.tertiary
-                                    )
-                                )
-                            ),
-                        contentAlignment = Alignment.Center
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            "HM",
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            fontSize = 26.sp
+                        // Developer Avatar with Image
+                        Image(
+                            painter = painterResource(id = R.drawable.harshalmali),
+                            contentDescription = "Harshal Mali",
+                            modifier = Modifier
+                                .size(70.dp)
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop
                         )
+
+                        // Developer Info
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text(
+                                "Developed with ❤️",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 11.sp
+                            )
+
+                            Text(
+                                "Harshal Mali",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 20.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+
+                            Surface(
+                                shape = RoundedCornerShape(16.dp),
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                            ) {
+                                Text(
+                                    "@harshal20m",
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
                     }
 
-                    // Developer Info
+                    // Social Media Links Section
                     Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Text(
-                            "Developed with ❤️",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 11.sp
-                        )
-
-                        Text(
-                            "Harshal Mali",
-                            style = MaterialTheme.typography.titleLarge,
+                            "Stay in Touch",
+                            style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 20.sp,
+                            fontSize = 15.sp,
                             color = MaterialTheme.colorScheme.onSurface
                         )
 
-                        Surface(
-                            shape = RoundedCornerShape(16.dp),
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                        // Social Icons Row
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly
                         ) {
-                            Text(
-                                "@harshal20m",
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold
+                            SocialIconButton(
+                                iconRes = R.drawable.ic_instagram,
+                                label = "Instagram",
+                                onClick = { openInstagram(context, "20harshal") }
+                            )
+
+                            SocialIconButton(
+                                iconRes = R.drawable.ic_linkedin,
+                                label = "LinkedIn",
+                                onClick = { openUrl(context, "https://www.linkedin.com/in/harshal-mali-b40b61244/") }
+                            )
+
+                            SocialIconButton(
+                                iconRes = R.drawable.ic_github,
+                                label = "GitHub",
+                                onClick = { openUrl(context, "https://github.com/harshal20m") }
+                            )
+
+                            SocialIconButton(
+                                iconRes = R.drawable.ic_whatsapp,
+                                label = "WhatsApp",
+                                onClick = { openWhatsApp(context, "918669119880") }
+                            )
+
+                            SocialIconButton(
+                                iconRes = R.drawable.ic_gmail,
+                                label = "Email",
+                                onClick = { openEmail(context, "20harshalmali@gmail.com") }
                             )
                         }
                     }
                 }
             }
 
-            // Features Card - Two Columns
+            // Features Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
@@ -288,7 +338,6 @@ fun AboutBottomSheet(onDismiss: () -> Unit) {
                         )
                     }
 
-                    // Features in 2 columns
                     Column(
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
@@ -317,7 +366,7 @@ fun AboutBottomSheet(onDismiss: () -> Unit) {
                 }
             }
 
-            // Tech Stack Card - Two Columns
+            // Tech Stack Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
@@ -391,6 +440,32 @@ fun AboutBottomSheet(onDismiss: () -> Unit) {
 }
 
 @Composable
+private fun SocialIconButton(
+    iconRes: Int,
+    label: String,
+    onClick: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+        modifier = Modifier
+            .clickable(onClick = onClick)
+            .padding(4.dp)
+    ) {
+        // Smaller icon
+        Image(
+            painter = painterResource(id = iconRes),
+            contentDescription = label,
+            modifier = Modifier
+                .size(30.dp) // Reduced from 56.dp
+                .clip(RoundedCornerShape(0.dp)), // Reduced corner radius
+            contentScale = ContentScale.Fit
+        )
+    }
+}
+
+
+@Composable
 private fun FeatureItem(text: String) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -430,5 +505,48 @@ private fun TechItem(text: String) {
             color = MaterialTheme.colorScheme.onTertiaryContainer,
             fontSize = 12.sp
         )
+    }
+}
+
+// Helper functions to open external apps
+private fun openUrl(context: Context, url: String) {
+    try {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+        context.startActivity(intent)
+    } catch (e: Exception) {
+        Toast.makeText(context, "Unable to open link", Toast.LENGTH_SHORT).show()
+    }
+}
+
+private fun openInstagram(context: Context, username: String) {
+    try {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("http://instagram.com/_u/$username"))
+        intent.setPackage("com.instagram.android")
+        context.startActivity(intent)
+    } catch (e: Exception) {
+        openUrl(context, "https://instagram.com/$username")
+    }
+}
+
+private fun openWhatsApp(context: Context, phoneNumber: String) {
+    try {
+        val url = "https://api.whatsapp.com/send?phone=$phoneNumber"
+        val intent = Intent(Intent.ACTION_VIEW)
+        intent.data = Uri.parse(url)
+        context.startActivity(intent)
+    } catch (e: Exception) {
+        Toast.makeText(context, "WhatsApp not installed", Toast.LENGTH_SHORT).show()
+    }
+}
+
+private fun openEmail(context: Context, email: String) {
+    try {
+        val intent = Intent(Intent.ACTION_SENDTO).apply {
+            data = Uri.parse("mailto:$email")
+            putExtra(Intent.EXTRA_SUBJECT, "Hello from PaisaTracker")
+        }
+        context.startActivity(Intent.createChooser(intent, "Send Email"))
+    } catch (e: Exception) {
+        Toast.makeText(context, "No email app found", Toast.LENGTH_SHORT).show()
     }
 }

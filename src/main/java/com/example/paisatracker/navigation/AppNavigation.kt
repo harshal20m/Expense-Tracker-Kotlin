@@ -23,7 +23,7 @@ fun AppNavigation(navController: NavHostController, viewModel: PaisaTrackerViewM
             ProjectListScreen(viewModel = viewModel, navController = navController)
         }
         composable("export") {
-            ExportScreen(viewModel = viewModel)
+            ExportScreen(viewModel = viewModel, navController = navController)
         }
         composable("assets") {
             AssetsScreen(viewModel = viewModel)
