@@ -1,7 +1,7 @@
 # PaisaTracker 💰
 
 <p align="center">
-  <img src="screenshots/app_icon.png" width="150" alt="PaisaTracker Icon">
+  <img src="https://github.com/harshal20m/PaisaTracker/blob/master/src/main/res/drawable/expenses_5501391.png" width="150" alt="PaisaTracker Icon">
 </p>
 
 <p align="center">
@@ -16,10 +16,10 @@
 </p>
 
 <p align="center">
-  <a href="releases/latest">
+  <a href="https://github.com/harshal20m/PaisaTracker/blob/master/src/releasedFiles/PaisaTracker.apk">
     <img src="https://img.shields.io/badge/Download-APK-green?style=for-the-badge&logo=android" alt="Download APK">
   </a>
-  <a href="releases/latest">
+  <a href="https://github.com/harshal20m/PaisaTracker/blob/master/src/releasedFiles/PaisaTracker.aab">
     <img src="https://img.shields.io/badge/Download-AAB-blue?style=for-the-badge&logo=android" alt="Download AAB">
   </a>
 </p>
