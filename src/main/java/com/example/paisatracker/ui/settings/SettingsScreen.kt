@@ -107,7 +107,7 @@ fun SettingsScreen(
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp, bottom = 110.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 110.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // Notifications Section
@@ -185,7 +185,6 @@ fun SettingsScreen(
                 )
             }
 
-
             // Data & Privacy Section
             item {
                 Spacer(modifier = Modifier.height(8.dp))
@@ -199,7 +198,6 @@ fun SettingsScreen(
                     subtitle = "Export and import your data",
                     enabled = true,
                     onClick = {
-                        // Clear the back stack to the start destination
                         navController.navigate("export") {
                             popUpTo("projects") {
                                 saveState = true
@@ -210,7 +208,6 @@ fun SettingsScreen(
                     }
                 )
             }
-
 
             // App Lock Card
             item {
@@ -288,7 +285,9 @@ fun SectionHeader(title: String) {
         style = MaterialTheme.typography.titleSmall,
         fontWeight = FontWeight.Bold,
         color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 4.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 4.dp, top = 8.dp, bottom = 4.dp)
     )
 }
 
