@@ -15,6 +15,11 @@
         android:maxSdkVersion="32"
         tools:ignore="ScopedStorage" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
+    <uses-permission android:name="android.permission.USE_BIOMETRIC"/> <!-- 👈 ADD THIS -->
+
+
 
     <!-- Queries for Camera Intent -->
     <queries>
@@ -46,8 +51,6 @@
         </activity>
 
         <!-- FileProvider -->
-
-
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

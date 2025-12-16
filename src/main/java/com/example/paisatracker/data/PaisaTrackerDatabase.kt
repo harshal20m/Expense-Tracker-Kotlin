@@ -23,7 +23,7 @@ abstract class PaisaTrackerDatabase : RoomDatabase() {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     PaisaTrackerDatabase::class.java,
-                    "paisa_tracker_database_v4"
+                    "paisa_tracker_database_v1_2"
                 ).fallbackToDestructiveMigration().build()
                 INSTANCE = instance
                 instance

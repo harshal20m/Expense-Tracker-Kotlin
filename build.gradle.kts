@@ -70,6 +70,16 @@ dependencies {
     implementation("com.itextpdf:kernel:7.2.5")
     implementation("com.itextpdf:layout:7.2.5")
     implementation("com.itextpdf:io:7.2.5")
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+
+    // Biometric Authentication
+    implementation("androidx.biometric:biometric:1.2.0-alpha05")
+
+    // DataStore for secure preferences
+    implementation("androidx.datastore:datastore-preferences:1.0.0")
+
+    // Fragment (for FragmentActivity)
+    implementation("androidx.fragment:fragment-ktx:1.6.2")
 
 
 }

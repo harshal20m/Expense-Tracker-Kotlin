@@ -24,6 +24,9 @@ class PaisaTrackerRepository(
 
     suspend fun getExpensesForExport(projectId: Long): List<ExpenseExport> = expenseDao.getExpensesForExport(projectId)
 
+    suspend fun getExportRows(projectId: Long?): List<ExportRow> =
+        expenseDao.getExportRows(projectId)
+
     suspend fun insertProject(project: Project): Long {
         return projectDao.insertProject(project)
     }

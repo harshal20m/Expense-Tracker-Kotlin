@@ -12,7 +12,9 @@ import kotlinx.coroutines.flow.Flow
 data class CategoryWithTotal(
     @Embedded
     val category: Category,
-    val totalAmount: Double
+    val totalAmount: Double,
+    val expenseCount: Int,
+    val latestExpenseTime: Long? = null
 )
 
 @Dao
@@ -36,12 +38,19 @@ interface CategoryDao {
     suspend fun getCategoryByName(name: String, projectId: Long): Category?
 
     @Query("""
-        SELECT c.*, COALESCE(SUM(e.amount), 0.0) as totalAmount
-        FROM categories c
-        LEFT JOIN expenses e ON c.id = e.categoryId
-        WHERE c.projectId = :projectId
-        GROUP BY c.id
-        ORDER BY c.name ASC
-    """)
+    SELECT 
+        c.*, 
+        COALESCE(SUM(e.amount), 0.0) AS totalAmount, 
+        COUNT(e.id) AS expenseCount,
+        MAX(e.date) AS latestExpenseTime
+    FROM categories c
+    LEFT JOIN expenses e ON c.id = e.categoryId
+    WHERE c.projectId = :projectId
+    GROUP BY c.id
+    ORDER BY c.name ASC
+""")
     fun getCategoriesWithTotalForProject(projectId: Long): Flow<List<CategoryWithTotal>>
+
+
+
 }

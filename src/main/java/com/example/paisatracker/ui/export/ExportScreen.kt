@@ -66,12 +66,28 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExportScreen(viewModel: PaisaTrackerViewModel) {
+
+    // ---------- State & basic setup ----------
+
+    // Sab projects list (name + emoji + totals)
     val projects by viewModel.getAllProjectsWithTotal().collectAsState(initial = emptyList())
+
+    // Currently selected project (jis ke under CSV export/import hoga)
     var selectedProject by remember { mutableStateOf<ProjectWithTotal?>(null) }
+
+    // Dropdown khula hai ya nahi
     var isProjectSelectorExpanded by remember { mutableStateOf(false) }
+
+    // Last exported CSV ka URI – share button tabhi dikhega jab yeh non‑null ho
     var lastExportedUri by remember { mutableStateOf<Uri?>(null) }
+
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+
+    var isImporting by remember { mutableStateOf(false) }
+
+
+    // ---------- CSV SAVE launcher (CREATE_DOCUMENT) ----------
 
     val fileSaverLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult(),
@@ -79,13 +95,21 @@ fun ExportScreen(viewModel: PaisaTrackerViewModel) {
             if (result.resultCode == Activity.RESULT_OK) {
                 result.data?.data?.also { uri ->
                     scope.launch {
-                        val csvData = selectedProject?.let { viewModel.getExpensesForExport(it.project.id) }
+                        // ViewModel se naya CSV string lao (emoji + paymentMethod included)
+                        val csvData = selectedProject?.let {
+                            viewModel.getExpensesForExport(it.project.id)
+                        }
+
                         if (csvData != null) {
                             context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-                                outputStream.write(csvData.toByteArray())
+                                // IMPORTANT: UTF‑8 BOM + UTF‑8 bytes so that emojis Excel/Sheets me sahi dikhen
+                                outputStream.write("\uFEFF".toByteArray(Charsets.UTF_8))      // BOM
+                                outputStream.write(csvData.toByteArray(Charsets.UTF_8))       // actual CSV
                             }
                             lastExportedUri = uri
                             Toast.makeText(context, "Export successful!", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(context, "No data to export.", Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
@@ -93,13 +117,18 @@ fun ExportScreen(viewModel: PaisaTrackerViewModel) {
         }
     )
 
+    // ---------- CSV PICKER launcher (GET_CONTENT) for import ----------
+
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
         onResult = { uri: Uri? ->
-            uri?.let {
+            uri?.let { pickedUri ->
                 selectedProject?.let { project ->
                     scope.launch {
-                        val success = viewModel.importFromCsv(context, it, project.project.id)
+                        isImporting = true
+                        val success = viewModel.importFromCsv(context, pickedUri, project.project.id)
+                        isImporting = false
+
                         if (success) {
                             Toast.makeText(context, "Import successful!", Toast.LENGTH_SHORT).show()
                         } else {
@@ -111,8 +140,38 @@ fun ExportScreen(viewModel: PaisaTrackerViewModel) {
         }
     )
 
+    if (isImporting) {
+        // simple full‑screen dim + circular progress
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.4f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 8.dp
+            ) {
+                Row(
+                    modifier = Modifier.padding(20.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    androidx.compose.material3.CircularProgressIndicator()
+                    Text("Importing, please wait…")
+                }
+            }
+        }
+    }
+
+
+
+    // ---------- UI layout start ----------
+
     Column(modifier = Modifier.fillMaxSize()) {
-        // Header
+
+        // ----- Top header -----
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -146,7 +205,7 @@ fun ExportScreen(viewModel: PaisaTrackerViewModel) {
                         modifier = Modifier.fillMaxSize()
                     ) {
                         Icon(
-                            Icons.Default.FileUpload,
+                            imageVector = Icons.Default.FileUpload,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onPrimaryContainer,
                             modifier = Modifier.size(28.dp)
@@ -171,19 +230,19 @@ fun ExportScreen(viewModel: PaisaTrackerViewModel) {
             }
         }
 
+        // ----- Content: project selector + export/import cards -----
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(16.dp, bottom = 110.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Project Selector - Modern Design
+
+            // ---- Project selector card ----
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(0.95f),
-                    elevation = CardDefaults.cardElevation(
-                        defaultElevation = 4.dp
-                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
                     shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surface
@@ -195,7 +254,8 @@ fun ExportScreen(viewModel: PaisaTrackerViewModel) {
                             .padding(20.dp),
                         verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        // Header with Icon
+
+                        // Title + icon
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -215,7 +275,7 @@ fun ExportScreen(viewModel: PaisaTrackerViewModel) {
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    Icons.Default.FolderOpen,
+                                    imageVector = Icons.Default.FolderOpen,
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(22.dp)
@@ -224,19 +284,19 @@ fun ExportScreen(viewModel: PaisaTrackerViewModel) {
 
                             Column {
                                 Text(
-                                    "Select Project",
+                                    text = "Select Project",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    "Choose which project to manage",
+                                    text = "Choose which project to manage",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
 
-                        // Dropdown
+                        // Actual dropdown
                         ExposedDropdownMenuBox(
                             expanded = isProjectSelectorExpanded,
                             onExpandedChange = { isProjectSelectorExpanded = !isProjectSelectorExpanded }
@@ -248,14 +308,16 @@ fun ExportScreen(viewModel: PaisaTrackerViewModel) {
                                 leadingIcon = {
                                     if (selectedProject != null) {
                                         Icon(
-                                            Icons.Default.Check,
+                                            imageVector = Icons.Default.Check,
                                             contentDescription = null,
                                             tint = MaterialTheme.colorScheme.primary
                                         )
                                     }
                                 },
                                 trailingIcon = {
-                                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = isProjectSelectorExpanded)
+                                    ExposedDropdownMenuDefaults.TrailingIcon(
+                                        expanded = isProjectSelectorExpanded
+                                    )
                                 },
                                 colors = TextFieldDefaults.colors(
                                     focusedContainerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f),
@@ -268,6 +330,7 @@ fun ExportScreen(viewModel: PaisaTrackerViewModel) {
                                     .fillMaxWidth(),
                                 shape = RoundedCornerShape(14.dp)
                             )
+
                             ExposedDropdownMenu(
                                 expanded = isProjectSelectorExpanded,
                                 onDismissRequest = { isProjectSelectorExpanded = false }
@@ -283,12 +346,14 @@ fun ExportScreen(viewModel: PaisaTrackerViewModel) {
                                                     text = project.project.emoji,
                                                     style = MaterialTheme.typography.titleMedium
                                                 )
-                                                Text(project.project.name)
+                                                Text(text = project.project.name)
                                             }
                                         },
                                         onClick = {
                                             selectedProject = project
                                             isProjectSelectorExpanded = false
+                                            // Naya project select karte hi last exported URI reset,
+                                            // taki share button purane project ke file ke liye na dikhe
                                             lastExportedUri = null
                                         }
                                     )
@@ -299,13 +364,14 @@ fun ExportScreen(viewModel: PaisaTrackerViewModel) {
                 }
             }
 
-            // Export & Import Row - Centered
+            // ---- Export & Import cards row ----
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(0.95f),
                     horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterHorizontally)
                 ) {
-                    // Export Card
+
+                    // ---------- EXPORT card ----------
                     Card(
                         modifier = Modifier.weight(1f),
                         elevation = CardDefaults.cardElevation(
@@ -323,6 +389,7 @@ fun ExportScreen(viewModel: PaisaTrackerViewModel) {
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(14.dp)
                         ) {
+
                             Box(
                                 modifier = Modifier
                                     .size(52.dp)
@@ -338,7 +405,7 @@ fun ExportScreen(viewModel: PaisaTrackerViewModel) {
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    Icons.Default.FileUpload,
+                                    imageVector = Icons.Default.FileUpload,
                                     contentDescription = null,
                                     modifier = Modifier.size(26.dp),
                                     tint = MaterialTheme.colorScheme.primary
@@ -346,24 +413,28 @@ fun ExportScreen(viewModel: PaisaTrackerViewModel) {
                             }
 
                             Text(
-                                "Export",
+                                text = "Export",
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold
                             )
 
                             Text(
-                                "Download as CSV",
+                                text = "Download as CSV",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
 
+                            // Export button → CREATE_DOCUMENT
                             Button(
                                 onClick = {
                                     selectedProject?.let { project ->
                                         val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
                                             addCategory(Intent.CATEGORY_OPENABLE)
                                             type = "text/csv"
-                                            putExtra(Intent.EXTRA_TITLE, "${project.project.name}_expenses.csv")
+                                            putExtra(
+                                                Intent.EXTRA_TITLE,
+                                                "${project.project.name}_expenses.csv"
+                                            )
                                         }
                                         fileSaverLauncher.launch(intent)
                                     }
@@ -373,9 +444,13 @@ fun ExportScreen(viewModel: PaisaTrackerViewModel) {
                                 shape = RoundedCornerShape(12.dp),
                                 contentPadding = PaddingValues(vertical = 14.dp)
                             ) {
-                                Text("Export", fontWeight = FontWeight.Bold)
+                                Text(
+                                    text = "Export",
+                                    fontWeight = FontWeight.Bold
+                                )
                             }
 
+                            // Last exported file share button
                             AnimatedVisibility(visible = lastExportedUri != null) {
                                 OutlinedButton(
                                     onClick = {
@@ -385,21 +460,33 @@ fun ExportScreen(viewModel: PaisaTrackerViewModel) {
                                                 putExtra(Intent.EXTRA_STREAM, uri)
                                                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                             }
-                                            context.startActivity(Intent.createChooser(shareIntent, "Share CSV"))
+                                            context.startActivity(
+                                                Intent.createChooser(
+                                                    shareIntent,
+                                                    "Share CSV"
+                                                )
+                                            )
                                         }
                                     },
                                     modifier = Modifier.fillMaxWidth(),
                                     shape = RoundedCornerShape(12.dp)
                                 ) {
-                                    Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Icon(
+                                        imageVector = Icons.Default.Share,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
                                     Spacer(modifier = Modifier.width(6.dp))
-                                    Text("Share", style = MaterialTheme.typography.labelLarge)
+                                    Text(
+                                        text = "Share",
+                                        style = MaterialTheme.typography.labelLarge
+                                    )
                                 }
                             }
                         }
                     }
 
-                    // Import Card
+                    // ---------- IMPORT card ----------
                     Card(
                         modifier = Modifier.weight(1f),
                         elevation = CardDefaults.cardElevation(
@@ -417,6 +504,7 @@ fun ExportScreen(viewModel: PaisaTrackerViewModel) {
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(14.dp)
                         ) {
+
                             Box(
                                 modifier = Modifier
                                     .size(52.dp)
@@ -432,7 +520,7 @@ fun ExportScreen(viewModel: PaisaTrackerViewModel) {
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    Icons.Default.FileDownload,
+                                    imageVector = Icons.Default.FileDownload,
                                     contentDescription = null,
                                     modifier = Modifier.size(26.dp),
                                     tint = MaterialTheme.colorScheme.secondary
@@ -440,17 +528,18 @@ fun ExportScreen(viewModel: PaisaTrackerViewModel) {
                             }
 
                             Text(
-                                "Import",
+                                text = "Import",
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold
                             )
 
                             Text(
-                                "Upload CSV file",
+                                text = "Upload CSV file",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
 
+                            // Import button → GET_CONTENT (CSV select)
                             Button(
                                 onClick = { filePickerLauncher.launch("*/*") },
                                 enabled = selectedProject != null,
@@ -461,7 +550,10 @@ fun ExportScreen(viewModel: PaisaTrackerViewModel) {
                                 ),
                                 contentPadding = PaddingValues(vertical = 14.dp)
                             ) {
-                                Text("Import", fontWeight = FontWeight.Bold)
+                                Text(
+                                    text = "Import",
+                                    fontWeight = FontWeight.Bold
+                                )
                             }
                         }
                     }

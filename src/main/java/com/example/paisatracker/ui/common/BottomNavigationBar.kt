@@ -23,9 +23,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.ImportExport
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.ImportExport
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -61,7 +63,6 @@ fun BottomNavigationBar(navController: NavController) {
             selectedIcon = Icons.Filled.Dashboard,
             unselectedIcon = Icons.Outlined.Dashboard
         ),
-
         NavItem(
             route = "assets",
             label = "Assets",
@@ -73,6 +74,12 @@ fun BottomNavigationBar(navController: NavController) {
             label = "Export",
             selectedIcon = Icons.Filled.ImportExport,
             unselectedIcon = Icons.Outlined.ImportExport
+        ),
+        NavItem(
+            route = "settings",
+            label = "Settings",
+            selectedIcon = Icons.Filled.Settings,
+            unselectedIcon = Icons.Outlined.Settings
         )
     )
 
@@ -90,7 +97,7 @@ fun BottomNavigationBar(navController: NavController) {
             shape = RoundedCornerShape(28.dp),
             tonalElevation = 3.dp,
             shadowElevation = 8.dp,
-            color = Color.Transparent  // Transparent background for capsule
+            color = Color.Transparent
         ) {
             Row(
                 modifier = Modifier
@@ -110,11 +117,27 @@ fun BottomNavigationBar(navController: NavController) {
                         item = item,
                         isSelected = isSelected,
                         onClick = {
-                            navController.navigate(item.route) {
-                                launchSingleTop = true
+                            if (item.route == "projects") {
+                                // For projects, clear everything and go to root
+                                navController.navigate(item.route) {
+                                    popUpTo("projects") {
+                                        inclusive = true
+                                    }
+                                    launchSingleTop = true
+                                }
+                            } else {
+                                // For other tabs, navigate normally
+                                navController.navigate(item.route) {
+                                    popUpTo("projects") {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
                             }
                         }
                     )
+
                 }
             }
         }
@@ -130,7 +153,7 @@ private fun BottomNavItem(
     val interactionSource = remember { MutableInteractionSource() }
 
     val animatedWidth by animateDpAsState(
-        targetValue = if (isSelected) 140.dp else 64.dp,
+        targetValue = if (isSelected) 110.dp else 64.dp, // Reduced width for 4 items
         animationSpec = spring(
             dampingRatio = 0.8f,
             stiffness = 400f
@@ -148,7 +171,7 @@ private fun BottomNavItem(
         targetValue = if (isSelected)
             MaterialTheme.colorScheme.primaryContainer
         else
-            Color.Transparent,  // Transparent for unselected items
+            Color.Transparent,
         animationSpec = tween(300),
         label = "containerColor"
     )
@@ -182,7 +205,7 @@ private fun BottomNavItem(
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(horizontal = 16.dp)
+            modifier = Modifier.padding(horizontal = 12.dp)
         ) {
             Icon(
                 imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
@@ -192,11 +215,11 @@ private fun BottomNavItem(
             )
 
             if (isSelected) {
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text = item.label,
                     color = contentColor,
-                    style = MaterialTheme.typography.labelLarge,
+                    style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1
                 )

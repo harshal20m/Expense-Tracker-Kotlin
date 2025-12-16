@@ -51,4 +51,24 @@ interface ExpenseDao {
         ORDER BY p.name, c.name, e.date
     """)
     suspend fun getExpensesForExport(projectId: Long): List<ExpenseExport>
+
+
+    @Query("""
+    SELECT 
+        p.name AS projectName,
+        p.emoji AS projectEmoji,
+        c.name AS categoryName,
+        c.emoji AS categoryEmoji,
+        e.description AS description,
+        e.amount AS amount,
+        e.date AS date,
+        e.paymentMethod AS paymentMethod
+    FROM expenses e
+    INNER JOIN categories c ON e.categoryId = c.id
+    INNER JOIN projects p ON c.projectId = p.id
+    WHERE (:projectId IS NULL OR p.id = :projectId)
+    ORDER BY p.name, c.name, e.date
+""")
+    suspend fun getExportRows(projectId: Long? = null): List<ExportRow>
+
 }

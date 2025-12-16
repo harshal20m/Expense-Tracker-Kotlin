@@ -23,7 +23,11 @@ enum class SortOption {
     AMOUNT_LOW_HIGH,
     AMOUNT_HIGH_LOW,
     NAME_A_Z,
-    NAME_Z_A
+    NAME_Z_A,
+
+    DATE_OLD_NEW,
+
+    DATE_NEW_OLD
 }
 
 @Composable
@@ -58,6 +62,8 @@ fun SortDropdown(
                     SortOption.AMOUNT_HIGH_LOW -> "₹ ↓"
                     SortOption.NAME_A_Z -> "A → Z"
                     SortOption.NAME_Z_A -> "Z → A"
+                    SortOption.DATE_OLD_NEW -> "Old → New"
+                    SortOption.DATE_NEW_OLD -> "New → Old"
                 },
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -96,6 +102,21 @@ fun SortDropdown(
                     expanded = false
                 }
             )
+            DropdownMenuItem(
+                text = { Text("Date: Old → New") },
+                onClick = {
+                    onChange(SortOption.DATE_OLD_NEW)
+                    expanded = false
+                }
+            )
+            DropdownMenuItem(
+                text = { Text("Date: New → Old") },
+                onClick = {
+                    onChange(SortOption.DATE_NEW_OLD)
+                    expanded = false
+                }
+            )
+
         }
     }
 }

@@ -9,10 +9,12 @@ import com.example.paisatracker.PaisaTrackerViewModel
 import com.example.paisatracker.ui.assets.AssetsScreen
 
 import com.example.paisatracker.ui.details.ProjectDetailsScreen
+import com.example.paisatracker.ui.details.ProjectInsightsScreen
 import com.example.paisatracker.ui.expense.ExpenseDetailScreen
 import com.example.paisatracker.ui.expense.ExpenseListScreen
 import com.example.paisatracker.ui.export.ExportScreen
 import com.example.paisatracker.ui.main.ProjectListScreen
+import com.example.paisatracker.ui.settings.SettingsScreen
 
 @Composable
 fun AppNavigation(navController: NavHostController, viewModel: PaisaTrackerViewModel, modifier: Modifier = Modifier) {
@@ -50,6 +52,19 @@ fun AppNavigation(navController: NavHostController, viewModel: PaisaTrackerViewM
             )
         }
 
+        composable("settings") {
+            SettingsScreen(viewModel = viewModel)
+        }
 
+        composable("project_insights/{projectId}") { backStackEntry ->
+            val projectId = backStackEntry.arguments?.getString("projectId")?.toLongOrNull()
+            if (projectId != null) {
+                ProjectInsightsScreen(
+                    viewModel = viewModel,
+                    projectId = projectId,
+                    navController = navController
+                )
+            }
+        }
     }
 }

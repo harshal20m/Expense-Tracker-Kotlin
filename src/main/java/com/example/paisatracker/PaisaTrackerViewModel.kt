@@ -2,7 +2,6 @@ package com.example.paisatracker
 
 import android.content.Context
 import android.net.Uri
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -11,46 +10,32 @@ import com.example.paisatracker.data.Category
 import com.example.paisatracker.data.CategoryExpense
 import com.example.paisatracker.data.CategoryWithTotal
 import com.example.paisatracker.data.Expense
-import com.example.paisatracker.data.ExpenseExport
 import com.example.paisatracker.data.PaisaTrackerRepository
 import com.example.paisatracker.data.Project
 import com.example.paisatracker.data.ProjectWithTotal
 import com.opencsv.CSVReader
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
+import java.io.File
 import java.io.InputStreamReader
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-
-
-//recently added for assets**
-import com.example.paisatracker.util.ImageUtils
-import kotlinx.coroutines.Dispatchers
-import java.io.File
-
 class PaisaTrackerViewModel(private val repository: PaisaTrackerRepository) : ViewModel() {
 
-    fun insertExpenseWithResult(expense: Expense, onInserted: (Long) -> Unit) {
-        viewModelScope.launch {
-            val newId = repository.insertExpense(expense)
-            onInserted(newId)
-        }
-    }
+    // ---------------- Assets ----------------
 
-
-    // Asset functions latest added independent vs depenedent assets .
     fun getAllAssets() = repository.getAllAssets()
     fun getAssetsForExpense(expenseId: Long) = repository.getAssetsForExpense(expenseId)
     fun getIndependentAssets() = repository.getIndependentAssets()
 
     suspend fun insertAsset(asset: Asset) = repository.insertAsset(asset)
+
     fun deleteAsset(asset: Asset) {
         viewModelScope.launch { repository.deleteAsset(asset) }
     }
-
-    // --------- NEW: image copy + helpers ---------
 
     private fun saveImageToInternalStorage(
         context: Context,
@@ -65,11 +50,7 @@ class PaisaTrackerViewModel(private val repository: PaisaTrackerRepository) : Vi
             val fileName = "IMG_${System.currentTimeMillis()}.jpg"
             val destFile = File(imagesDir, fileName)
 
-            val input = context.contentResolver.openInputStream(uri)
-            if (input == null) {
-                Log.e("PT_DEBUG", "saveImageToInternalStorage: inputStream null for uri=$uri")
-                return null
-            }
+            val input = context.contentResolver.openInputStream(uri) ?: return null
 
             input.use { ins ->
                 destFile.outputStream().use { outs ->
@@ -77,14 +58,11 @@ class PaisaTrackerViewModel(private val repository: PaisaTrackerRepository) : Vi
                 }
             }
 
-            Log.d("PT_DEBUG", "Image saved to ${destFile.absolutePath}")
             destFile.absolutePath
         } catch (e: Exception) {
-            Log.e("PT_DEBUG", "saveImageToInternalStorage error", e)
             null
         }
     }
-
 
     private suspend fun saveAssetInternal(
         context: Context,
@@ -93,11 +71,7 @@ class PaisaTrackerViewModel(private val repository: PaisaTrackerRepository) : Vi
         description: String,
         expenseId: Long?
     ) {
-        val path = saveImageToInternalStorage(context, uri)
-        if (path == null) {
-            Log.e("PT_DEBUG", "saveAssetInternal: path null, asset not inserted")
-            return
-        }
+        val path = saveImageToInternalStorage(context, uri) ?: return
 
         val asset = Asset(
             imagePath = path,
@@ -106,9 +80,7 @@ class PaisaTrackerViewModel(private val repository: PaisaTrackerRepository) : Vi
             expenseId = expenseId
         )
         repository.insertAsset(asset)
-        Log.d("PT_DEBUG", "Asset inserted for expenseId=$expenseId, path=$path")
     }
-
 
     fun addIndependentAsset(
         context: Context,
@@ -116,13 +88,13 @@ class PaisaTrackerViewModel(private val repository: PaisaTrackerRepository) : Vi
         title: String,
         description: String
     ) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             saveAssetInternal(
                 context = context,
                 uri = uri,
                 title = title,
                 description = description,
-                expenseId = null      // independent
+                expenseId = null
             )
         }
     }
@@ -134,88 +106,264 @@ class PaisaTrackerViewModel(private val repository: PaisaTrackerRepository) : Vi
         description: String,
         expenseId: Long
     ) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             saveAssetInternal(
                 context = context,
                 uri = uri,
                 title = title,
                 description = description,
-                expenseId = expenseId  // linked
+                expenseId = expenseId
             )
         }
     }
 
-    //end
+    // ---------------- Projects / Categories / Expenses basic APIs ----------------
 
+    fun getAllProjectsWithTotal(): Flow<List<ProjectWithTotal>> =
+        repository.getAllProjectsWithTotal()
 
-    fun getAllProjectsWithTotal(): Flow<List<ProjectWithTotal>> = repository.getAllProjectsWithTotal()
-
-    fun getCategoryExpenses(projectId: Long): Flow<List<CategoryExpense>> = repository.getCategoryExpenses(projectId)
+    fun getCategoryExpenses(projectId: Long): Flow<List<CategoryExpense>> =
+        repository.getCategoryExpenses(projectId)
 
     fun getExpenseById(id: Long): Flow<Expense?> =
         repository.getExpenseById(id)
 
-    fun getCategoriesWithTotalForProject(projectId: Long): Flow<List<CategoryWithTotal>> = repository.getCategoriesWithTotalForProject(projectId)
+    fun getCategoriesWithTotalForProject(projectId: Long): Flow<List<CategoryWithTotal>> =
+        repository.getCategoriesWithTotalForProject(projectId)
 
-    fun getAllExpenses(): Flow<List<Expense>> = repository.getAllExpenses()
+    fun getAllExpenses(): Flow<List<Expense>> =
+        repository.getAllExpenses()
 
-    fun getProjectById(projectId: Long): Flow<Project> = repository.getProjectById(projectId)
+    fun getProjectById(projectId: Long): Flow<Project> =
+        repository.getProjectById(projectId)
 
-    fun getCategoryById(categoryId: Long): Flow<Category> = repository.getCategoryById(categoryId)
+    fun getCategoryById(categoryId: Long): Flow<Category> =
+        repository.getCategoryById(categoryId)
 
+    fun getCategoriesForProject(projectId: Long): Flow<List<Category>> =
+        repository.getCategoriesForProject(projectId)
 
+    fun insertProject(project: Project) {
+        viewModelScope.launch { repository.insertProject(project) }
+    }
+
+    fun updateProject(project: Project) {
+        viewModelScope.launch { repository.updateProject(project) }
+    }
+
+    fun deleteProject(project: Project) {
+        viewModelScope.launch { repository.deleteProject(project) }
+    }
+
+    fun insertCategory(category: Category) {
+        viewModelScope.launch { repository.insertCategory(category) }
+    }
+
+    fun updateCategory(category: Category) {
+        viewModelScope.launch { repository.updateCategory(category) }
+    }
+
+    fun deleteCategory(category: Category) {
+        viewModelScope.launch { repository.deleteCategory(category) }
+    }
+
+    fun getExpensesForCategory(categoryId: Long): Flow<List<Expense>> =
+        repository.getExpensesForCategory(categoryId)
+
+    fun insertExpense(expense: Expense) {
+        viewModelScope.launch { repository.insertExpense(expense) }
+    }
+
+    fun insertExpenseWithResult(expense: Expense, onInserted: (Long) -> Unit) {
+        viewModelScope.launch {
+            val newId = repository.insertExpense(expense)
+            onInserted(newId)
+        }
+    }
+
+    fun updateExpense(expense: Expense) {
+        viewModelScope.launch { repository.updateExpense(expense) }
+    }
+
+    fun deleteExpense(expense: Expense) {
+        viewModelScope.launch { repository.deleteExpense(expense) }
+    }
+
+    // ---------------- Export: CSV with emoji + paymentMethod ----------------
 
     suspend fun getExpensesForExport(projectId: Long): String {
-        val expenses = repository.getExpensesForExport(projectId)
-        return formatToCsv(expenses)
-    }
+        val rows = repository.getExportRows(projectId)
+        val sb = StringBuilder()
 
-    private fun formatToCsv(expenses: List<ExpenseExport>): String {
-        val csvBuilder = StringBuilder()
-        csvBuilder.append("Category Name,Description,Amount,Date\n")
+        // Final CSV header – import bhi isi order ko use karega
+        sb.appendLine("Project,Project Emoji,Category,Category Emoji,Description,Amount,Date,Payment Method")
+
         val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-        for (expense in expenses) {
-            csvBuilder.append("\"${expense.categoryName.replace("\"", "\"\"")}\",\"${expense.expenseDescription.replace("\"", "\"\"")}\",${expense.expenseAmount},${sdf.format(Date(expense.expenseDate))}\n")
+
+        fun esc(value: String?): String {
+            val v = value ?: ""
+            return if (v.contains(Regex("[,\n\"]"))) {
+                "\"${v.replace("\"", "\"\"")}\""
+            } else v
         }
-        return csvBuilder.toString()
+
+        rows.forEach { r ->
+            val dateStr = sdf.format(Date(r.date))
+
+            sb.appendLine(
+                listOf(
+                    esc(r.projectName),
+                    esc(r.projectEmoji),
+                    esc(r.categoryName),
+                    esc(r.categoryEmoji),
+                    esc(r.description),
+                    r.amount.toString(),
+                    esc(dateStr),
+                    esc(r.paymentMethod)
+                ).joinToString(",")
+            )
+        }
+
+        return sb.toString()
     }
 
-    private suspend fun getOrCreateCategoryAndGetId(categoryName: String, projectId: Long): Long {
-        if (categoryName.isBlank()) return -1 // Invalid category
-        val category = repository.getCategoryByName(categoryName, projectId)
-        return category?.id ?: repository.insertCategory(Category(name = categoryName, projectId = projectId))
+    // ---------------- Import: supports new 8‑column + old 4‑column CSV ----------------
+
+    private suspend fun getOrCreateCategoryAndGetId(
+        categoryName: String,
+        projectId: Long,
+        emoji: String?
+    ): Long {
+        if (categoryName.isBlank()) return -1
+
+        val existing = repository.getCategoryByName(categoryName, projectId)
+
+        return if (existing != null) {
+            // Agar CSV me emoji diya gaya hai aur different hai, to update kar de
+            if (!emoji.isNullOrBlank() && existing.emoji != emoji) {
+                repository.updateCategory(existing.copy(emoji = emoji))
+            }
+            existing.id
+        } else {
+            // Nayi category create with emoji (ya default)
+            val newCategory = Category(
+                name = categoryName,
+                projectId = projectId,
+                emoji = emoji?.takeIf { it.isNotBlank() } ?: "▶️"
+            )
+            repository.insertCategory(newCategory)
+        }
     }
+
 
     suspend fun importFromCsv(context: Context, uri: Uri, projectId: Long): Boolean {
         return try {
             context.contentResolver.openInputStream(uri)?.use { inputStream ->
                 CSVReader(InputStreamReader(inputStream)).use { reader ->
-                    reader.readNext() // Skip header
 
-                    val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-                    var line: Array<String>?
-                    while (reader.readNext().also { line = it } != null) {
-                        val tokens = line!!
-                        if (tokens.size < 3) continue // Must have at least Category, Description, Amount
+                    // ---------- 1. Read header & build index map ----------
+                    // ---------- 1. Read header & build index map ----------
+                    val header = reader.readNext() ?: return false
 
-                        val categoryName = tokens[0].trim()
-                        val expenseDescription = tokens[1].trim()
-                        val expenseAmount = tokens[2].trim().toDoubleOrNull() ?: continue // Skip if amount is invalid
+// Map: normalized column name -> index
+                    val indexMap = mutableMapOf<String, Int>()
 
-                        val expenseDate = if (tokens.size >= 4 && tokens[3].isNotBlank()) {
+                    header.forEachIndexed { index, rawName ->
+                        val name = rawName.trim().lowercase()
+
+                        when {
+                            // Simple "Emoji" column → treat as category emoji
+                            name == "emoji" ->
+                                indexMap["categoryEmoji"] = index
+
+                            // "Project Emoji" column
+                            name == "project emoji" ->
+                                indexMap["projectEmoji"] = index   // abhi ignore karenge
+
+                            // "Category Emoji" column
+                            name == "category emoji" ->
+                                indexMap["categoryEmoji"] = index
+
+                            name in listOf("category", "category name") ->
+                                indexMap["category"] = index
+
+                            name in listOf("description", "details", "note") ->
+                                indexMap["description"] = index
+
+                            name in listOf("amount", "price", "value") ->
+                                indexMap["amount"] = index
+
+                            name in listOf("date", "txn date", "transaction date") ->
+                                indexMap["date"] = index
+
+                            name in listOf("payment method", "payment", "method") ->
+                                indexMap["paymentMethod"] = index
+                        }
+                    }
+
+// Category, description, amount at least hone chahiye
+                    val catIdx = indexMap["category"] ?: return false
+                    val descIdx = indexMap["description"] ?: return false
+                    val amountIdx = indexMap["amount"] ?: return false
+
+// Emoji indexes
+                    val categoryEmojiIdx = indexMap["categoryEmoji"]    // optional
+// projectEmojiIdx ko abhi use nahi kar rahe:
+                    val dateIdx = indexMap["date"]                      // optional
+                    val paymentIdx = indexMap["paymentMethod"]          // optional
+
+                    val dateFormat = SimpleDateFormat("dd/MM/yy", Locale.getDefault())
+                    val altDateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+
+                    // ---------- 2. Read data rows ----------
+                    var row: Array<String>?
+                    while (reader.readNext().also { row = it } != null) {
+                        val tokens = row ?: continue
+                        if (tokens.isEmpty()) continue
+
+                        // Bounds safety
+                        fun getSafe(i: Int?): String? =
+                            if (i != null && i >= 0 && i < tokens.size) tokens[i].trim() else null
+
+                        val categoryName = getSafe(catIdx)?.takeIf { it.isNotBlank() } ?: continue
+                        val description = getSafe(descIdx) ?: ""
+                        val amountStr = getSafe(amountIdx) ?: continue
+                        val amount = amountStr.toDoubleOrNull() ?: continue
+
+                        // Category Emoji column se emoji (agar present ho)
+                        val emoji = getSafe(categoryEmojiIdx)
+
+                        val dateStr = getSafe(dateIdx)
+                        val millis = if (!dateStr.isNullOrBlank()) {
                             try {
-                                dateFormat.parse(tokens[3].trim())?.time
-                            } catch (e: Exception) {
-                                System.currentTimeMillis() // Use today's date if parsing fails
+                                // Try dd/MM/yy, fallback dd/MM/yyyy
+                                (try {
+                                    dateFormat.parse(dateStr)
+                                } catch (_: Exception) {
+                                    altDateFormat.parse(dateStr)
+                                })?.time ?: System.currentTimeMillis()
+                            } catch (_: Exception) {
+                                System.currentTimeMillis()
                             }
                         } else {
-                            System.currentTimeMillis() // Use today's date if date is missing
-                        } ?: System.currentTimeMillis()
+                            System.currentTimeMillis()
+                        }
 
-                        val categoryId = getOrCreateCategoryAndGetId(categoryName, projectId)
-                        if (categoryId == -1L) continue // Skip if category is blank
+                        val paymentMethod = getSafe(paymentIdx)?.takeIf { it.isNotBlank() }
 
-                        repository.insertExpense(Expense(description = expenseDescription, amount = expenseAmount, date = expenseDate, categoryId = categoryId))
+                        // Category create / fetch
+                        val categoryId = getOrCreateCategoryAndGetId(categoryName, projectId,emoji)
+                        if (categoryId == -1L) continue
+
+                        val expense = Expense(
+                            description = description,
+                            amount = amount,
+                            date = millis,
+                            categoryId = categoryId,
+                            paymentMethod = paymentMethod
+                        )
+
+                        repository.insertExpense(expense)
                     }
                 }
             }
@@ -226,66 +374,11 @@ class PaisaTrackerViewModel(private val repository: PaisaTrackerRepository) : Vi
         }
     }
 
-    fun insertProject(project: Project) {
-        viewModelScope.launch {
-            repository.insertProject(project)
-        }
-    }
-
-    fun updateProject(project: Project) {
-        viewModelScope.launch {
-            repository.updateProject(project)
-        }
-    }
-
-    fun deleteProject(project: Project) {
-        viewModelScope.launch {
-            repository.deleteProject(project)
-        }
-    }
-
-    fun getCategoriesForProject(projectId: Long): Flow<List<Category>> = repository.getCategoriesForProject(projectId)
-
-    fun insertCategory(category: Category) {
-        viewModelScope.launch {
-            repository.insertCategory(category)
-        }
-    }
-
-    fun updateCategory(category: Category) {
-        viewModelScope.launch {
-            repository.updateCategory(category)
-        }
-    }
-
-    fun deleteCategory(category: Category) {
-        viewModelScope.launch {
-            repository.deleteCategory(category)
-        }
-    }
-
-    fun getExpensesForCategory(categoryId: Long): Flow<List<Expense>> = repository.getExpensesForCategory(categoryId)
-
-    fun insertExpense(expense: Expense) {
-        viewModelScope.launch {
-            repository.insertExpense(expense)
-        }
-    }
-
-    fun updateExpense(expense: Expense) {
-        viewModelScope.launch {
-            repository.updateExpense(expense)
-        }
-    }
-
-    fun deleteExpense(expense: Expense) {
-        viewModelScope.launch {
-            repository.deleteExpense(expense)
-        }
-    }
 }
 
-class PaisaTrackerViewModelFactory(private val repository: PaisaTrackerRepository) : ViewModelProvider.Factory {
+class PaisaTrackerViewModelFactory(
+    private val repository: PaisaTrackerRepository
+) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(PaisaTrackerViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")

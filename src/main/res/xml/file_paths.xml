@@ -1,7 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Internal filesDir/images folder -->
+    <!-- Internal app storage for images -->
     <files-path
         name="images"
         path="images/" />
+
+    <!-- Cache directory for temporary files -->
+    che-path
+    name="cachee"
+    path="/" />
+
+    <!-- External storage (if needed) -->
+    <external-files-path
+        name="external_files"
+        path="/" />
 </paths>

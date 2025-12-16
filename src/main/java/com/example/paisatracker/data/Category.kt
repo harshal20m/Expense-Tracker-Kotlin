@@ -20,5 +20,7 @@ data class Category(
     val id: Long = 0,
     val name: String,
     val projectId: Long,
-    val emoji: String = "▶️"   // naya field, default emoji
+    val emoji: String = "▶️",   // naya field, default emoji
+
+    val createdAt: Long = System.currentTimeMillis()
 )
