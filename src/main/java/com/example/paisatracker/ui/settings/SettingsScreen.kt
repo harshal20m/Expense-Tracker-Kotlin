@@ -157,7 +157,11 @@ fun SettingsScreen(
                         try {
                             val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
                             val apkPath = packageInfo.applicationInfo?.sourceDir
-                            val apkFile = File(apkPath)
+                            val apkFile = File(apkPath ?: return@SettingsCard)
+                            val packageName = context.packageName ?: run {
+                                Toast.makeText(context, "Error: Package name not found", Toast.LENGTH_SHORT).show()
+                                return@SettingsCard
+                            }
 
                             val apkUri = FileProvider.getUriForFile(
                                 context,
