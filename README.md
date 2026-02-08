@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://www.amazon.com/dp/YOUR_APP_ID">
+  <a href="https://www.amazon.com/dp/B0G7LNNBVM">
     <img src="https://images-na.ssl-images-amazon.com/images/G/01/mobile-apps/devportal2/res/images/amazon-appstore-badge-english-black.png" width="200" alt="Available on Amazon Appstore">
   </a>
 </p>
@@ -52,6 +52,8 @@
 <p align="center">
   <img src="https://github.com/harshal20m/PaisaTracker/blob/master/src/main/res/screenshots/Notification_settings_modal.jpg" width="200" alt="Notifications">
   <img src="https://github.com/harshal20m/PaisaTracker/blob/master/src/main/res/screenshots/Battery_settings_modal.jpg" width="200" alt="Battery Settings">
+  <img src="https://github.com/harshal20m/PaisaTracker/blob/master/src/main/res/screenshots/Lock_Screen.jpg" width="200" alt="Lock Screen">
+  
 </p>
 
 ---
