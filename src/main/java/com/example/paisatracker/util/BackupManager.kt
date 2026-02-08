@@ -201,46 +201,19 @@ class BackupManager(private val context: Context) {
     /**
      * Delete backup file from storage
      */
-    suspend fun deleteBackupFile(backup: BackupMetadata): Boolean =
-        withContext(Dispatchers.IO) {
+    suspend fun deleteBackupFile(backup: BackupMetadata): Boolean = withContext(Dispatchers.IO) {
+        try {
             val uri = Uri.parse(backup.filePath)
+            context.contentResolver.delete(uri, null, null)
 
-            try {
-                // STEP 1: Check if file exists
-                val fileExists = try {
-                    context.contentResolver.openFileDescriptor(uri, "r")?.use {
-                        true
-                    } ?: false
-                } catch (e: Exception) {
-                    false
-                }
-
-                // STEP 2: Delete file ONLY if it exists
-                if (fileExists) {
-                    try {
-                        context.contentResolver.delete(uri, null, null)
-                    } catch (e: Exception) {
-                        // Ignore — file may already be gone
-                        e.printStackTrace()
-                    }
-                }
-
-                // STEP 3: Always delete DB record
-                database.backupDao().deleteBackup(backup)
-
-                true
-            } catch (e: Exception) {
-                e.printStackTrace()
-
-                // LAST RESORT: still remove DB entry to avoid stuck history
-                try {
-                    database.backupDao().deleteBackup(backup)
-                } catch (_: Exception) {}
-
-                false
-            }
+            // Remove from database
+            database.backupDao().deleteBackup(backup)
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
         }
-
+    }
 
     /**
      * Get file size from URI

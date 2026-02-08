@@ -190,19 +190,15 @@ fun ExportScreen(
                 backupToDelete = null
             },
             onConfirm = {
-                val backup = backupToDelete ?: return@DeleteBackupDialog
-
-                showDeleteBackupDialog = false
-                backupToDelete = null
-
                 scope.launch {
-                    val success = backupManager.deleteBackupFile(backup)
+                    val success = backupManager.deleteBackupFile(backupToDelete!!)
                     if (success) {
                         Toast.makeText(context, "Backup deleted", Toast.LENGTH_SHORT).show()
                     }
                 }
+                showDeleteBackupDialog = false
+                backupToDelete = null
             }
-
         )
     }
 
