@@ -479,11 +479,18 @@ fun ExpenseListScreen(
                         }
 
                         is SheetState.Delete -> {
-                            DeleteBottomSheetContent(expense = sheet.expense, onCancel = { currentSheet = null }, onConfirm = {
-                                viewModel.deleteExpense(sheet.expense)
-                                currentSheet = null
-                            })
+                            val expenseToDelete = sheet.expense
+
+                            DeleteBottomSheetContent(
+                                expense = expenseToDelete,
+                                onCancel = { currentSheet = null },
+                                onConfirm = {
+                                    viewModel.deleteExpense(expenseToDelete)
+                                    currentSheet = null
+                                }
+                            )
                         }
+
                     }
                 }
             }

@@ -55,18 +55,21 @@ fun ExpenseDetailScreen(
     val assets by viewModel.getAssetsForExpense(expenseId)
         .collectAsState(initial = emptyList())
 
-    val pickImageLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-            if (uri != null && expense != null) {
-                viewModel.addLinkedAsset(
-                    context = context,
-                    uri = uri,
-                    title = expense!!.description,
-                    description = "",
-                    expenseId = expense!!.id
-                )
+        val pickImageLauncher =
+            rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+                val e = expense ?: return@rememberLauncherForActivityResult
+
+                uri?.let {
+                    viewModel.addLinkedAsset(
+                        context = context,
+                        uri = it,
+                        title = e.description,
+                        description = "",
+                        expenseId = e.id
+                    )
+                }
+
             }
-        }
 
     val backgroundGradient = Brush.verticalGradient(
         colors = listOf(
