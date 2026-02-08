@@ -9,6 +9,13 @@ class PaisaTrackerRepository(
     private val assetDao: AssetDao,
     private val backupDao: BackupDao
 ) {
+
+    fun getRecentExpensesWithDetails(limit: Int): Flow<List<RecentExpense>> {
+        return expenseDao.getRecentExpensesWithDetails(limit)
+    }
+
+
+
     fun getAllProjects(): Flow<List<Project>> = projectDao.getAllProjects()
 
     fun getProjectById(projectId: Long): Flow<Project> = projectDao.getProjectById(projectId)

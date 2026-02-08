@@ -17,6 +17,24 @@ data class ExpenseExport(
     val expenseDate: Long
 )
 
+
+// Add this data class to your data package
+data class RecentExpense(
+    val id: Long,
+    val amount: Double,
+    val description: String,
+    val date: Long,
+    val paymentMethod: String?,
+    val paymentIcon: String?,
+    val projectId: Long,
+    val projectName: String,
+    val projectEmoji: String,
+    val categoryId: Long,
+    val categoryName: String,
+    val categoryEmoji: String
+)
+
+
 @Dao
 interface ExpenseDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
@@ -76,5 +94,31 @@ interface ExpenseDao {
 
     @Query("SELECT SUM(amount) FROM expenses")
     suspend fun getTotalAmount(): Double?
+
+
+    // Add this query to your ExpenseDao interface
+
+    @Query("""
+    SELECT 
+        e.id as id,
+        e.amount as amount,
+        e.description as description,
+        e.date as date,
+        e.paymentMethod as paymentMethod,
+        e.paymentIcon as paymentIcon,
+        c.projectId as projectId,
+        p.name as projectName,
+        p.emoji as projectEmoji,
+        c.id as categoryId,
+        c.name as categoryName,
+        c.emoji as categoryEmoji
+    FROM expenses e
+    INNER JOIN categories c ON e.categoryId = c.id
+    INNER JOIN projects p ON c.projectId = p.id
+    ORDER BY e.date DESC
+    LIMIT :limit
+""")
+    fun getRecentExpensesWithDetails(limit: Int): Flow<List<RecentExpense>>
+
 
 }

@@ -1,5 +1,6 @@
 package com.example.paisatracker.ui.main
 
+import com.example.paisatracker.ui.recent.RecentExpensesSection
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -22,7 +23,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -243,6 +243,12 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
                         ),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
+                        // Recent Expenses Section at the top
+                        item {
+                            RecentExpensesSection(viewModel = viewModel)
+                        }
+
+                        // Project items
                         itemsIndexed(orderedProjects, key = { _, item -> item.project.id }) { index, projectWithTotal ->
                             ProjectListItemWithReorder(
                                 projectWithTotal = projectWithTotal,

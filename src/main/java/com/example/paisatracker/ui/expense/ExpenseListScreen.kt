@@ -123,7 +123,7 @@ fun ExpenseListScreen(
         .collectAsState(initial = emptyList())
 
     // sort state
-    var expenseSortOption by remember { mutableStateOf(SortOption.AMOUNT_HIGH_LOW) }
+    var expenseSortOption by remember { mutableStateOf(SortOption.DATE_NEW_OLD) }
     var currentViewType by remember { mutableStateOf(ExpenseViewType.LIST) }
 
     var currentSheet by remember { mutableStateOf<SheetState?>(null) }

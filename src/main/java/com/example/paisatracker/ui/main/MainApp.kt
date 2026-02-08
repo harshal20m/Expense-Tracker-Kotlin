@@ -10,7 +10,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.paisatracker.PaisaTrackerViewModel
@@ -39,16 +38,14 @@ fun MainApp(viewModel: PaisaTrackerViewModel) {
                 },
                 containerColor = MaterialTheme.colorScheme.background
             ) { paddingValues ->
-                // Only top padding, no bottom
-                AppNavigation(
-                    navController = navController,
-                    viewModel = viewModel,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(top = paddingValues.calculateTopPadding())
-                )
+                Box(modifier = Modifier.padding(paddingValues)) {
+                    AppNavigation(
+                        navController = navController,
+                        viewModel = viewModel,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
             }
-
             // Floating bottom nav (overlay)
             Box(
                 modifier = Modifier.fillMaxSize(),

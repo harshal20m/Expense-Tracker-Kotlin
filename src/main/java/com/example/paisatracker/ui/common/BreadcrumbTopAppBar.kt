@@ -3,6 +3,7 @@ package com.example.paisatracker.ui.common
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -20,6 +21,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavBackStackEntry
@@ -77,8 +80,6 @@ fun BreadcrumbTopAppBar(
         )
     )
 }
-
-
 @Composable
 fun BreadcrumbTitle(
     navController: NavController,
@@ -86,110 +87,68 @@ fun BreadcrumbTitle(
     navBackStackEntry: NavBackStackEntry?
 ) {
     val currentRoute = navBackStackEntry?.destination?.route
+    val breadcrumbTextStyle = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp)
+    val activeBreadcrumbStyle = breadcrumbTextStyle.copy(fontWeight = FontWeight.Bold)
 
-    val breadcrumbTextStyle = MaterialTheme.typography.bodyMedium.copy(fontSize = 15.sp)
-    val activeBreadcrumbStyle = breadcrumbTextStyle.copy(fontWeight = FontWeight.SemiBold)
-    val separatorModifier = Modifier.padding(horizontal = 4.dp)
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        // Always show Projects
+        Text(
+            text = "Projects",
+            style = breadcrumbTextStyle,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.clickable {
+                navController.navigate("projects") { popUpTo("projects") { inclusive = true } }
+            }
+        )
 
-    when (currentRoute) {
-        "project_details/{projectId}" -> {
-            val projectId = navBackStackEntry?.arguments?.getString("projectId")?.toLongOrNull()
-            if (projectId != null) {
-                val project by viewModel.getProjectById(projectId).collectAsState(initial = null)
-                Row(verticalAlignment = Alignment.CenterVertically) {
+        when (currentRoute) {
+            "project_details/{projectId}" -> {
+                val projectId = navBackStackEntry?.arguments?.getString("projectId")?.toLongOrNull()
+                projectId?.let { id ->
+                    val project by viewModel.getProjectById(id).collectAsState(initial = null)
+                    BreadcrumbSeparator()
                     Text(
-                        "Projects",
-                        style = breadcrumbTextStyle,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.clickable {
-                            navController.navigate("projects") {
-                                popUpTo("projects") { inclusive = false }
-                            }
-                        }
-                    )
-                    Text(
-                        " > ",
-                        modifier = separatorModifier,
-                        style = breadcrumbTextStyle,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        project?.name ?: "Loading...",
+                        text = project?.name ?: "...",
                         style = activeBreadcrumbStyle,
-                        color = MaterialTheme.colorScheme.onSurface
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
-        }
-
-        "expense_list/{categoryId}" -> {
-            val categoryId = navBackStackEntry?.arguments?.getString("categoryId")?.toLongOrNull()
-            if (categoryId != null) {
-                val category by viewModel.getCategoryById(categoryId).collectAsState(initial = null)
-                val project by if (category != null) {
-                    viewModel.getProjectById(category!!.projectId).collectAsState(initial = null)
-                } else {
-                    remember { mutableStateOf(null) }
-                }
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
+            "expense_list/{categoryId}" -> {
+                val categoryId = navBackStackEntry?.arguments?.getString("categoryId")?.toLongOrNull()
+                categoryId?.let { id ->
+                    val category by viewModel.getCategoryById(id).collectAsState(initial = null)
+                    // You could potentially fetch the project name via the ViewModel
+                    // in a single state object to avoid nested collecting
+                    BreadcrumbSeparator()
                     Text(
-                        "Projects",
+                        text = "Category", // Or fetch project name
                         style = breadcrumbTextStyle,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.clickable {
-                            navController.navigate("projects") {
-                                popUpTo("projects") { inclusive = false }
-                            }
-                        }
+                        color = MaterialTheme.colorScheme.primary
                     )
+                    BreadcrumbSeparator()
                     Text(
-                        " > ",
-                        modifier = separatorModifier,
-                        style = breadcrumbTextStyle,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = category?.name ?: "...",
+                        style = activeBreadcrumbStyle,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
-
-                    if (project != null) {
-                        Text(
-                            project!!.name,
-                            style = breadcrumbTextStyle,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.clickable {
-                                navController.navigate("project_details/${project!!.id}") {
-                                    popUpTo("project_details/${project!!.id}") { inclusive = false }
-                                }
-                            }
-                        )
-                        Text(
-                            " > ",
-                            modifier = separatorModifier,
-                            style = breadcrumbTextStyle,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Text(
-                            category?.name ?: "Loading...",
-                            style = activeBreadcrumbStyle,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    } else {
-                        Text(
-                            "Loading...",
-                            style = breadcrumbTextStyle,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
                 }
             }
-        }
-
-        else -> {
-            // Fallback - shouldn't reach here due to filter above
-            Text(
-                "Projects",
-                style = activeBreadcrumbStyle,
-                color = MaterialTheme.colorScheme.onSurface
-            )
         }
     }
+}
+
+@Composable
+fun BreadcrumbSeparator() {
+    Text(
+        text = "/",
+        modifier = Modifier.padding(horizontal = 6.dp),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+    )
 }

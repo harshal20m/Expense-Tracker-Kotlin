@@ -11,6 +11,7 @@ import com.example.paisatracker.data.Category
 import com.example.paisatracker.data.CategoryExpense
 import com.example.paisatracker.data.CategoryWithTotal
 import com.example.paisatracker.data.Expense
+import com.example.paisatracker.data.RecentExpense
 import com.example.paisatracker.data.PaisaTrackerRepository
 import com.example.paisatracker.data.Project
 import com.example.paisatracker.data.ProjectWithTotal
@@ -23,11 +24,25 @@ import java.io.InputStreamReader
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+
 
 class PaisaTrackerViewModel(private val repository: PaisaTrackerRepository) : ViewModel() {
 
 
 
+
+    private val _recentExpensesLimit = MutableStateFlow(10)
+    @kotlinx.coroutines.ExperimentalCoroutinesApi
+    val recentExpenses: Flow<List<RecentExpense>> = _recentExpensesLimit.flatMapLatest { limit ->
+        repository.getRecentExpensesWithDetails(limit)
+    }
+
+    // Add this function for loading more
+    fun loadMoreRecentExpenses() {
+        _recentExpensesLimit.value += 10
+    }
 
 
     //-----------------Backup----------------
