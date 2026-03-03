@@ -33,6 +33,9 @@ import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.core.content.FileProvider
 import java.io.File
+import androidx.lifecycle.viewmodel.compose.viewModel // Import for viewModel()
+import com.example.paisatracker.PaisaTrackerApplication
+import com.example.paisatracker.data.AppTheme // For theme enum
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,9 +44,17 @@ fun SettingsScreen(
     navController: NavHostController
 ) {
     val context = LocalContext.current
+    val application = context.applicationContext as PaisaTrackerApplication
+    val settingsViewModel: SettingsViewModel = viewModel(
+        factory = SettingsViewModelFactory(application.themePreferencesRepository)
+    )
+    val currentTheme by settingsViewModel.currentTheme.collectAsState()
+
     var showNotificationDialog by remember { mutableStateOf(false) }
     var showBatteryDialog by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
+    var showThemeSelectionDialog by remember { mutableStateOf(false) } // New state for theme dialog
+
 
     Column(modifier = Modifier.fillMaxSize()) {
         // Header
@@ -137,6 +148,16 @@ fun SettingsScreen(
             item {
                 Spacer(modifier = Modifier.height(8.dp))
                 SectionHeader(title = "App")
+            }
+
+            // New Theme Settings Card
+            item {
+                SettingsCard(
+                    icon = Icons.Default.Palette,
+                    title = "App Theme",
+                    subtitle = "Current: ${currentTheme.themeName}",
+                    onClick = { showThemeSelectionDialog = true }
+                )
             }
 
             item {
@@ -275,6 +296,17 @@ fun SettingsScreen(
 
     if (showAboutDialog) {
         AboutBottomSheet(onDismiss = { showAboutDialog = false })
+    }
+
+    if (showThemeSelectionDialog) {
+        ThemeSelectionBottomSheet(
+            currentTheme = currentTheme,
+            onDismiss = { showThemeSelectionDialog = false },
+            onThemeSelected = { theme ->
+                settingsViewModel.saveTheme(theme)
+                showThemeSelectionDialog = false
+            }
+        )
     }
 }
 

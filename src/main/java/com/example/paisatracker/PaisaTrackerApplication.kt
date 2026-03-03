@@ -5,6 +5,8 @@ import android.content.Context
 import androidx.work.*
 import com.example.paisatracker.data.PaisaTrackerDatabase
 import com.example.paisatracker.data.PaisaTrackerRepository
+import com.example.paisatracker.data.ThemePreferencesRepository
+import com.example.paisatracker.data.themeDataStore
 import com.example.paisatracker.util.ExpenseReminderWorker
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
@@ -19,6 +21,10 @@ class PaisaTrackerApplication : Application() {
             database.assetDao(),
             database.backupDao()
         )
+    }
+
+    val themePreferencesRepository: ThemePreferencesRepository by lazy {
+        ThemePreferencesRepository.getInstance(applicationContext)
     }
 
     override fun onCreate() {

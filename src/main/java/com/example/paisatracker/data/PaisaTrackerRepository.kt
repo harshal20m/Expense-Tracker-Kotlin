@@ -14,8 +14,6 @@ class PaisaTrackerRepository(
         return expenseDao.getRecentExpensesWithDetails(limit)
     }
 
-
-
     fun getAllProjects(): Flow<List<Project>> = projectDao.getAllProjects()
 
     fun getProjectById(projectId: Long): Flow<Project> = projectDao.getProjectById(projectId)
@@ -29,8 +27,6 @@ class PaisaTrackerRepository(
     fun getCategoriesWithTotalForProject(projectId: Long): Flow<List<CategoryWithTotal>> = categoryDao.getCategoriesWithTotalForProject(projectId)
 
     fun getAllExpenses(): Flow<List<Expense>> = expenseDao.getAllExpenses()
-
-    suspend fun getExpensesForExport(projectId: Long): List<ExpenseExport> = expenseDao.getExpensesForExport(projectId)
 
     suspend fun getExportRows(projectId: Long?): List<ExportRow> =
         expenseDao.getExportRows(projectId)
@@ -69,10 +65,6 @@ class PaisaTrackerRepository(
         return expenseDao.insert(expense)
     }
 
-
-
-
-
     suspend fun updateExpense(expense: Expense) {
         expenseDao.updateExpense(expense)
     }
@@ -89,34 +81,6 @@ class PaisaTrackerRepository(
         return categoryDao.getCategoryByName(name, projectId)
     }
 
-
-
-
-    // Asset methods latest added ***
-    // Add these methods
-//    fun getAllAssets(): Flow<List<Asset>> {
-//        return assetDao.getAllAssets()
-//    }
-//
-//    suspend fun insertAsset(asset: Asset): Long {
-//        return assetDao.insertAsset(asset)
-//    }
-//
-//    suspend fun updateAsset(asset: Asset) {
-//        assetDao.updateAsset(asset)
-//    }
-//
-//    suspend fun deleteAsset(asset: Asset) {
-//        assetDao.deleteAsset(asset)
-//    }
-//
-//    suspend fun deleteAllAssets() {
-//        assetDao.deleteAllAssets()
-//    }
-//
-
-
-
     // Asset functions
     fun getAllAssets(): Flow<List<Asset>> = assetDao.getAllAssets()
     fun getAssetsForExpense(expenseId: Long): Flow<List<Asset>> = assetDao.getAssetsForExpense(expenseId)
@@ -125,12 +89,7 @@ class PaisaTrackerRepository(
     suspend fun insertAsset(asset: Asset) = assetDao.insertAsset(asset)
     suspend fun deleteAsset(asset: Asset) = assetDao.deleteAsset(asset)
 
-
-
     //backup methods
-    // 2. ADD THESE METHODS TO YOUR PaisaTrackerRepository CLASS:
-
-    // Backup methods
     fun getRecentBackups(): Flow<List<BackupMetadata>> {
         return backupDao.getRecentBackups()
     }
@@ -161,5 +120,18 @@ class PaisaTrackerRepository(
 
     suspend fun getTotalAmount(): Double {
         return expenseDao.getTotalAmount() ?: 0.0
+    }
+
+    // Search methods
+    fun searchExpensesByDescription(query: String?, projectId: Long?): Flow<List<RecentExpense>> {
+        return expenseDao.searchExpensesByDescription(query, projectId)
+    }
+
+    fun searchExpensesByAmount(minAmount: Double?, maxAmount: Double?, projectId: Long?): Flow<List<RecentExpense>> {
+        return expenseDao.searchExpensesByAmount(minAmount, maxAmount, projectId)
+    }
+
+    fun searchExpensesByDateRange(startDate: Long?, endDate: Long?, projectId: Long?): Flow<List<RecentExpense>> {
+        return expenseDao.searchExpensesByDateRange(startDate, endDate, projectId)
     }
 }

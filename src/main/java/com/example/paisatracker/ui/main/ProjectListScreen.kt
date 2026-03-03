@@ -1,6 +1,5 @@
 package com.example.paisatracker.ui.main
 
-import com.example.paisatracker.ui.recent.RecentExpensesSection
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -21,8 +20,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -32,6 +31,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
@@ -39,14 +39,13 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Folder
-import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
@@ -54,15 +53,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.BottomSheetDefaults
-import androidx.compose.material3.SheetState
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.SheetState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -78,25 +75,30 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.paisatracker.PaisaTrackerApplication
 import com.example.paisatracker.PaisaTrackerViewModel
 import com.example.paisatracker.R
 import com.example.paisatracker.data.Project
 import com.example.paisatracker.data.ProjectWithTotal
+import com.example.paisatracker.data.RecentExpense
+import com.example.paisatracker.ui.recent.RecentExpensesSection
+import com.example.paisatracker.ui.search.SearchViewModel
+import com.example.paisatracker.ui.search.SearchViewModelFactory
 import com.example.paisatracker.util.formatCurrency
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import kotlinx.coroutines.launch
-import kotlin.math.roundToInt
+
 
 // Emoji List (same as before)
 private val projectEmojis = listOf(
@@ -124,6 +126,19 @@ private enum class SheetType {
 @Composable
 fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavController) {
     val context = androidx.compose.ui.platform.LocalContext.current
+    val application = context.applicationContext as PaisaTrackerApplication
+
+    // Search ViewModel Integration
+    val searchViewModel: SearchViewModel = viewModel(
+        factory = SearchViewModelFactory(application.repository)
+    )
+    val searchQuery by searchViewModel.searchQuery.collectAsState()
+    val minAmount by searchViewModel.minAmount.collectAsState()
+    val maxAmount by searchViewModel.maxAmount.collectAsState()
+    val searchResults by searchViewModel.searchResults.collectAsState()
+    val isSearchActive by searchViewModel.isSearchActive.collectAsState()
+    var searchExpanded by remember { mutableStateOf(false) }
+
     val projects by viewModel.getAllProjectsWithTotal().collectAsState(initial = emptyList())
     var currentSheetType by remember { mutableStateOf<SheetType?>(null) }
     var projectToEdit by remember { mutableStateOf<ProjectWithTotal?>(null) }
@@ -202,6 +217,24 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
             }
         )
 
+        // Search Panel
+        SearchPanel(
+            searchExpanded = searchExpanded,
+            onExpandChange = { searchExpanded = it },
+            searchQuery = searchQuery,
+            onSearchQueryChange = { searchViewModel.onSearchQueryChanged(it) },
+            minAmount = minAmount,
+            onMinAmountChange = { searchViewModel.onMinAmountChanged(it) },
+            maxAmount = maxAmount,
+            onMaxAmountChange = { searchViewModel.onMaxAmountChanged(it) },
+            onSearch = { searchViewModel.executeSearch() },
+            onClear = {
+                searchViewModel.clearSearch()
+                searchExpanded = false
+            },
+            isSearchActive = isSearchActive
+        )
+
         // Content with conditional summary position
         Box(
             modifier = Modifier.fillMaxSize()
@@ -220,7 +253,7 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
                     )
                 }
 
-                this@Column.AnimatedVisibility(
+                AnimatedVisibility(
                     visible = orderedProjects.isEmpty(),
                     enter = fadeIn(),
                     exit = fadeOut()
@@ -228,94 +261,106 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
                     EmptyProjectsState()
                 }
 
-                this@Column.AnimatedVisibility(
+                AnimatedVisibility(
                     visible = orderedProjects.isNotEmpty(),
                     enter = fadeIn(),
                     exit = fadeOut()
                 ) {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(
-                            start = 16.dp,
-                            end = 16.dp,
-                            top = 16.dp,
-                            bottom = if (!summaryAtTop && orderedProjects.isNotEmpty()) 200.dp else 110.dp
-                        ),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        // Recent Expenses Section at the top
-                        item {
-                            RecentExpensesSection(viewModel = viewModel)
+                    // Conditional: Show search results or projects
+                    if (isSearchActive && searchResults.isNotEmpty()) {
+                        SearchResultsGrid(searchResults = searchResults)
+                    } else if (isSearchActive) {
+                        Box(
+                            modifier = Modifier.fillMaxSize().padding(32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("No results found")
                         }
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(
+                                start = 16.dp,
+                                end = 16.dp,
+                                top = 16.dp,
+                                bottom = if (!summaryAtTop && orderedProjects.isNotEmpty()) 200.dp else 110.dp
+                            ),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            // Recent Expenses Section at the top
+                            item {
+                                RecentExpensesSection(viewModel = viewModel)
+                            }
 
-                        // Project items
-                        itemsIndexed(orderedProjects, key = { _, item -> item.project.id }) { index, projectWithTotal ->
-                            ProjectListItemWithReorder(
-                                projectWithTotal = projectWithTotal,
-                                currentIndex = index,
-                                totalItems = orderedProjects.size,
-                                onReorder = { fromIndex, toIndex ->
-                                    // Update custom order map
-                                    val newOrderMap = mutableMapOf<Long, Int>()
-                                    orderedProjects.forEachIndexed { idx, project ->
-                                        newOrderMap[project.project.id] = when {
-                                            idx == fromIndex -> toIndex
-                                            idx < fromIndex && idx >= toIndex -> idx + 1
-                                            idx > fromIndex && idx <= toIndex -> idx - 1
-                                            else -> idx
+                            // Project items
+                            itemsIndexed(orderedProjects, key = { _, item -> item.project.id }) { index, projectWithTotal ->
+                                ProjectListItemWithReorder(
+                                    projectWithTotal = projectWithTotal,
+                                    currentIndex = index,
+                                    totalItems = orderedProjects.size,
+                                    onReorder = { fromIndex, toIndex ->
+                                        // Update custom order map
+                                        val newOrderMap = mutableMapOf<Long, Int>()
+                                        orderedProjects.forEachIndexed { idx, project ->
+                                            newOrderMap[project.project.id] = when {
+                                                idx == fromIndex -> toIndex
+                                                idx < fromIndex && idx >= toIndex -> idx + 1
+                                                idx > fromIndex && idx <= toIndex -> idx - 1
+                                                else -> idx
+                                            }
                                         }
-                                    }
-                                    customOrderMap = newOrderMap
+                                        customOrderMap = newOrderMap
 
-                                    // Save order to SharedPreferences
-                                    with(sharedPrefs.edit()) {
-                                        newOrderMap.forEach { (projectId, position) ->
-                                            putInt("project_$projectId", position)
+                                        // Save order to SharedPreferences
+                                        with(sharedPrefs.edit()) {
+                                            newOrderMap.forEach { (projectId, position) ->
+                                                putInt("project_$projectId", position)
+                                            }
+                                            apply()
                                         }
-                                        apply()
-                                    }
-                                },
-                                onProjectClick = {
-                                    // Update lastModified timestamp to mark as recently used
-                                    viewModel.updateProject(
-                                        projectWithTotal.project.copy(
-                                            lastModified = System.currentTimeMillis()
+                                    },
+                                    onProjectClick = {
+                                        // Update lastModified timestamp to mark as recently used
+                                        viewModel.updateProject(
+                                            projectWithTotal.project.copy(
+                                                lastModified = System.currentTimeMillis()
+                                            )
                                         )
-                                    )
 
-                                    // Move to top of list
-                                    val newOrderMap = mutableMapOf<Long, Int>()
-                                    newOrderMap[projectWithTotal.project.id] = 0
-                                    orderedProjects.forEachIndexed { idx, project ->
-                                        if (project.project.id != projectWithTotal.project.id) {
-                                            newOrderMap[project.project.id] = idx + 1
+                                        // Move to top of list
+                                        val newOrderMap = mutableMapOf<Long, Int>()
+                                        newOrderMap[projectWithTotal.project.id] = 0
+                                        orderedProjects.forEachIndexed { idx, project ->
+                                            if (project.project.id != projectWithTotal.project.id) {
+                                                newOrderMap[project.project.id] = idx + 1
+                                            }
                                         }
-                                    }
-                                    customOrderMap = newOrderMap
+                                        customOrderMap = newOrderMap
 
-                                    // Save new order
-                                    with(sharedPrefs.edit()) {
-                                        newOrderMap.forEach { (projectId, position) ->
-                                            putInt("project_$projectId", position)
+                                        // Save new order
+                                        with(sharedPrefs.edit()) {
+                                            newOrderMap.forEach { (projectId, position) ->
+                                                putInt("project_$projectId", position)
+                                            }
+                                            apply()
                                         }
-                                        apply()
-                                    }
 
-                                    navController.navigate("project_details/${projectWithTotal.project.id}")
-                                },
-                                onEditClick = {
-                                    projectToEdit = projectWithTotal
-                                    currentSheetType = SheetType.EDIT
-                                    showSheet = true
-                                    scope.launch { sheetState.show() }
-                                },
-                                onDeleteClick = {
-                                    projectToDelete = projectWithTotal
-                                    currentSheetType = SheetType.DELETE
-                                    showSheet = true
-                                    scope.launch { sheetState.show() }
-                                }
-                            )
+                                        navController.navigate("project_details/${projectWithTotal.project.id}")
+                                    },
+                                    onEditClick = {
+                                        projectToEdit = projectWithTotal
+                                        currentSheetType = SheetType.EDIT
+                                        showSheet = true
+                                        scope.launch { sheetState.show() }
+                                    },
+                                    onDeleteClick = {
+                                        projectToDelete = projectWithTotal
+                                        currentSheetType = SheetType.DELETE
+                                        showSheet = true
+                                        scope.launch { sheetState.show() }
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -695,11 +740,12 @@ private fun Header(onAddProjectClick: () -> Unit) {
                     endY = 150f
                 )
             )
+            .padding(top = 40.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 28.dp),
+                .padding(horizontal = 24.dp, vertical = 18.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -999,8 +1045,6 @@ fun ProjectListItemWithReorder(
                             thickness = 0.5.dp
                         )
 
-
-
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -1017,8 +1061,6 @@ fun ProjectListItemWithReorder(
                                 modifier = Modifier.weight(1f)
                             )
                         }
-
-
 
                         // Dates Row with Explore Button
                         Row(
@@ -1675,6 +1717,198 @@ private fun MenuActionButton(
                 color = if (enabled) contentColor else contentColor.copy(alpha = 0.5f),
                 fontSize = 13.sp
             )
+        }
+    }
+}
+
+
+@Composable
+fun SearchPanel(
+    searchExpanded: Boolean,
+    onExpandChange: (Boolean) -> Unit,
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    minAmount: String,
+    onMinAmountChange: (String) -> Unit,
+    maxAmount: String,
+    onMaxAmountChange: (String) -> Unit,
+    onSearch: () -> Unit,
+    onClear: () -> Unit,
+    isSearchActive: Boolean
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        elevation = CardDefaults.cardElevation(2.dp)
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onExpandChange(!searchExpanded) },
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "Search",
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        "Search Expenses",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                Icon(
+                    imageVector = if (searchExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                    contentDescription = if (searchExpanded) "Collapse" else "Expand",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            AnimatedVisibility(
+                visible = searchExpanded,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                Column(modifier = Modifier.padding(top = 12.dp)) {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = onSearchQueryChange,
+                        label = { Text("Description") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp),
+                        singleLine = true
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = minAmount,
+                            onValueChange = onMinAmountChange,
+                            label = { Text("Min Amount") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(8.dp),
+                            singleLine = true
+                        )
+                        OutlinedTextField(
+                            value = maxAmount,
+                            onValueChange = onMaxAmountChange,
+                            label = { Text("Max Amount") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(8.dp),
+                            singleLine = true
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = onSearch,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Icon(Icons.Default.Search, null, Modifier.size(18.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("Search")
+                        }
+
+                        if (isSearchActive) {
+                            OutlinedButton(
+                                onClick = onClear,
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text("Clear")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SearchResultsGrid(
+    searchResults: List<RecentExpense>,
+    modifier: Modifier = Modifier
+) {
+    LazyColumn(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp),
+        contentPadding = PaddingValues(bottom = 100.dp)
+    ) {
+        item {
+            Text(
+                "Search Results (${searchResults.size})",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(vertical = 12.dp)
+            )
+        }
+
+        items(searchResults.chunked(2)) { rowItems ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                rowItems.forEach { expense ->
+                    Card(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { /* Navigate to expense details */ },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surface
+                        ),
+                        elevation = CardDefaults.cardElevation(2.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(
+                                expense.description,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                formatCurrency(expense.amount),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+                                    .format(Date(expense.date)),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+                if (rowItems.size == 1) {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+            }
         }
     }
 }

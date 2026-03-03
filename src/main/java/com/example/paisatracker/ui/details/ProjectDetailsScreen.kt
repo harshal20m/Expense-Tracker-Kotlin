@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -53,6 +54,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -152,6 +154,7 @@ fun ProjectDetailsScreen(
     }
 
     Scaffold(
+        containerColor = Color.Transparent, // Make it transparent
         floatingActionButton = {
             FloatingActionButton(
                 onClick = {
@@ -163,8 +166,12 @@ fun ProjectDetailsScreen(
                 },
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
-                shape = CircleShape,
-                modifier = Modifier.size(56.dp)
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.size(52.dp).offset(y = (-58).dp, x = (-12).dp),
+                elevation = FloatingActionButtonDefaults.elevation(
+                    defaultElevation = 6.dp,
+                    pressedElevation = 12.dp
+                )
             ) {
                 Icon(
                     Icons.Default.Add,
@@ -179,7 +186,10 @@ fun ProjectDetailsScreen(
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
                 .padding(paddingValues),
-            contentPadding = PaddingValues(bottom = 80.dp, top = 0.dp),
+            contentPadding = PaddingValues(
+                top = 0.dp,
+                bottom = 100.dp // Fixed bottom padding for nav bar + FAB space
+            ),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // Compact Summary Header
@@ -319,6 +329,7 @@ fun ProjectDetailsScreen(
                 categoryToDelete = null
             },
             sheetState = sheetState,
+
             shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
             dragHandle = { BottomSheetDefaults.DragHandle() },
             containerColor = MaterialTheme.colorScheme.surface

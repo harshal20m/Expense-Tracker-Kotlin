@@ -376,7 +376,7 @@ private fun BoxScope.FloatingActionButtons(
     Row(
         modifier = Modifier
             .align(Alignment.BottomEnd)
-            .padding(end = 20.dp, bottom = 130.dp),
+            .padding(end = 20.dp, bottom = 78.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         // Gallery FAB

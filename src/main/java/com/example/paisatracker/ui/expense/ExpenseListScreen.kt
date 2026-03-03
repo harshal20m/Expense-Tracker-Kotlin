@@ -124,7 +124,7 @@ fun ExpenseListScreen(
 
     // sort state
     var expenseSortOption by remember { mutableStateOf(SortOption.DATE_NEW_OLD) }
-    var currentViewType by remember { mutableStateOf(ExpenseViewType.LIST) }
+    var currentViewType by remember { mutableStateOf(ExpenseViewType.GRID) }
 
     var currentSheet by remember { mutableStateOf<SheetState?>(null) }
 
@@ -257,9 +257,7 @@ fun ExpenseListScreen(
                     newExpenseImageUri = null
                     currentSheet = SheetState.Add
                 },
-                modifier = Modifier
-                    .padding(bottom = 80.dp)
-                    .shadow(16.dp, RoundedCornerShape(16.dp)),
+                modifier = Modifier.size(52.dp).offset(y = (-58).dp, x = (-12).dp),
                 shape = RoundedCornerShape(20.dp),
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary
@@ -299,7 +297,7 @@ fun ExpenseListScreen(
                         ExpenseViewType.LIST -> {
                             LazyColumn(
                                 modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 110.dp),
+                                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 100.dp),
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                                 items(sortedExpenses, key = { it.id }) { expense ->
@@ -326,7 +324,7 @@ fun ExpenseListScreen(
                         ExpenseViewType.GRID -> {
                             LazyColumn(
                                 modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 110.dp),
+                                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 100.dp),
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                                 items(

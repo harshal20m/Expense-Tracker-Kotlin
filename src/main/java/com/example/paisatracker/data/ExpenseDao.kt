@@ -8,16 +8,6 @@ import androidx.room.Query
 import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
-// New data class for exporting
-data class ExpenseExport(
-    val projectName: String,
-    val categoryName: String,
-    val expenseDescription: String,
-    val expenseAmount: Double,
-    val expenseDate: Long
-)
-
-
 // Add this data class to your data package
 data class RecentExpense(
     val id: Long,
@@ -33,7 +23,6 @@ data class RecentExpense(
     val categoryName: String,
     val categoryEmoji: String
 )
-
 
 @Dao
 interface ExpenseDao {
@@ -59,20 +48,8 @@ interface ExpenseDao {
     @Query("SELECT * FROM expenses WHERE categoryId = :categoryId ORDER BY date DESC")
     fun getExpensesForCategory(categoryId: Long): Flow<List<Expense>>
 
-    // New query for exporting data for a specific project
     @Query("""
-        SELECT p.name as projectName, c.name as categoryName, e.description as expenseDescription, e.amount as expenseAmount, e.date as expenseDate
-        FROM expenses e
-        INNER JOIN categories c ON e.categoryId = c.id
-        INNER JOIN projects p ON c.projectId = p.id
-        WHERE p.id = :projectId
-        ORDER BY p.name, c.name, e.date
-    """)
-    suspend fun getExpensesForExport(projectId: Long): List<ExpenseExport>
-
-
-    @Query("""
-    SELECT 
+    SELECT
         p.name AS projectName,
         p.emoji AS projectEmoji,
         c.name AS categoryName,
@@ -95,11 +72,8 @@ interface ExpenseDao {
     @Query("SELECT SUM(amount) FROM expenses")
     suspend fun getTotalAmount(): Double?
 
-
-    // Add this query to your ExpenseDao interface
-
     @Query("""
-    SELECT 
+    SELECT
         e.id as id,
         e.amount as amount,
         e.description as description,
@@ -120,5 +94,77 @@ interface ExpenseDao {
 """)
     fun getRecentExpensesWithDetails(limit: Int): Flow<List<RecentExpense>>
 
+    // New search queries
+
+    @Query("""
+        SELECT
+            e.id as id,
+            e.amount as amount,
+            e.description as description,
+            e.date as date,
+            e.paymentMethod as paymentMethod,
+            e.paymentIcon as paymentIcon,
+            c.projectId as projectId,
+            p.name as projectName,
+            p.emoji as projectEmoji,
+            c.id as categoryId,
+            c.name as categoryName,
+            c.emoji as categoryEmoji
+        FROM expenses e
+        INNER JOIN categories c ON e.categoryId = c.id
+        INNER JOIN projects p ON c.projectId = p.id
+        WHERE (:query IS NULL OR e.description LIKE '%' || :query || '%')
+        AND (:projectId IS NULL OR p.id = :projectId)
+        ORDER BY e.date DESC
+    """)
+    fun searchExpensesByDescription(query: String?, projectId: Long?): Flow<List<RecentExpense>>
+
+    @Query("""
+        SELECT
+            e.id as id,
+            e.amount as amount,
+            e.description as description,
+            e.date as date,
+            e.paymentMethod as paymentMethod,
+            e.paymentIcon as paymentIcon,
+            c.projectId as projectId,
+            p.name as projectName,
+            p.emoji as projectEmoji,
+            c.id as categoryId,
+            c.name as categoryName,
+            c.emoji as categoryEmoji
+        FROM expenses e
+        INNER JOIN categories c ON e.categoryId = c.id
+        INNER JOIN projects p ON c.projectId = p.id
+        WHERE (:minAmount IS NULL OR e.amount >= :minAmount)
+        AND (:maxAmount IS NULL OR e.amount <= :maxAmount)
+        AND (:projectId IS NULL OR p.id = :projectId)
+        ORDER BY e.date DESC
+    """)
+    fun searchExpensesByAmount(minAmount: Double?, maxAmount: Double?, projectId: Long?): Flow<List<RecentExpense>>
+
+    @Query("""
+        SELECT
+            e.id as id,
+            e.amount as amount,
+            e.description as description,
+            e.date as date,
+            e.paymentMethod as paymentMethod,
+            e.paymentIcon as paymentIcon,
+            c.projectId as projectId,
+            p.name as projectName,
+            p.emoji as projectEmoji,
+            c.id as categoryId,
+            c.name as categoryName,
+            c.emoji as categoryEmoji
+        FROM expenses e
+        INNER JOIN categories c ON e.categoryId = c.id
+        INNER JOIN projects p ON c.projectId = p.id
+        WHERE (:startDate IS NULL OR e.date >= :startDate)
+        AND (:endDate IS NULL OR e.date <= :endDate)
+        AND (:projectId IS NULL OR p.id = :projectId)
+        ORDER BY e.date DESC
+    """)
+    fun searchExpensesByDateRange(startDate: Long?, endDate: Long?, projectId: Long?): Flow<List<RecentExpense>>
 
 }

@@ -20,6 +20,8 @@ import com.example.paisatracker.ui.main.MainApp
 import com.example.paisatracker.ui.theme.PaisaTrackerTheme
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import com.example.paisatracker.data.ThemePreferencesRepository // Import ThemePreferencesRepository
+import com.example.paisatracker.data.AppTheme // Import AppTheme enum
 
 class MainActivity : FragmentActivity() {
     private val viewModel: PaisaTrackerViewModel by viewModels {
@@ -27,6 +29,8 @@ class MainActivity : FragmentActivity() {
     }
 
     private val appLockPrefs by lazy { AppLockPreferences.getInstance(this) }
+    private val themePreferencesRepository by lazy { ThemePreferencesRepository.getInstance(this) }
+
     private var isUnlocked by mutableStateOf(false)
     private var isFinishing = false
 
@@ -51,7 +55,8 @@ class MainActivity : FragmentActivity() {
         requestNotificationPermission()
 
         setContent {
-            PaisaTrackerTheme {
+            val currentTheme by themePreferencesRepository.appTheme.collectAsState(initial = AppTheme.SYSTEM_DEFAULT)
+            PaisaTrackerTheme(appTheme = currentTheme) {
                 AppContent()
             }
         }
