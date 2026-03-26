@@ -11,7 +11,7 @@ object ImageUtils {
         try {
             val inputStream = context.contentResolver.openInputStream(uri) ?: return null
             val fileName = "IMG_${UUID.randomUUID()}.jpg"
-            val directory = File(context.filesDir, "expense_images")
+            val directory = File(context.filesDir, "expense_assets")
 
             if (!directory.exists()) {
                 directory.mkdirs()
@@ -36,7 +36,9 @@ object ImageUtils {
     fun deleteImage(imagePath: String): Boolean {
         return try {
             val file = File(imagePath)
-            file.delete()
+            if (file.exists()) {
+                file.delete()
+            } else true
         } catch (e: Exception) {
             e.printStackTrace()
             false

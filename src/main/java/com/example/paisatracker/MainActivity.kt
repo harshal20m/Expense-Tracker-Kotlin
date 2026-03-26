@@ -8,6 +8,7 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.runtime.*
@@ -20,8 +21,8 @@ import com.example.paisatracker.ui.main.MainApp
 import com.example.paisatracker.ui.theme.PaisaTrackerTheme
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import com.example.paisatracker.data.ThemePreferencesRepository // Import ThemePreferencesRepository
-import com.example.paisatracker.data.AppTheme // Import AppTheme enum
+import com.example.paisatracker.data.ThemePreferencesRepository
+import com.example.paisatracker.data.AppTheme
 
 class MainActivity : FragmentActivity() {
     private val viewModel: PaisaTrackerViewModel by viewModels {
@@ -43,6 +44,8 @@ class MainActivity : FragmentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Enable Edge-to-Edge handling
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
         if (savedInstanceState == null) {
@@ -75,10 +78,6 @@ class MainActivity : FragmentActivity() {
     override fun onPause() {
         super.onPause()
         isFinishing = isFinishing()
-    }
-
-    override fun onResume() {
-        super.onResume()
     }
 
     @Composable

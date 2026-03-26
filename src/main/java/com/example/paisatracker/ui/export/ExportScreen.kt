@@ -7,7 +7,6 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -22,8 +21,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -34,6 +33,7 @@ import com.example.paisatracker.data.BackupMetadata
 import com.example.paisatracker.data.ProjectWithTotal
 import com.example.paisatracker.util.BackupManager
 import com.example.paisatracker.util.formatCurrency
+import com.example.paisatracker.ui.assets.CompactHeader
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
@@ -65,234 +65,141 @@ fun ExportScreen(
     var showDeleteBackupDialog by remember { mutableStateOf(false) }
     var backupToDelete by remember { mutableStateOf<BackupMetadata?>(null) }
 
-    // Full Database Backup Launcher
-    val fullBackupLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
+    // Launchers
+    val fullBackupLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             result.data?.data?.also { uri ->
                 scope.launch {
                     isBackingUp = true
-                    val metadata = backupManager.createFullBackup(uri)
+                    if (backupManager.createFullBackup(uri) != null) Toast.makeText(context, "✅ Backup Created!", Toast.LENGTH_SHORT).show()
+                    else Toast.makeText(context, "❌ Backup Failed!", Toast.LENGTH_SHORT).show()
                     isBackingUp = false
-
-                    if (metadata != null) {
-                        Toast.makeText(context, "Backup created successfully!", Toast.LENGTH_SHORT).show()
-                    } else {
-                        Toast.makeText(context, "Backup failed!", Toast.LENGTH_SHORT).show()
-                    }
                 }
             }
         }
     }
 
-    // Full Database Restore Launcher
-    val fullRestoreLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri ->
-        uri?.let {
-            pendingRestoreUri = it
-            showRestoreWarning = true
-        }
+    val fullRestoreLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        uri?.let { pendingRestoreUri = it; showRestoreWarning = true }
     }
 
-    // CSV Export Launcher
-    val csvExportLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
+    val csvExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             result.data?.data?.also { uri ->
                 scope.launch {
-                    val csvData = selectedProject?.let {
-                        viewModel.getExpensesForExport(it.project.id)
-                    }
-
+                    val csvData = selectedProject?.let { viewModel.getExpensesForExport(it.project.id) }
                     if (csvData != null) {
-                        context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-                            outputStream.write("\uFEFF".toByteArray(Charsets.UTF_8))
-                            outputStream.write(csvData.toByteArray(Charsets.UTF_8))
+                        context.contentResolver.openOutputStream(uri)?.use { os ->
+                            os.write("\uFEFF".toByteArray(Charsets.UTF_8))
+                            os.write(csvData.toByteArray(Charsets.UTF_8))
                         }
                         lastExportedUri = uri
-                        Toast.makeText(context, "CSV exported successfully!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "📊 CSV Exported!", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
         }
     }
 
-    // CSV Import Launcher
-    val csvImportLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri ->
+    val csvImportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let {
             selectedProject?.let { project ->
                 scope.launch {
                     isImportingCsv = true
-                    val success = viewModel.importFromCsv(context, it, project.project.id)
+                    if (viewModel.importFromCsv(context, it, project.project.id)) Toast.makeText(context, "📥 CSV Imported!", Toast.LENGTH_SHORT).show()
+                    else Toast.makeText(context, "⚠️ Import Failed!", Toast.LENGTH_SHORT).show()
                     isImportingCsv = false
-
-                    if (success) {
-                        Toast.makeText(context, "CSV imported successfully!", Toast.LENGTH_SHORT).show()
-                    } else {
-                        Toast.makeText(context, "Import failed. Check file format.", Toast.LENGTH_LONG).show()
-                    }
                 }
             }
         }
     }
 
-    // Loading Overlays
-    if (isBackingUp) {
-        LoadingOverlay(message = "Creating backup...")
-    }
+    Column(modifier = Modifier.fillMaxSize()) {
+        CompactHeader(
+            title = "Data Management",
+            subtitle = "Backup or export your data",
+            icon = Icons.Default.CloudSync
+        )
 
-    if (isRestoring) {
-        LoadingOverlay(message = "Restoring data...")
-    }
+        if (isBackingUp) LoadingOverlay("Creating backup...")
+        if (isRestoring) LoadingOverlay("Restoring data...")
+        if (isImportingCsv) LoadingOverlay("Importing CSV...")
 
-    if (isImportingCsv) {
-        LoadingOverlay(message = "Importing CSV...")
-    }
-
-    // Restore Warning Dialog
-    if (showRestoreWarning) {
-        RestoreWarningDialog(
-            onDismiss = {
-                showRestoreWarning = false
-                pendingRestoreUri = null
-            },
-            onConfirm = {
-                showRestoreWarning = false
-                pendingRestoreUri?.let { uri ->
-                    scope.launch {
-                        isRestoring = true
-                        val success = backupManager.restoreFromBackup(uri)
-                        isRestoring = false
-
-                        if (success) {
-                            Toast.makeText(context, "Restore successful! Restart app to see changes.", Toast.LENGTH_LONG).show()
-                        } else {
-                            Toast.makeText(context, "Restore failed!", Toast.LENGTH_SHORT).show()
+        if (showRestoreWarning) {
+            RestoreWarningDialog(
+                onDismiss = { showRestoreWarning = false; pendingRestoreUri = null },
+                onConfirm = {
+                    showRestoreWarning = false
+                    pendingRestoreUri?.let { uri ->
+                        scope.launch {
+                            isRestoring = true
+                            if (backupManager.restoreFromBackup(uri)) Toast.makeText(context, "✅ Restore Successful!", Toast.LENGTH_LONG).show()
+                            else Toast.makeText(context, "❌ Restore Failed!", Toast.LENGTH_SHORT).show()
+                            isRestoring = false
                         }
                     }
+                    pendingRestoreUri = null
                 }
-                pendingRestoreUri = null
-            }
-        )
-    }
+            )
+        }
 
-    // Delete Backup Dialog
-    if (showDeleteBackupDialog && backupToDelete != null) {
-        DeleteBackupDialog(
-            backup = backupToDelete!!,
-            onDismiss = {
-                showDeleteBackupDialog = false
-                backupToDelete = null
-            },
-            onConfirm = {
+        if (showDeleteBackupDialog && backupToDelete != null) {
+            DeleteBackupDialog(backupToDelete!!, { showDeleteBackupDialog = false }, {
                 scope.launch {
-                    val success = backupManager.deleteBackupFile(backupToDelete!!)
-                    if (success) {
-                        Toast.makeText(context, "Backup deleted", Toast.LENGTH_SHORT).show()
-                    }
+                    if (backupManager.deleteBackupFile(backupToDelete!!)) Toast.makeText(context, "🗑️ Deleted!", Toast.LENGTH_SHORT).show()
                 }
                 showDeleteBackupDialog = false
-                backupToDelete = null
-            }
-        )
-    }
+            })
+        }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        // Header
-        ExportHeader()
-
-        // Content
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 110.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 110.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // Full Database Backup Section
             item {
+                SectionTitle("System Backup")
                 CleanBackupCard(
                     onBackup = {
                         val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
                             addCategory(Intent.CATEGORY_OPENABLE)
-                            type = "application/zip"
-                            putExtra(Intent.EXTRA_TITLE, "PaisaTracker_Backup_${SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())}.zip")
+                            type = "application/octet-stream"
+                            putExtra(Intent.EXTRA_TITLE, "PaisaTracker_${SimpleDateFormat("yyyyMMdd_HHmm", Locale.getDefault()).format(Date())}.backup")
                         }
                         fullBackupLauncher.launch(intent)
                     },
-                    onRestore = {
-                        fullRestoreLauncher.launch("application/zip")
-                    }
+                    onRestore = { fullRestoreLauncher.launch("*/*") }
                 )
             }
 
-            // Recent Backups Section
             if (recentBackups.isNotEmpty()) {
-                item {
-                    Text(
-                        text = "Recent Backups",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-
+                item { SectionTitle("Recent Backups") }
                 items(recentBackups) { backup ->
                     CleanBackupItem(
                         backup = backup,
                         backupManager = backupManager,
-                        onRestore = {
-                            pendingRestoreUri = Uri.parse(backup.filePath)
-                            showRestoreWarning = true
-                        },
-                        onDelete = {
-                            backupToDelete = backup
-                            showDeleteBackupDialog = true
+                        onRestore = { pendingRestoreUri = Uri.parse(backup.filePath); showRestoreWarning = true },
+                        onDelete = { backupToDelete = backup; showDeleteBackupDialog = true },
+                        onShare = {
+                            try {
+                                val uri = Uri.parse(backup.filePath)
+                                val intent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "application/octet-stream"
+                                    putExtra(Intent.EXTRA_STREAM, uri)
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                context.startActivity(Intent.createChooser(intent, "Share Backup"))
+                            } catch (e: Exception) { Toast.makeText(context, "❌ Share Failed", Toast.LENGTH_SHORT).show() }
                         }
                     )
                 }
             }
 
-            // CSV Export/Import Section
             item {
-                Text(
-                    text = "CSV Export & Import",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
-            }
-
-            item {
-                CleanProjectSelector(
-                    projects = projects,
-                    selectedProject = selectedProject,
-                    isExpanded = isProjectSelectorExpanded,
-                    onExpandChange = { isProjectSelectorExpanded = it },
-                    onProjectSelected = {
-                        selectedProject = it
-                        lastExportedUri = null
-                    },
-                    onNoProjectsClick = {
-                        // Navigate to projects page to create a project
-                        navController.navigate("projects") {
-                            popUpTo("export") { inclusive = false }
-                        }
-                    }
-                )
-            }
-
-            item {
-                CleanCsvRow(
-                    selectedProject = selectedProject,
-                    lastExportedUri = lastExportedUri,
-                    onExport = {
+                SectionTitle("CSV Export & Import")
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    CleanProjectSelector(projects, selectedProject, isProjectSelectorExpanded, { isProjectSelectorExpanded = it }, { selectedProject = it; lastExportedUri = null }, { navController.navigate("projects") })
+                    CleanCsvRow(selectedProject, lastExportedUri, {
                         selectedProject?.let { project ->
                             val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
                                 addCategory(Intent.CATEGORY_OPENABLE)
@@ -301,280 +208,74 @@ fun ExportScreen(
                             }
                             csvExportLauncher.launch(intent)
                         }
-                    },
-                    onImport = {
-                        csvImportLauncher.launch("*/*")
-                    },
-                    onShare = { uri ->
-                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                    }, { csvImportLauncher.launch("*/*") }, { uri ->
+                        val intent = Intent(Intent.ACTION_SEND).apply {
                             type = "text/csv"
                             putExtra(Intent.EXTRA_STREAM, uri)
                             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                         }
-                        context.startActivity(Intent.createChooser(shareIntent, "Share CSV"))
-                    }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ExportHeader() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
-                        MaterialTheme.colorScheme.surface
-                    ),
-                    startY = 0f,
-                    endY = 250f
-                )
-            )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 32.dp, bottom = 20.dp, start = 24.dp, end = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(64.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.CloudUpload,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(32.dp)
-                )
-            }
-
-            Text(
-                text = "Backup & Export",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-                fontSize = 26.sp
-            )
-
-            Text(
-                text = "Manage your data safely",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 14.sp
-            )
-        }
-    }
-}
-
-@Composable
-private fun CleanBackupCard(
-    onBackup: () -> Unit,
-    onRestore: () -> Unit
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 1.dp
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f))
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Default.CloudUpload,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(24.dp)
-                    )
+                        context.startActivity(Intent.createChooser(intent, "Share CSV"))
+                    })
                 }
+            }
+        }
+    }
+}
 
+@Composable
+private fun SectionTitle(title: String) {
+    Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(bottom = 4.dp))
+}
+
+@Composable
+private fun CleanBackupCard(onBackup: () -> Unit, onRestore: () -> Unit) {
+    Surface(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surface, tonalElevation = 1.dp, border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.Storage, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+                }
                 Column {
-                    Text(
-                        "Full Database Backup",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp
-                    )
-                    Text(
-                        "Complete app data including receipts",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontSize = 13.sp
-                    )
+                    Text("System Backup", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    Text("Database and assets in one file", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Button(
-                    onClick = onBackup,
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp),
-                    contentPadding = PaddingValues(vertical = 14.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary
-                    )
-                ) {
-                    Icon(
-                        Icons.Default.Save,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Create Backup", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-                }
-
-                OutlinedButton(
-                    onClick = onRestore,
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp),
-                    contentPadding = PaddingValues(vertical = 14.dp)
-                ) {
-                    Icon(
-                        Icons.Default.CloudDownload,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Restore", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-                }
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Button(onClick = onBackup, modifier = Modifier.weight(1f), shape = RoundedCornerShape(8.dp), contentPadding = PaddingValues(vertical = 10.dp)) { Icon(Icons.Default.Backup, null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(8.dp)); Text("Backup", fontSize = 13.sp) }
+                OutlinedButton(onClick = onRestore, modifier = Modifier.weight(1f), shape = RoundedCornerShape(8.dp), contentPadding = PaddingValues(vertical = 10.dp)) { Icon(Icons.Default.Restore, null, modifier = Modifier.size(16.dp)); Spacer(Modifier.width(8.dp)); Text("Restore", fontSize = 13.sp) }
             }
         }
     }
 }
 
 @Composable
-private fun CleanBackupItem(
-    backup: BackupMetadata,
-    backupManager: BackupManager,
-    onRestore: () -> Unit,
-    onDelete: () -> Unit
-) {
+private fun CleanBackupItem(backup: BackupMetadata, backupManager: BackupManager, onRestore: () -> Unit, onDelete: () -> Unit, onShare: () -> Unit) {
     var isExpanded by remember { mutableStateOf(false) }
-
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { isExpanded = !isExpanded },
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 1.dp
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Default.Backup,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.secondary,
-                            modifier = Modifier.size(20.dp)
-                        )
+    Surface(modifier = Modifier.fillMaxWidth().clickable { isExpanded = !isExpanded }, shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surface, tonalElevation = 1.dp) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                    Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f)), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Default.History, null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(18.dp))
                     }
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(Date(backup.timestamp)),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 15.sp
-                        )
-                        Text(
-                            SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date(backup.timestamp)),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 12.sp
-                        )
+                    Column {
+                        Text(SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(Date(backup.timestamp)), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                        Text(SimpleDateFormat("hh:mm a", Locale.getDefault()).format(Date(backup.timestamp)), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    IconButton(
-                        onClick = onRestore,
-                        modifier = Modifier.size(36.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.CloudDownload,
-                            contentDescription = "Restore",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-
-                    IconButton(
-                        onClick = onDelete,
-                        modifier = Modifier.size(36.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.Delete,
-                            contentDescription = "Delete",
-                            tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
+                Row {
+                    IconButton(onClick = onShare, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.Share, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp)) }
+                    IconButton(onClick = onRestore, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.Restore, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp)) }
+                    IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp)) }
                 }
             }
-
             if (isExpanded) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
-
+                Column(modifier = Modifier.padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    BackupInfoRow("File", backup.fileName)
                     BackupInfoRow("Size", backupManager.formatFileSize(backup.fileSize))
-                    BackupInfoRow("Projects", "${backup.projectCount}")
-                    BackupInfoRow("Categories", "${backup.categoryCount}")
                     BackupInfoRow("Expenses", "${backup.expenseCount}")
-                    BackupInfoRow("Total Amount", formatCurrency(backup.totalAmount))
+                    BackupInfoRow("Total", formatCurrency(backup.totalAmount))
                 }
             }
         }
@@ -583,248 +284,48 @@ private fun CleanBackupItem(
 
 @Composable
 private fun BackupInfoRow(label: String, value: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(
-            label,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontSize = 12.sp
-        )
-        Text(
-            value,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 13.sp
-        )
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+        Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(value, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun CleanProjectSelector(
-    projects: List<ProjectWithTotal>,
-    selectedProject: ProjectWithTotal?,
-    isExpanded: Boolean,
-    onExpandChange: (Boolean) -> Unit,
-    onProjectSelected: (ProjectWithTotal) -> Unit,
-    onNoProjectsClick: () -> Unit
-) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Text(
-            "Select Project for CSV",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 15.sp
-        )
-
-        if (projects.isEmpty()) {
-            // Empty state - redirect to create project
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onNoProjectsClick() },
-                shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f),
-                tonalElevation = 1.dp
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        Icons.Default.Warning,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            "No Projects Found",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                        Text(
-                            "Tap here to create your first project",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onErrorContainer,
-                            fontSize = 12.sp
-                        )
-                    }
-                    Icon(
-                        Icons.Default.ChevronRight,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
+private fun CleanProjectSelector(projects: List<ProjectWithTotal>, selectedProject: ProjectWithTotal?, isExpanded: Boolean, onExpandChange: (Boolean) -> Unit, onProjectSelected: (ProjectWithTotal) -> Unit, onNoProjectsClick: () -> Unit) {
+    if (projects.isEmpty()) {
+        Surface(modifier = Modifier.fillMaxWidth().clickable { onNoProjectsClick() }, shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.1f)) {
+            Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+                Text("No projects. Tap to create.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
             }
-        } else {
-            ExposedDropdownMenuBox(
-                expanded = isExpanded,
-                onExpandedChange = onExpandChange
-            ) {
-                TextField(
-                    value = selectedProject?.project?.name ?: "Choose a project",
-                    onValueChange = {},
-                    readOnly = true,
-                    leadingIcon = {
-                        selectedProject?.let {
-                            Text(it.project.emoji, fontSize = 20.sp)
-                        }
-                    },
-                    trailingIcon = {
-                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = isExpanded)
-                    },
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surface,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
-                        focusedIndicatorColor = MaterialTheme.colorScheme.primary,
-                        unfocusedIndicatorColor = MaterialTheme.colorScheme.outlineVariant
-                    ),
-                    modifier = Modifier
-                        .menuAnchor()
-                        .fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
-                )
-
-                ExposedDropdownMenu(
-                    expanded = isExpanded,
-                    onDismissRequest = { onExpandChange(false) }
-                ) {
-                    projects.forEach { project ->
-                        DropdownMenuItem(
-                            text = {
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(project.project.emoji, fontSize = 20.sp)
-                                    Text(project.project.name)
-                                }
-                            },
-                            onClick = {
-                                onProjectSelected(project)
-                                onExpandChange(false)
-                            }
-                        )
-                    }
-                }
+        }
+    } else {
+        ExposedDropdownMenuBox(expanded = isExpanded, onExpandedChange = onExpandChange) {
+            TextField(value = selectedProject?.project?.name ?: "Select Project", onValueChange = {}, readOnly = true, leadingIcon = { selectedProject?.let { Text(it.project.emoji) } }, trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isExpanded) }, colors = TextFieldDefaults.colors(focusedContainerColor = MaterialTheme.colorScheme.surface, unfocusedContainerColor = MaterialTheme.colorScheme.surface), modifier = Modifier.menuAnchor().fillMaxWidth(), shape = RoundedCornerShape(8.dp), textStyle = MaterialTheme.typography.bodyMedium)
+            ExposedDropdownMenu(expanded = isExpanded, onDismissRequest = { onExpandChange(false) }) {
+                projects.forEach { project -> DropdownMenuItem(text = { Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { Text(project.project.emoji); Text(project.project.name, style = MaterialTheme.typography.bodyMedium) } }, onClick = { onProjectSelected(project); onExpandChange(false) }) }
             }
         }
     }
 }
 
 @Composable
-private fun CleanCsvRow(
-    selectedProject: ProjectWithTotal?,
-    lastExportedUri: Uri?,
-    onExport: () -> Unit,
-    onImport: () -> Unit,
-    onShare: (Uri) -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        // Export Card
-        Surface(
-            modifier = Modifier.weight(1f),
-            shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surface,
-            tonalElevation = 1.dp
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Icon(
-                    Icons.Default.FileUpload,
-                    contentDescription = null,
-                    modifier = Modifier.size(32.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-
-                Text(
-                    "Export CSV",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 15.sp
-                )
-
-                Button(
-                    onClick = onExport,
-                    enabled = selectedProject != null,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(10.dp),
-                    contentPadding = PaddingValues(vertical = 12.dp)
-                ) {
-                    Text("Export", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                }
-
-                if (lastExportedUri != null) {
-                    OutlinedButton(
-                        onClick = { onShare(lastExportedUri) },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(10.dp),
-                        contentPadding = PaddingValues(vertical = 10.dp)
-                    ) {
-                        Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Share", fontSize = 13.sp)
-                    }
-                }
+private fun CleanCsvRow(selectedProject: ProjectWithTotal?, lastExportedUri: Uri?, onExport: () -> Unit, onImport: () -> Unit, onShare: (Uri) -> Unit) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Surface(modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surface, tonalElevation = 1.dp) {
+            Column(modifier = Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Icon(Icons.Default.FileUpload, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
+                Text("Export CSV", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                Button(onClick = onExport, enabled = selectedProject != null, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(8.dp)) { Text("Export", fontSize = 12.sp) }
+                if (lastExportedUri != null) OutlinedButton(onClick = { onShare(lastExportedUri) }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(8.dp)) { Icon(Icons.Default.Share, null, modifier = Modifier.size(14.dp)); Spacer(Modifier.width(4.dp)); Text("Share", fontSize = 12.sp) }
             }
         }
-
-        // Import Card
-        Surface(
-            modifier = Modifier.weight(1f),
-            shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surface,
-            tonalElevation = 1.dp
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Icon(
-                    Icons.Default.FileDownload,
-                    contentDescription = null,
-                    modifier = Modifier.size(32.dp),
-                    tint = MaterialTheme.colorScheme.secondary
-                )
-
-                Text(
-                    "Import CSV",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 15.sp
-                )
-
-                Button(
-                    onClick = onImport,
-                    enabled = selectedProject != null,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.secondary
-                    ),
-                    shape = RoundedCornerShape(10.dp),
-                    contentPadding = PaddingValues(vertical = 12.dp)
-                ) {
-                    Text("Import", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                }
+        Surface(modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surface, tonalElevation = 1.dp) {
+            Column(modifier = Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Icon(Icons.Default.FileDownload, null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(24.dp))
+                Text("Import CSV", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                Button(onClick = onImport, enabled = selectedProject != null, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary), shape = RoundedCornerShape(8.dp)) { Text("Import", fontSize = 12.sp) }
             }
         }
     }

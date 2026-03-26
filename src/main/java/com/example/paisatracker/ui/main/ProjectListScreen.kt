@@ -2,7 +2,6 @@ package com.example.paisatracker.ui.main
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -10,7 +9,6 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,6 +25,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
@@ -71,14 +70,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -99,8 +94,6 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-
-// Emoji List (same as before)
 private val projectEmojis = listOf(
     "📁", "💼", "🏠", "🚗", "✈️", "🎓", "💰", "🏥", "🛒", "🎯",
     "📱", "💻", "🎨", "🎬", "🎮", "📚", "☕", "🍕", "🎉", "💡",
@@ -118,9 +111,7 @@ private val projectEmojis = listOf(
     "🧘", "🌿", "🐾", "🎈", "👶", "🎀", "🔑"
 )
 
-private enum class SheetType {
-    ADD, EDIT, DELETE
-}
+private enum class SheetType { ADD, EDIT, DELETE }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -128,7 +119,6 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
     val context = androidx.compose.ui.platform.LocalContext.current
     val application = context.applicationContext as PaisaTrackerApplication
 
-    // Search ViewModel Integration
     val searchViewModel: SearchViewModel = viewModel(
         factory = SearchViewModelFactory(application.repository)
     )
@@ -147,14 +137,12 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
     var showSummary by remember { mutableStateOf(false) }
     var summaryAtTop by remember { mutableStateOf(true) }
 
-    // Persistent storage for project order
     val sharedPrefs = remember {
         context.getSharedPreferences("project_order", android.content.Context.MODE_PRIVATE)
     }
 
     var customOrderMap by remember { mutableStateOf<Map<Long, Int>>(emptyMap()) }
 
-    // Load saved order on first composition
     if (projects.isNotEmpty() && customOrderMap.isEmpty()) {
         val savedOrder = mutableMapOf<Long, Int>()
         projects.forEach { project ->
@@ -167,14 +155,12 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
         if (savedOrder.isNotEmpty()) {
             customOrderMap = savedOrder
         } else {
-            // Initialize with default order (most recent first based on lastModified)
             customOrderMap = projects
                 .sortedByDescending { it.project.lastModified }
                 .mapIndexed { index, project ->
                     project.project.id to index
                 }.toMap()
 
-            // Save initial order
             with(sharedPrefs.edit()) {
                 customOrderMap.forEach { (projectId, position) ->
                     putInt("project_$projectId", position)
@@ -184,7 +170,6 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
         }
     }
 
-    // Apply custom order to projects
     val orderedProjects = remember(projects, customOrderMap) {
         if (customOrderMap.isEmpty()) {
             projects.sortedByDescending { it.project.lastModified }
@@ -203,10 +188,7 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
     val totalCategories = orderedProjects.sumOf { it.categoryCount }
     val totalExpenses = orderedProjects.sumOf { it.expenseCount }
 
-    Column(
-        modifier = Modifier.fillMaxSize()
-    ) {
-        // Header
+    Column(modifier = Modifier.fillMaxSize()) {
         Header(
             onAddProjectClick = {
                 currentSheetType = SheetType.ADD
@@ -217,7 +199,6 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
             }
         )
 
-        // Search Panel
         SearchPanel(
             searchExpanded = searchExpanded,
             onExpandChange = { searchExpanded = it },
@@ -235,12 +216,8 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
             isSearchActive = isSearchActive
         )
 
-        // Content with conditional summary position
-        Box(
-            modifier = Modifier.fillMaxSize()
-        ) {
+        Box(modifier = Modifier.fillMaxSize()) {
             Column(modifier = Modifier.fillMaxSize()) {
-                // Summary at top - only show if projects exist
                 if (summaryAtTop && orderedProjects.isNotEmpty()) {
                     CollapsibleSummary(
                         totalSpent = totalSpent,
@@ -248,8 +225,7 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
                         totalCategories = totalCategories,
                         totalExpenses = totalExpenses,
                         isExpanded = showSummary,
-                        onToggleExpand = { showSummary = !showSummary },
-                        onSwapPosition = { summaryAtTop = false }
+                        onToggleExpand = { showSummary = !showSummary }
                     )
                 }
 
@@ -266,7 +242,6 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
                     enter = fadeIn(),
                     exit = fadeOut()
                 ) {
-                    // Conditional: Show search results or projects
                     if (isSearchActive && searchResults.isNotEmpty()) {
                         SearchResultsGrid(searchResults = searchResults)
                     } else if (isSearchActive) {
@@ -283,23 +258,20 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
                                 start = 16.dp,
                                 end = 16.dp,
                                 top = 16.dp,
-                                bottom = if (!summaryAtTop && orderedProjects.isNotEmpty()) 200.dp else 110.dp
+                                bottom = if (!summaryAtTop && orderedProjects.isNotEmpty()) 180.dp else 110.dp
                             ),
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            // Recent Expenses Section at the top
                             item {
                                 RecentExpensesSection(viewModel = viewModel)
                             }
 
-                            // Project items
                             itemsIndexed(orderedProjects, key = { _, item -> item.project.id }) { index, projectWithTotal ->
                                 ProjectListItemWithReorder(
                                     projectWithTotal = projectWithTotal,
                                     currentIndex = index,
                                     totalItems = orderedProjects.size,
                                     onReorder = { fromIndex, toIndex ->
-                                        // Update custom order map
                                         val newOrderMap = mutableMapOf<Long, Int>()
                                         orderedProjects.forEachIndexed { idx, project ->
                                             newOrderMap[project.project.id] = when {
@@ -311,7 +283,6 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
                                         }
                                         customOrderMap = newOrderMap
 
-                                        // Save order to SharedPreferences
                                         with(sharedPrefs.edit()) {
                                             newOrderMap.forEach { (projectId, position) ->
                                                 putInt("project_$projectId", position)
@@ -320,14 +291,12 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
                                         }
                                     },
                                     onProjectClick = {
-                                        // Update lastModified timestamp to mark as recently used
                                         viewModel.updateProject(
                                             projectWithTotal.project.copy(
                                                 lastModified = System.currentTimeMillis()
                                             )
                                         )
 
-                                        // Move to top of list
                                         val newOrderMap = mutableMapOf<Long, Int>()
                                         newOrderMap[projectWithTotal.project.id] = 0
                                         orderedProjects.forEachIndexed { idx, project ->
@@ -337,7 +306,6 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
                                         }
                                         customOrderMap = newOrderMap
 
-                                        // Save new order
                                         with(sharedPrefs.edit()) {
                                             newOrderMap.forEach { (projectId, position) ->
                                                 putInt("project_$projectId", position)
@@ -365,7 +333,6 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
                     }
                 }
 
-                // Summary at bottom - only show if projects exist
                 if (!summaryAtTop && orderedProjects.isNotEmpty()) {
                     CollapsibleSummary(
                         totalSpent = totalSpent,
@@ -373,8 +340,7 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
                         totalCategories = totalCategories,
                         totalExpenses = totalExpenses,
                         isExpanded = showSummary,
-                        onToggleExpand = { showSummary = !showSummary },
-                        onSwapPosition = { summaryAtTop = true }
+                        onToggleExpand = { showSummary = !showSummary }
                     )
                 }
             }
@@ -461,9 +427,7 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
                         )
                     }
                 }
-                null -> {
-                    // Optional: empty content when currentSheetType is null
-                }
+                null -> {}
             }
         }
     }
@@ -476,71 +440,22 @@ private fun CollapsibleSummary(
     totalCategories: Int,
     totalExpenses: Int,
     isExpanded: Boolean,
-    onToggleExpand: () -> Unit,
-    onSwapPosition: () -> Unit
+    onToggleExpand: () -> Unit
 ) {
     val rotationAngle by animateFloatAsState(
         targetValue = if (isExpanded) 180f else 0f,
         label = "arrow rotation"
     )
 
-    // Drag state for position swapping
-    var isDragging by remember { mutableStateOf(false) }
-    var dragOffsetY by remember { mutableStateOf(0f) }
-
-    val scale by animateFloatAsState(
-        targetValue = if (isDragging) 1.02f else 1f,
-        animationSpec = tween(durationMillis = 150),
-        label = "drag scale"
-    )
-
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            }
-            .shadow(if (isDragging) 8.dp else 4.dp, RoundedCornerShape(16.dp))
-            .pointerInput(Unit) {
-                detectDragGestures(
-                    onDragStart = {
-                        isDragging = false
-                        dragOffsetY = 0f
-                    },
-                    onDrag = { change, dragAmount ->
-                        // Activate drag after threshold (long press detection)
-                        if (!isDragging && kotlin.math.abs(dragOffsetY + dragAmount.y) > 50f) {
-                            isDragging = true
-                        }
-
-                        if (isDragging) {
-                            change.consume()
-                            dragOffsetY += dragAmount.y
-                        }
-                    },
-                    onDragEnd = {
-                        // If dragged significantly, swap position
-                        if (isDragging && kotlin.math.abs(dragOffsetY) > 100f) {
-                            onSwapPosition()
-                        }
-                        isDragging = false
-                        dragOffsetY = 0f
-                    },
-                    onDragCancel = {
-                        isDragging = false
-                        dragOffsetY = 0f
-                    }
-                )
-            },
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isDragging)
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f)
-            else
-                MaterialTheme.colorScheme.primaryContainer
-        )
+            containerColor = MaterialTheme.colorScheme.primaryContainer
+        ),
+        elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Column(
             modifier = Modifier
@@ -554,11 +469,10 @@ private fun CollapsibleSummary(
                     )
                 )
         ) {
-            // Header - Always visible
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable(enabled = !isDragging) { onToggleExpand() }
+                    .clickable { onToggleExpand() }
                     .padding(horizontal = 16.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
@@ -574,10 +488,7 @@ private fun CollapsibleSummary(
                         modifier = Modifier.size(36.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
-                            Text(
-                                text = "📊",
-                                fontSize = 18.sp
-                            )
+                            Text(text = "📊", fontSize = 18.sp)
                         }
                     }
 
@@ -601,11 +512,9 @@ private fun CollapsibleSummary(
                     }
                 }
 
-                // Only expand/collapse button
                 IconButton(
                     onClick = onToggleExpand,
-                    modifier = Modifier.size(32.dp),
-                    enabled = !isDragging
+                    modifier = Modifier.size(32.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.KeyboardArrowDown,
@@ -618,7 +527,6 @@ private fun CollapsibleSummary(
                 }
             }
 
-            // Expanded content
             AnimatedVisibility(
                 visible = isExpanded,
                 enter = expandVertically() + fadeIn(),
@@ -627,7 +535,7 @@ private fun CollapsibleSummary(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     androidx.compose.material3.HorizontalDivider(
@@ -635,59 +543,83 @@ private fun CollapsibleSummary(
                         thickness = 1.dp
                     )
 
-                    // Total Spent - Prominent
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(14.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text(
-                                text = "Total Spending",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
-                                fontSize = 12.sp
-                            )
-                            Text(
-                                text = formatCurrency(totalSpent),
-                                style = MaterialTheme.typography.headlineMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontSize = 24.sp
-                            )
-                        }
-                    }
-
-                    // Stats Grid
+                    // Horizontal Stats Row
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        StatCard(
-                            label = "Projects",
-                            value = totalProjects.toString(),
-                            modifier = Modifier.weight(1f)
-                        )
-                        StatCard(
-                            label = "Categories",
-                            value = totalCategories.toString(),
-                            modifier = Modifier.weight(1f)
-                        )
-                        StatCard(
-                            label = "Expenses",
-                            value = totalExpenses.toString(),
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
+                        // Total Spending Stat
+                        Surface(
+                            modifier = Modifier.weight(1.5f),
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(10.dp),
+                                verticalArrangement = Arrangement.spacedBy(2.dp)
+                            ) {
+                                Text(
+                                    text = "Total Spending",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
+                                    fontSize = 10.sp
+                                )
+                                Text(
+                                    text = formatCurrency(totalSpent),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontSize = 16.sp
+                                )
+                            }
+                        }
 
-                    Spacer(modifier = Modifier.height(4.dp))
+                        // Grid of other stats
+                        Column(
+                            modifier = Modifier.weight(2f),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                CompactStatItem(label = "Projects", value = totalProjects.toString(), modifier = Modifier.weight(1f))
+                                CompactStatItem(label = "Categories", value = totalCategories.toString(), modifier = Modifier.weight(1f))
+                            }
+                            CompactStatItem(label = "Expenses", value = totalExpenses.toString(), modifier = Modifier.fillMaxWidth())
+                        }
+                    }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun CompactStatItem(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(8.dp),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                fontSize = 10.sp
+            )
         }
     }
 }
@@ -740,7 +672,6 @@ private fun Header(onAddProjectClick: () -> Unit) {
                     endY = 150f
                 )
             )
-            .padding(top = 40.dp)
     ) {
         Row(
             modifier = Modifier
@@ -908,7 +839,6 @@ fun ProjectListItemWithReorder(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Explore Button
                         Button(
                             onClick = onProjectClick,
                             modifier = Modifier.height(40.dp),
@@ -929,11 +859,9 @@ fun ProjectListItemWithReorder(
                                     fontWeight = FontWeight.SemiBold,
                                     fontSize = 13.sp
                                 )
-
                             }
                         }
 
-                        // Three-dot menu button - toggles menu expansion
                         IconButton(
                             onClick = { menuExpanded = !menuExpanded },
                             modifier = Modifier.size(36.dp)
@@ -948,7 +876,6 @@ fun ProjectListItemWithReorder(
                     }
                 }
 
-                // Animated expandable menu inside card
                 AnimatedVisibility(
                     visible = menuExpanded,
                     enter = expandVertically() + fadeIn(),
@@ -965,12 +892,10 @@ fun ProjectListItemWithReorder(
                             thickness = 1.dp
                         )
 
-                        // Menu Actions
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            // Edit Button
                             MenuActionButton(
                                 icon = Icons.Default.Edit,
                                 label = "Edit",
@@ -982,7 +907,6 @@ fun ProjectListItemWithReorder(
                                 containerColor = MaterialTheme.colorScheme.primaryContainer
                             )
 
-                            // Move to Top Button
                             MenuActionButton(
                                 icon = Icons.Default.KeyboardArrowUp,
                                 label = "To Top",
@@ -997,7 +921,6 @@ fun ProjectListItemWithReorder(
                                 containerColor = MaterialTheme.colorScheme.secondaryContainer
                             )
 
-                            // Move to Bottom Button
                             MenuActionButton(
                                 icon = Icons.Default.KeyboardArrowDown,
                                 label = "To Bottom",
@@ -1013,7 +936,6 @@ fun ProjectListItemWithReorder(
                             )
                         }
 
-                        // Delete Button - Full Width
                         MenuActionButton(
                             icon = Icons.Default.Delete,
                             label = "Delete Project",
@@ -1028,7 +950,6 @@ fun ProjectListItemWithReorder(
                     }
                 }
 
-                // Only show main content when menu is collapsed
                 AnimatedVisibility(
                     visible = !menuExpanded,
                     enter = expandVertically() + fadeIn(),
@@ -1062,7 +983,6 @@ fun ProjectListItemWithReorder(
                             )
                         }
 
-                        // Dates Row with Explore Button
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -1192,11 +1112,6 @@ private fun DateChip(
             )
         }
     }
-}
-
-private fun formatDate(timestamp: Long): String {
-    val sdf = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
-    return sdf.format(Date(timestamp))
 }
 
 private fun formatDateCompact(timestamp: Long): String {

@@ -43,7 +43,7 @@ class BackupManager(private val context: Context) {
             val expenseCount = db.expenseDao().getExpenseCount()
             val totalAmount = db.expenseDao().getTotalAmount() ?: 0.0
 
-            // Create ZIP file
+            // Create ZIP file (even though we use .backup extension, it's a zip internally)
             context.contentResolver.openOutputStream(destinationUri)?.use { outputStream ->
                 ZipOutputStream(outputStream).use { zipOut ->
 
@@ -101,7 +101,7 @@ class BackupManager(private val context: Context) {
 
             // Create metadata
             val timestamp = System.currentTimeMillis()
-            val fileName = "PaisaTracker_Backup_${SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date(timestamp))}.zip"
+            val fileName = "PaisaTracker_Backup_${SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date(timestamp))}.backup"
 
             val metadata = BackupMetadata(
                 fileName = fileName,
@@ -126,7 +126,7 @@ class BackupManager(private val context: Context) {
     }
 
     /**
-     * Restore database from backup ZIP file
+     * Restore database from backup file
      * Returns true if successful, false otherwise
      */
     suspend fun restoreFromBackup(sourceUri: Uri): Boolean = withContext(Dispatchers.IO) {
@@ -143,7 +143,7 @@ class BackupManager(private val context: Context) {
                 assetDir.mkdirs()
             }
 
-            // Extract ZIP file
+            // Extract ZIP file content from the backup file
             context.contentResolver.openInputStream(sourceUri)?.use { inputStream ->
                 ZipInputStream(inputStream).use { zipIn ->
                     var entry: ZipEntry? = zipIn.nextEntry
@@ -199,14 +199,21 @@ class BackupManager(private val context: Context) {
     }
 
     /**
-     * Delete backup file from storage
+     * Delete backup file from storage and database record.
+     * Record is removed from database even if file deletion fails.
      */
     suspend fun deleteBackupFile(backup: BackupMetadata): Boolean = withContext(Dispatchers.IO) {
+        // Attempt to delete the physical file
         try {
             val uri = Uri.parse(backup.filePath)
             context.contentResolver.delete(uri, null, null)
+        } catch (e: Exception) {
+            // Log file deletion error but proceed to remove record from DB
+            e.printStackTrace()
+        }
 
-            // Remove from database
+        // Always remove from database
+        try {
             database.backupDao().deleteBackup(backup)
             true
         } catch (e: Exception) {

@@ -15,6 +15,7 @@ import com.example.paisatracker.data.RecentExpense
 import com.example.paisatracker.data.PaisaTrackerRepository
 import com.example.paisatracker.data.Project
 import com.example.paisatracker.data.ProjectWithTotal
+import com.example.paisatracker.util.ImageUtils
 import com.opencsv.CSVReader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -30,9 +31,6 @@ import kotlinx.coroutines.flow.flatMapLatest
 
 class PaisaTrackerViewModel(private val repository: PaisaTrackerRepository) : ViewModel() {
 
-
-
-
     private val _recentExpensesLimit = MutableStateFlow(10)
     @kotlinx.coroutines.ExperimentalCoroutinesApi
     val recentExpenses: Flow<List<RecentExpense>> = _recentExpensesLimit.flatMapLatest { limit ->
@@ -43,7 +41,6 @@ class PaisaTrackerViewModel(private val repository: PaisaTrackerRepository) : Vi
     fun loadMoreRecentExpenses() {
         _recentExpensesLimit.value += 10
     }
-
 
     //-----------------Backup----------------
     fun getRecentBackups(): Flow<List<BackupMetadata>> {
@@ -78,8 +75,6 @@ class PaisaTrackerViewModel(private val repository: PaisaTrackerRepository) : Vi
         return repository.getTotalAmount()
     }
 
-
-
     // ---------------- Assets ----------------
 
     fun getAllAssets() = repository.getAllAssets()
@@ -89,33 +84,9 @@ class PaisaTrackerViewModel(private val repository: PaisaTrackerRepository) : Vi
     suspend fun insertAsset(asset: Asset) = repository.insertAsset(asset)
 
     fun deleteAsset(asset: Asset) {
-        viewModelScope.launch { repository.deleteAsset(asset) }
-    }
-
-    private fun saveImageToInternalStorage(
-        context: Context,
-        uri: Uri
-    ): String? {
-        return try {
-            val imagesDir = File(context.filesDir, "images")
-            if (!imagesDir.exists()) {
-                imagesDir.mkdirs()
-            }
-
-            val fileName = "IMG_${System.currentTimeMillis()}.jpg"
-            val destFile = File(imagesDir, fileName)
-
-            val input = context.contentResolver.openInputStream(uri) ?: return null
-
-            input.use { ins ->
-                destFile.outputStream().use { outs ->
-                    ins.copyTo(outs)
-                }
-            }
-
-            destFile.absolutePath
-        } catch (e: Exception) {
-            null
+        viewModelScope.launch(Dispatchers.IO) {
+            ImageUtils.deleteImage(asset.imagePath)
+            repository.deleteAsset(asset)
         }
     }
 
@@ -126,7 +97,7 @@ class PaisaTrackerViewModel(private val repository: PaisaTrackerRepository) : Vi
         description: String,
         expenseId: Long?
     ) {
-        val path = saveImageToInternalStorage(context, uri) ?: return
+        val path = ImageUtils.saveImageToInternalStorage(context, uri) ?: return
 
         val asset = Asset(
             imagePath = path,
@@ -317,10 +288,9 @@ class PaisaTrackerViewModel(private val repository: PaisaTrackerRepository) : Vi
                 CSVReader(InputStreamReader(inputStream)).use { reader ->
 
                     // ---------- 1. Read header & build index map ----------
-                    // ---------- 1. Read header & build index map ----------
                     val header = reader.readNext() ?: return false
 
-// Map: normalized column name -> index
+                    // Map: normalized column name -> index
                     val indexMap = mutableMapOf<String, Int>()
 
                     header.forEachIndexed { index, rawName ->
@@ -333,7 +303,7 @@ class PaisaTrackerViewModel(private val repository: PaisaTrackerRepository) : Vi
 
                             // "Project Emoji" column
                             name == "project emoji" ->
-                                indexMap["projectEmoji"] = index   // abhi ignore karenge
+                                indexMap["projectEmoji"] = index
 
                             // "Category Emoji" column
                             name == "category emoji" ->
@@ -356,14 +326,13 @@ class PaisaTrackerViewModel(private val repository: PaisaTrackerRepository) : Vi
                         }
                     }
 
-// Category, description, amount at least hone chahiye
+                    // Category, description, amount at least hone chahiye
                     val catIdx = indexMap["category"] ?: return false
                     val descIdx = indexMap["description"] ?: return false
                     val amountIdx = indexMap["amount"] ?: return false
 
-// Emoji indexes
+                    // Emoji indexes
                     val categoryEmojiIdx = indexMap["categoryEmoji"]    // optional
-// projectEmojiIdx ko abhi use nahi kar rahe:
                     val dateIdx = indexMap["date"]                      // optional
                     val paymentIdx = indexMap["paymentMethod"]          // optional
 
