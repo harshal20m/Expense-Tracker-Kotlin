@@ -94,6 +94,27 @@ interface ExpenseDao {
 """)
     fun getRecentExpensesWithDetails(limit: Int): Flow<List<RecentExpense>>
 
+    @Query("""
+    SELECT
+        e.id as id,
+        e.amount as amount,
+        e.description as description,
+        e.date as date,
+        e.paymentMethod as paymentMethod,
+        e.paymentIcon as paymentIcon,
+        c.projectId as projectId,
+        p.name as projectName,
+        p.emoji as projectEmoji,
+        c.id as categoryId,
+        c.name as categoryName,
+        c.emoji as categoryEmoji
+    FROM expenses e
+    INNER JOIN categories c ON e.categoryId = c.id
+    INNER JOIN projects p ON c.projectId = p.id
+    ORDER BY e.date DESC
+""")
+    fun getAllExpensesWithDetails(): Flow<List<RecentExpense>>
+
     // New search queries
 
     @Query("""

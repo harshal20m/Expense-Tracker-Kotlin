@@ -14,6 +14,10 @@ class PaisaTrackerRepository(
         return expenseDao.getRecentExpensesWithDetails(limit)
     }
 
+    fun getAllExpensesWithDetails(): Flow<List<RecentExpense>> {
+        return expenseDao.getAllExpensesWithDetails()
+    }
+
     fun getAllProjects(): Flow<List<Project>> = projectDao.getAllProjects()
 
     fun getProjectById(projectId: Long): Flow<Project> = projectDao.getProjectById(projectId)

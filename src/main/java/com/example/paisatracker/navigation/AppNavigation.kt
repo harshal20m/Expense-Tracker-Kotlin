@@ -1,6 +1,8 @@
 package com.example.paisatracker.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -15,25 +17,31 @@ import com.example.paisatracker.ui.expense.ExpenseListScreen
 import com.example.paisatracker.ui.export.ExportScreen
 import com.example.paisatracker.ui.main.ProjectListScreen
 import com.example.paisatracker.ui.settings.SettingsScreen
-// Removed the SearchScreen import since we're not using it
+import com.example.paisatracker.ui.common.CalendarTransactionView
 
 @Composable
 fun AppNavigation(
     navController: NavHostController,
     viewModel: PaisaTrackerViewModel,
     modifier: Modifier = Modifier,
-    application: PaisaTrackerApplication // Keeping this parameter in case it's needed elsewhere
+    application: PaisaTrackerApplication
 ) {
     NavHost(navController, startDestination = "projects", modifier = modifier) {
-        // --- Your Original Routes ---
         composable("projects") {
             ProjectListScreen(viewModel = viewModel, navController = navController)
+        }
+        composable("calendar") {
+            val expenses by viewModel.getAllExpensesWithDetails().collectAsState(initial = emptyList())
+            CalendarTransactionView(expenses = expenses)
+        }
+        composable("assets") {
+            AssetsScreen(viewModel = viewModel)
         }
         composable("export") {
             ExportScreen(viewModel = viewModel, navController = navController)
         }
-        composable("assets") {
-            AssetsScreen(viewModel = viewModel)
+        composable("settings") {
+            SettingsScreen(viewModel = viewModel, navController = navController)
         }
         composable("project_details/{projectId}") { backStackEntry ->
             val projectId = backStackEntry.arguments?.getString("projectId")?.toLongOrNull() ?: 0L
@@ -47,22 +55,11 @@ fun AppNavigation(
             val categoryId = backStackEntry.arguments?.getString("categoryId")?.toLongOrNull() ?: return@composable
             ExpenseListScreen(viewModel = viewModel, categoryId = categoryId, navController = navController)
         }
-        composable("settings") {
-            SettingsScreen(viewModel = viewModel, navController = navController)
-        }
         composable("project_insights/{projectId}") { backStackEntry ->
             val projectId = backStackEntry.arguments?.getString("projectId")?.toLongOrNull()
             if (projectId != null) {
                 ProjectInsightsScreen(viewModel = viewModel, projectId = projectId, navController = navController)
             }
         }
-
-        // REMOVED: The duplicate search route that was causing the issue
-        // composable("search") {
-        //     SearchScreen(
-        //         application = application,
-        //         navController = navController
-        //     )
-        // }
     }
 }

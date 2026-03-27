@@ -20,10 +20,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.ImportExport
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.ImportExport
@@ -44,6 +46,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 
@@ -62,6 +65,12 @@ fun BottomNavigationBar(navController: NavController) {
             label = "Projects",
             selectedIcon = Icons.Filled.Dashboard,
             unselectedIcon = Icons.Outlined.Dashboard
+        ),
+        NavItem(
+            route = "calendar",
+            label = "Calendar",
+            selectedIcon = Icons.Filled.CalendarMonth,
+            unselectedIcon = Icons.Outlined.CalendarMonth
         ),
         NavItem(
             route = "assets",
@@ -89,7 +98,7 @@ fun BottomNavigationBar(navController: NavController) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 12.dp, vertical = 12.dp),
         contentAlignment = Alignment.Center
     ) {
         Surface(
@@ -108,7 +117,7 @@ fun BottomNavigationBar(navController: NavController) {
                         shape = RoundedCornerShape(28.dp)
                     )
                     .padding(horizontal = 8.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 items.forEach { item ->
@@ -118,7 +127,6 @@ fun BottomNavigationBar(navController: NavController) {
                         isSelected = isSelected,
                         onClick = {
                             if (item.route == "projects") {
-                                // For projects, clear everything and go to root
                                 navController.navigate(item.route) {
                                     popUpTo("projects") {
                                         inclusive = true
@@ -126,7 +134,6 @@ fun BottomNavigationBar(navController: NavController) {
                                     launchSingleTop = true
                                 }
                             } else {
-                                // For other tabs, navigate normally
                                 navController.navigate(item.route) {
                                     popUpTo("projects") {
                                         saveState = true
@@ -137,7 +144,6 @@ fun BottomNavigationBar(navController: NavController) {
                             }
                         }
                     )
-
                 }
             }
         }
@@ -153,7 +159,7 @@ private fun BottomNavItem(
     val interactionSource = remember { MutableInteractionSource() }
 
     val animatedWidth by animateDpAsState(
-        targetValue = if (isSelected) 110.dp else 64.dp, // Reduced width for 4 items
+        targetValue = if (isSelected) 100.dp else 50.dp,
         animationSpec = spring(
             dampingRatio = 0.8f,
             stiffness = 400f
@@ -205,23 +211,24 @@ private fun BottomNavItem(
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(horizontal = 12.dp)
+            modifier = Modifier.padding(horizontal = 8.dp)
         ) {
             Icon(
                 imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
                 contentDescription = item.label,
                 tint = contentColor,
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(22.dp)
             )
 
             if (isSelected) {
-                Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = item.label,
                     color = contentColor,
-                    style = MaterialTheme.typography.labelMedium,
+                    style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.SemiBold,
-                    maxLines = 1
+                    maxLines = 1,
+                    fontSize = 11.sp
                 )
             }
         }

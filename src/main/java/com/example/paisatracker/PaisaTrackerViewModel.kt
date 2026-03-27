@@ -42,6 +42,10 @@ class PaisaTrackerViewModel(private val repository: PaisaTrackerRepository) : Vi
         _recentExpensesLimit.value += 10
     }
 
+    fun getAllExpensesWithDetails(): Flow<List<RecentExpense>> {
+        return repository.getAllExpensesWithDetails()
+    }
+
     //-----------------Backup----------------
     fun getRecentBackups(): Flow<List<BackupMetadata>> {
         return repository.getRecentBackups()
@@ -343,7 +347,7 @@ class PaisaTrackerViewModel(private val repository: PaisaTrackerRepository) : Vi
                     var row: Array<String>?
                     while (reader.readNext().also { row = it } != null) {
                         val tokens = row ?: continue
-                        if (tokens.isEmpty()) continue
+                        if (tokens.size == 0) continue
 
                         // Bounds safety
                         fun getSafe(i: Int?): String? =
