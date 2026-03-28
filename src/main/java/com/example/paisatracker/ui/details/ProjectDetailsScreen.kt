@@ -53,8 +53,6 @@ import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -78,9 +76,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -153,33 +155,21 @@ fun ProjectDetailsScreen(
         }
     }
 
+    // Include a null item at the start to represent the "Add New" card
+    val listItems = remember(sortedCategories) {
+        listOf<CategoryWithTotal?>(null) + sortedCategories
+    }
+
+    val onAddNewCategoryClick: () -> Unit = {
+        currentSheetType = CategorySheetType.ADD
+        categoryToEdit = null
+        categoryToDelete = null
+        showSheet = true
+        scope.launch { sheetState.show() }
+    }
+
     Scaffold(
-        containerColor = Color.Transparent, // Make it transparent
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = {
-                    currentSheetType = CategorySheetType.ADD
-                    categoryToEdit = null
-                    categoryToDelete = null
-                    showSheet = true
-                    scope.launch { sheetState.show() }
-                },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.size(52.dp).offset(y = (-58).dp, x = (-12).dp),
-                elevation = FloatingActionButtonDefaults.elevation(
-                    defaultElevation = 6.dp,
-                    pressedElevation = 12.dp
-                )
-            ) {
-                Icon(
-                    Icons.Default.Add,
-                    contentDescription = "Add Category",
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-        }
+        containerColor = Color.Transparent
     ) { paddingValues ->
         LazyColumn(
             modifier = Modifier
@@ -188,7 +178,7 @@ fun ProjectDetailsScreen(
                 .padding(paddingValues),
             contentPadding = PaddingValues(
                 top = 0.dp,
-                bottom = 100.dp // Fixed bottom padding for nav bar + FAB space
+                bottom = 180.dp
             ),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -205,63 +195,57 @@ fun ProjectDetailsScreen(
             }
 
             // Categories Header with Controls
-            if (categoriesWithTotal.isNotEmpty()) {
-                item {
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 0.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Categories • ${categoriesWithTotal.size}",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 0.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "Categories • ${categoriesWithTotal.size}",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onBackground
+                        CompactViewTypeToggle(
+                            currentViewType = currentViewType,
+                            onViewTypeChange = { currentViewType = it }
                         )
-
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            CompactViewTypeToggle(
-                                currentViewType = currentViewType,
-                                onViewTypeChange = { currentViewType = it }
-                            )
-                            SortDropdown(
-                                current = categorySortOption,
-                                onChange = { categorySortOption = it }
-                            )
-                        }
+                        SortDropdown(
+                            current = categorySortOption,
+                            onChange = { categorySortOption = it }
+                        )
                     }
                 }
             }
 
-            // Empty State
-            if (categoriesWithTotal.isEmpty()) {
-                item {
-                    CompactEmptyState(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 40.dp)
-                    )
-                }
-            } else {
-                // Category List/Grid
-                when (currentViewType) {
-                    ViewType.GRID -> {
-                        items(
-                            items = sortedCategories.chunked(2),
-                            key = { row -> row.first().category.id }
-                        ) { rowItems ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                rowItems.forEach { categoryWithTotal ->
+            // Category List/Grid (Empty state no longer needed as Add button is always there)
+            when (currentViewType) {
+                ViewType.GRID -> {
+                    items(
+                        items = listItems.chunked(2),
+                        key = { row -> row.first()?.category?.id ?: -1L }
+                    ) { rowItems ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            rowItems.forEach { categoryWithTotal ->
+                                if (categoryWithTotal == null) {
+                                    AddCategoryGridItem(
+                                        onClick = onAddNewCategoryClick,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                } else {
                                     CompactCategoryGridItem(
                                         categoryWithTotal = categoryWithTotal,
                                         maxCategoryAmount = maxCategoryAmount,
@@ -284,14 +268,21 @@ fun ProjectDetailsScreen(
                                         modifier = Modifier.weight(1f)
                                     )
                                 }
-                                if (rowItems.size == 1) {
-                                    Spacer(modifier = Modifier.weight(1f))
-                                }
+                            }
+                            if (rowItems.size == 1) {
+                                Spacer(modifier = Modifier.weight(1f))
                             }
                         }
                     }
-                    ViewType.LIST -> {
-                        items(sortedCategories, key = { it.category.id }) { categoryWithTotal ->
+                }
+                ViewType.LIST -> {
+                    items(listItems, key = { it?.category?.id ?: -1L }) { categoryWithTotal ->
+                        if (categoryWithTotal == null) {
+                            AddCategoryListItem(
+                                onClick = onAddNewCategoryClick,
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+                        } else {
                             CompactCategoryListItem(
                                 categoryWithTotal = categoryWithTotal,
                                 maxCategoryAmount = maxCategoryAmount,
@@ -329,7 +320,6 @@ fun ProjectDetailsScreen(
                 categoryToDelete = null
             },
             sheetState = sheetState,
-
             shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
             dragHandle = { BottomSheetDefaults.DragHandle() },
             containerColor = MaterialTheme.colorScheme.surface
@@ -408,6 +398,121 @@ fun ProjectDetailsScreen(
                 }
                 null -> Unit
             }
+        }
+    }
+}
+
+@Composable
+fun AddCategoryListItem(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val dashColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .drawWithCache {
+                val stroke = Stroke(
+                    width = 2.dp.toPx(),
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(24f, 24f), 0f)
+                )
+                onDrawWithContent {
+                    drawContent()
+                    drawRoundRect(
+                        color = dashColor,
+                        style = stroke,
+                        cornerRadius = CornerRadius(16.dp.toPx())
+                    )
+                }
+            }
+            .clickable { onClick() },
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 20.dp, horizontal = 16.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(44.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = "Add Category",
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(26.dp)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Text(
+                text = "Add New Category",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+    }
+}
+
+@Composable
+fun AddCategoryGridItem(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val dashColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(160.dp) // Adjusted to match CompactCategoryGridItem height
+            .drawWithCache {
+                val stroke = Stroke(
+                    width = 2.dp.toPx(),
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(24f, 24f), 0f)
+                )
+                onDrawWithContent {
+                    drawContent()
+                    drawRoundRect(
+                        color = dashColor,
+                        style = stroke,
+                        cornerRadius = CornerRadius(14.dp.toPx()) // Match border radius of compact items
+                    )
+                }
+            }
+            .clickable { onClick() },
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(56.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = "Add Category",
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "Add Category",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
         }
     }
 }
@@ -557,41 +662,6 @@ fun CompactViewTypeToggle(
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-fun CompactEmptyState(
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(text = "📂", fontSize = 48.sp)
-            Text(
-                text = "No categories yet",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
-            )
-            Text(
-                text = "Tap + to create your first category",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
         }
     }
 }

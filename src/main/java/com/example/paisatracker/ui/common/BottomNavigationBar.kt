@@ -1,10 +1,19 @@
 package com.example.paisatracker.ui.common
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.EaseInOutSine
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -32,7 +41,6 @@ import androidx.compose.material.icons.outlined.ImportExport
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
@@ -42,6 +50,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -98,53 +107,55 @@ fun BottomNavigationBar(navController: NavController) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 12.dp),
+            // Provide enough padding so the large shadow isn't clipped by the edge of the screen
+            .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp), // <--- NEW LINE
         contentAlignment = Alignment.Center
     ) {
-        Surface(
-            modifier = Modifier.wrapContentWidth(),
-            shape = RoundedCornerShape(28.dp),
-            tonalElevation = 3.dp,
-            shadowElevation = 8.dp,
-            color = Color.Transparent
+        Row(
+            modifier = Modifier
+                .wrapContentWidth()
+                .height(72.dp)
+                // 1. Beautiful, visible shadow. We pass solid colors because the system
+                // will automatically diffuse and fade it for us.
+                .shadow(
+                    elevation = 24.dp, // High elevation for a wide, soft spread
+                    shape = RoundedCornerShape(36.dp),
+                    spotColor = MaterialTheme.colorScheme.primary, // Adds a subtle tint to the shadow
+                    ambientColor = Color.Black
+                )
+                // 2. Solid, clean background
+                .background(
+                    color = MaterialTheme.colorScheme.surface,
+                    shape = RoundedCornerShape(36.dp)
+                )
+                .padding(horizontal = 8.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier
-                    .wrapContentWidth()
-                    .height(72.dp)
-                    .background(
-                        color = MaterialTheme.colorScheme.surfaceContainer,
-                        shape = RoundedCornerShape(28.dp)
-                    )
-                    .padding(horizontal = 8.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                items.forEach { item ->
-                    val isSelected = currentRoute == item.route
-                    BottomNavItem(
-                        item = item,
-                        isSelected = isSelected,
-                        onClick = {
-                            if (item.route == "projects") {
-                                navController.navigate(item.route) {
-                                    popUpTo("projects") {
-                                        inclusive = true
-                                    }
-                                    launchSingleTop = true
+            items.forEach { item ->
+                val isSelected = currentRoute == item.route
+                BottomNavItem(
+                    item = item,
+                    isSelected = isSelected,
+                    onClick = {
+                        if (item.route == "projects") {
+                            navController.navigate(item.route) {
+                                popUpTo("projects") {
+                                    inclusive = true
                                 }
-                            } else {
-                                navController.navigate(item.route) {
-                                    popUpTo("projects") {
-                                        saveState = true
-                                    }
-                                    launchSingleTop = true
-                                    restoreState = true
+                                launchSingleTop = true
+                            }
+                        } else {
+                            navController.navigate(item.route) {
+                                popUpTo("projects") {
+                                    saveState = true
                                 }
+                                launchSingleTop = true
+                                restoreState = true
                             }
                         }
-                    )
-                }
+                    }
+                )
             }
         }
     }
@@ -158,27 +169,23 @@ private fun BottomNavItem(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
 
+    // Fluid spring animation for width
     val animatedWidth by animateDpAsState(
-        targetValue = if (isSelected) 100.dp else 50.dp,
+        targetValue = if (isSelected) 115.dp else 50.dp,
         animationSpec = spring(
-            dampingRatio = 0.8f,
-            stiffness = 400f
+            dampingRatio = 0.65f, // Slightly bouncier
+            stiffness = 300f
         ),
         label = "width"
     )
 
-    val animatedScale by animateFloatAsState(
-        targetValue = if (isSelected) 1.05f else 1f,
-        animationSpec = tween(300),
-        label = "scale"
-    )
-
+    // Smooth color transitions
     val containerColor by animateColorAsState(
         targetValue = if (isSelected)
             MaterialTheme.colorScheme.primaryContainer
         else
             Color.Transparent,
-        animationSpec = tween(300),
+        animationSpec = tween(400),
         label = "containerColor"
     )
 
@@ -186,16 +193,30 @@ private fun BottomNavItem(
         targetValue = if (isSelected)
             MaterialTheme.colorScheme.onPrimaryContainer
         else
-            MaterialTheme.colorScheme.onSurfaceVariant,
-        animationSpec = tween(300),
+            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+        animationSpec = tween(400),
         label = "contentColor"
     )
+
+    // Continuous "Breathing" Animation generator
+    val infiniteTransition = rememberInfiniteTransition(label = "breathing")
+    val breathingScale by infiniteTransition.animateFloat(
+        initialValue = 0.96f,
+        targetValue = 1.04f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = EaseInOutSine),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "breathingScale"
+    )
+
+    // Only apply the breathing scale if the item is currently selected
+    val finalScale = if (isSelected) breathingScale else 1f
 
     Box(
         modifier = Modifier
             .width(animatedWidth)
             .height(56.dp)
-            .scale(animatedScale)
             .clip(RoundedCornerShape(28.dp))
             .background(containerColor)
             .clickable(
@@ -211,25 +232,37 @@ private fun BottomNavItem(
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(horizontal = 8.dp)
+            modifier = Modifier.padding(horizontal = 12.dp)
         ) {
             Icon(
                 imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
                 contentDescription = item.label,
                 tint = contentColor,
-                modifier = Modifier.size(22.dp)
+                modifier = Modifier
+                    .size(24.dp)
+                    .scale(finalScale)
             )
 
-            if (isSelected) {
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = item.label,
-                    color = contentColor,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    fontSize = 11.sp
-                )
+            // Animated visibility for the text ensures it slides in beautifully
+            AnimatedVisibility(
+                visible = isSelected,
+                enter = fadeIn(animationSpec = tween(400)) +
+                        expandHorizontally(animationSpec = spring(dampingRatio = 0.7f, stiffness = 300f)),
+                exit = fadeOut(animationSpec = tween(200)) +
+                        shrinkHorizontally(animationSpec = spring(dampingRatio = 0.7f, stiffness = 300f))
+            ) {
+                Row {
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = item.label,
+                        color = contentColor,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        fontSize = 12.sp,
+                        modifier = Modifier.scale(finalScale)
+                    )
+                }
             }
         }
     }

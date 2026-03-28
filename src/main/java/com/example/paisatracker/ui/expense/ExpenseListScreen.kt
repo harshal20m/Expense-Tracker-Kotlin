@@ -1,5 +1,22 @@
 package com.example.paisatracker.ui.expense
 
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+  import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.Card
+ import androidx.compose.material3.Icon
+ import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
+
+import androidx.compose.ui.unit.dp
+
 import android.Manifest
 import android.app.DatePickerDialog
 import android.content.Context
@@ -36,7 +53,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -101,7 +117,6 @@ fun paymentIconRes(key: String?): Int? = when (key) {
     else -> null
 }
 
-// Move sealed class outside composable to avoid 'local class' sealed error
 sealed class SheetState {
     object Add : SheetState()
     data class Edit(val expense: Expense) : SheetState()
@@ -221,50 +236,33 @@ fun ExpenseListScreen(
 
     val sortedExpenses = remember(expenses, expenseSortOption) {
         when (expenseSortOption) {
-            SortOption.AMOUNT_LOW_HIGH ->
-                expenses.sortedBy { it.amount }
-
-            SortOption.AMOUNT_HIGH_LOW ->
-                expenses.sortedByDescending { it.amount }
-
-            SortOption.NAME_A_Z ->
-                expenses.sortedBy { it.description.lowercase() }
-
-            SortOption.NAME_Z_A ->
-                expenses.sortedByDescending { it.description.lowercase() }
-
-            SortOption.DATE_OLD_NEW ->
-                expenses.sortedBy { it.date }
-
-            SortOption.DATE_NEW_OLD ->
-                expenses.sortedByDescending { it.date }
+            SortOption.AMOUNT_LOW_HIGH -> expenses.sortedBy { it.amount }
+            SortOption.AMOUNT_HIGH_LOW -> expenses.sortedByDescending { it.amount }
+            SortOption.NAME_A_Z -> expenses.sortedBy { it.description.lowercase() }
+            SortOption.NAME_Z_A -> expenses.sortedByDescending { it.description.lowercase() }
+            SortOption.DATE_OLD_NEW -> expenses.sortedBy { it.date }
+            SortOption.DATE_NEW_OLD -> expenses.sortedByDescending { it.date }
         }
     }
 
+    // Include a null item at the start to represent the "Add New" card
+    val listItems = remember(sortedExpenses) {
+        listOf<Expense?>(null) + sortedExpenses
+    }
 
-    // Bottom sheet state
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
 
+    val onAddNewExpenseClick = {
+        newExpenseDate = System.currentTimeMillis()
+        newPaymentMethod = null
+        newExpenseAmount = ""
+        newExpenseDescription = ""
+        newExpenseImageUri = null
+        currentSheet = SheetState.Add
+    }
+
     Scaffold(
-        containerColor = Color.Transparent,
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = {
-                    newExpenseDate = System.currentTimeMillis()
-                    newPaymentMethod = null
-                    newExpenseAmount = ""
-                    newExpenseDescription = ""
-                    newExpenseImageUri = null
-                    currentSheet = SheetState.Add
-                },
-                modifier = Modifier.size(52.dp).offset(y = (-58).dp, x = (-12).dp),
-                shape = RoundedCornerShape(20.dp),
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Expense")
-            }
-        }
+        containerColor = Color.Transparent
     ) { paddingValues ->
         Box(
             modifier = Modifier
@@ -272,35 +270,35 @@ fun ExpenseListScreen(
                 .background(backgroundGradient)
                 .padding(paddingValues)
         ) {
-            if (expenses.isEmpty()) {
-                EmptyExpenseState()
-            } else {
-                Column {
-                    ExpenseSummaryHeader(expenses = expenses)
+            Column {
+                ExpenseSummaryHeader(expenses = expenses)
 
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        ExpenseViewTypeToggle(
-                            currentViewType = currentViewType,
-                            onViewTypeChange = { currentViewType = it }
-                        )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    ExpenseViewTypeToggle(
+                        currentViewType = currentViewType,
+                        onViewTypeChange = { currentViewType = it }
+                    )
 
-                        SortDropdown(current = expenseSortOption, onChange = { expenseSortOption = it })
-                    }
+                    SortDropdown(current = expenseSortOption, onChange = { expenseSortOption = it })
+                }
 
-                    when (currentViewType) {
-                        ExpenseViewType.LIST -> {
-                            LazyColumn(
-                                modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 100.dp),
-                                verticalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                items(sortedExpenses, key = { it.id }) { expense ->
+                when (currentViewType) {
+                    ExpenseViewType.LIST -> {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 100.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(listItems, key = { it?.id ?: "ADD" }) { expense ->
+                                if (expense == null) {
+                                    AddExpenseListItem(onClick = onAddNewExpenseClick)
+                                } else {
                                     ExpenseListItem(
                                         expense = expense,
                                         onClick = { navController.navigate("expense_details/${expense.id}") },
@@ -320,22 +318,28 @@ fun ExpenseListScreen(
                                 }
                             }
                         }
+                    }
 
-                        ExpenseViewType.GRID -> {
-                            LazyColumn(
-                                modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 100.dp),
-                                verticalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                items(
-                                    items = sortedExpenses.chunked(2),
-                                    key = { row -> row.first().id }
-                                ) { rowItems ->
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                    ) {
-                                        rowItems.forEach { expense ->
+                    ExpenseViewType.GRID -> {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 180.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(
+                                items = listItems.chunked(2)
+                            ) { rowItems ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    rowItems.forEach { expense ->
+                                        if (expense == null) {
+                                            AddExpenseGridItem(
+                                                onClick = onAddNewExpenseClick,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                        } else {
                                             ExpenseGridItem(
                                                 expense = expense,
                                                 onClick = { navController.navigate("expense_details/${expense.id}") },
@@ -354,9 +358,9 @@ fun ExpenseListScreen(
                                                 modifier = Modifier.weight(1f)
                                             )
                                         }
-                                        if (rowItems.size == 1) {
-                                            Spacer(modifier = Modifier.weight(1f))
-                                        }
+                                    }
+                                    if (rowItems.size == 1) {
+                                        Spacer(modifier = Modifier.weight(1f))
                                     }
                                 }
                             }
@@ -368,7 +372,6 @@ fun ExpenseListScreen(
             // Show ModalBottomSheet when currentSheet != null
             currentSheet?.let { sheet ->
                 ModalBottomSheet(onDismissRequest = { currentSheet = null }, sheetState = sheetState, tonalElevation = 10.dp) {
-                    // Add a visible drag handle and a rounded top container for better Pixel feel
                     Box(modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 8.dp), contentAlignment = Alignment.TopCenter) {
@@ -490,6 +493,120 @@ fun ExpenseListScreen(
 }
 
 @Composable
+fun AddExpenseListItem(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val dashColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .drawWithCache {
+                val stroke = Stroke(
+                    width = 2.dp.toPx(),
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(24f, 24f), 0f)
+                )
+                onDrawWithContent {
+                    drawContent()
+                    drawRoundRect(
+                        color = dashColor,
+                        style = stroke,
+                        cornerRadius = CornerRadius(16.dp.toPx())
+                    )
+                }
+            }
+            .clickable { onClick() },
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 20.dp, horizontal = 16.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(44.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = "Add Expense",
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(26.dp)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Text(
+                text = "Add New Expense",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+    }
+}
+
+@Composable
+fun AddExpenseGridItem(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val dashColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(180.dp)
+            .drawWithCache {
+                val stroke = Stroke(
+                    width = 2.dp.toPx(),
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(24f, 24f), 0f)
+                )
+                onDrawWithContent {
+                    drawContent()
+                    drawRoundRect(
+                        color = dashColor,
+                        style = stroke,
+                        cornerRadius = CornerRadius(16.dp.toPx())
+                    )
+                }
+            }
+            .clickable { onClick() },
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(56.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = "Add Expense",
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "Add Expense",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+    }
+}
+@Composable
 fun ExpenseViewTypeToggle(
     currentViewType: ExpenseViewType,
     onViewTypeChange: (ExpenseViewType) -> Unit,
@@ -542,7 +659,6 @@ fun ExpenseViewTypeToggle(
     }
 }
 
-// small helper to prefill edit fields
 private fun expenseToEditPrep(
     expense: Expense,
     onSetAmount: (String) -> Unit,
@@ -706,23 +822,6 @@ fun DeleteBottomSheetContent(expense: Expense, onCancel: () -> Unit, onConfirm: 
 }
 
 @Composable
-fun EmptyExpenseState() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            Surface(modifier = Modifier.size(80.dp), shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(painter = painterResource(id = R.drawable.ic_expense_icon), contentDescription = null, modifier = Modifier.size(40.dp), tint = MaterialTheme.colorScheme.primary)
-                }
-            }
-            Spacer(modifier = Modifier.height(24.dp))
-            Text(text = "No expenses yet", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(text = "Add your first expense to get started!", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f), textAlign = TextAlign.Center)
-        }
-    }
-}
-
-@Composable
 fun ExpenseSummaryHeader(expenses: List<Expense>) {
     val totalAmount = expenses.sumOf { it.amount }
 
@@ -821,7 +920,6 @@ fun ExpenseListItem(
                         modifier = Modifier.weight(1f),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Use payment icon if available, otherwise use default expense icon
                         Box(
                             modifier = Modifier
                                 .size(44.dp)
@@ -1041,7 +1139,6 @@ fun ExpenseGridItem(
                     .padding(14.dp),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-                // Header
                 Column(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
@@ -1050,7 +1147,6 @@ fun ExpenseGridItem(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Use payment icon if available
                         Box(
                             modifier = Modifier
                                 .size(44.dp)
@@ -1122,7 +1218,6 @@ fun ExpenseGridItem(
                     )
                 }
 
-                // Footer
                 Column(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {

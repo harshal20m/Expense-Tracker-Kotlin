@@ -32,7 +32,13 @@ fun AppNavigation(
         }
         composable("calendar") {
             val expenses by viewModel.getAllExpensesWithDetails().collectAsState(initial = emptyList())
-            CalendarTransactionView(expenses = expenses)
+            CalendarTransactionView(
+                expenses = expenses,
+                onTransactionClick = { expenseId ->
+                    // Use your navController to jump to the details screen!
+                    navController.navigate("expense_details/$expenseId")
+                }
+            )
         }
         composable("assets") {
             AssetsScreen(viewModel = viewModel)
