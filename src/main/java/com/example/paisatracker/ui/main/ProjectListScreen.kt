@@ -1,7 +1,10 @@
 package com.example.paisatracker.ui.main
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -23,6 +26,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.ui.text.style.TextAlign
@@ -32,11 +36,15 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import com.example.paisatracker.ui.assets.AssetsBottomSheet
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
@@ -49,6 +57,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -58,6 +67,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -67,10 +77,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -86,10 +98,10 @@ import com.example.paisatracker.R
 import com.example.paisatracker.data.Project
 import com.example.paisatracker.data.ProjectWithTotal
 import com.example.paisatracker.data.RecentExpense
-import com.example.paisatracker.ui.recent.RecentExpensesSection
 import com.example.paisatracker.ui.search.SearchViewModel
 import com.example.paisatracker.ui.search.SearchViewModelFactory
 import com.example.paisatracker.util.formatCurrency
+import com.example.paisatracker.util.CurrentCurrency
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -130,17 +142,21 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
     val searchResults by searchViewModel.searchResults.collectAsState()
     val isSearchActive by searchViewModel.isSearchActive.collectAsState()
 
-    // UI Toggle States
+    val currency by viewModel.currentCurrency.collectAsState()
+
+    LaunchedEffect(currency) {
+        CurrentCurrency.set(currency)
+    }
+
+    // UI Toggle States — only one can be expanded at a time
     var searchExpanded by remember { mutableStateOf(false) }
     var recentExpanded by remember { mutableStateOf(false) }
+    var summaryExpanded by remember { mutableStateOf(false) }
 
     val projects by viewModel.getAllProjectsWithTotal().collectAsState(initial = emptyList())
     var currentSheetType by remember { mutableStateOf<SheetType?>(null) }
     var projectToEdit by remember { mutableStateOf<ProjectWithTotal?>(null) }
     var projectToDelete by remember { mutableStateOf<ProjectWithTotal?>(null) }
-
-    var showSummary by remember { mutableStateOf(false) }
-    var summaryAtTop by remember { mutableStateOf(true) }
 
     val sharedPrefs = remember {
         context.getSharedPreferences("project_order", android.content.Context.MODE_PRIVATE)
@@ -156,16 +172,13 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
                 savedOrder[project.project.id] = savedPosition
             }
         }
-
         if (savedOrder.isNotEmpty()) {
             customOrderMap = savedOrder
         } else {
             customOrderMap = projects
                 .sortedByDescending { it.project.lastModified }
-                .mapIndexed { index, project ->
-                    project.project.id to index
-                }.toMap()
-
+                .mapIndexed { index, project -> project.project.id to index }
+                .toMap()
             with(sharedPrefs.edit()) {
                 customOrderMap.forEach { (projectId, position) ->
                     putInt("project_$projectId", position)
@@ -187,6 +200,15 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
 
     val sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showSheet by remember { mutableStateOf(false) }
+    var showAssetsSheet by remember { mutableStateOf(false) }
+
+    if (showAssetsSheet) {
+        AssetsBottomSheet(
+            viewModel = viewModel, // pass your viewmodel
+            onDismiss = { showAssetsSheet = false } // Closes it when swiped down
+        )
+    }
+
     val scope = rememberCoroutineScope()
 
     val totalSpent = orderedProjects.sumOf { it.totalAmount }
@@ -195,7 +217,6 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
     val recentExpensesList by viewModel.recentExpenses.collectAsState(initial = emptyList())
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // 1. Header remains fixed at the top
         Header(
             onAddProjectClick = {
                 currentSheetType = SheetType.ADD
@@ -206,31 +227,12 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
             }
         )
 
-        // 2. Everything else is inside a single scrollable LazyColumn
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(
-                top = 8.dp,
-                bottom = if (!summaryAtTop && orderedProjects.isNotEmpty()) 180.dp else 110.dp
-            ),
+            contentPadding = PaddingValues(top = 8.dp, bottom = 110.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-
-            // --- Summary Section ---
-            if (summaryAtTop && orderedProjects.isNotEmpty()) {
-                item {
-                    CollapsibleSummary(
-                        totalSpent = totalSpent,
-                        totalProjects = orderedProjects.size,
-                        totalCategories = totalCategories,
-                        totalExpenses = totalExpenses,
-                        isExpanded = showSummary,
-                        onToggleExpand = { showSummary = !showSummary }
-                    )
-                }
-            }
-
-            // --- Calendar Section ---
+            // Calendar Section
             item {
                 WeeklyDashboardCalendar(
                     expenses = recentExpensesList,
@@ -240,43 +242,132 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
                 )
             }
 
-            // --- Action Toggles Row ---
+            // ── Action Toggles Grid (2x2: Summary, Search | Recent, Assets) ──
             item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                // 1. Add a Box to center the content on large screens
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center
                 ) {
-                    ActionToggleCard(
-                        title = "Search",
-                        icon = Icons.Default.Search,
-                        isExpanded = searchExpanded,
-                        onClick = {
-                            searchExpanded = !searchExpanded
-                            if (searchExpanded) recentExpanded = false
-                        },
-                        modifier = Modifier.weight(1f)
-                    )
-                    ActionToggleCard(
-                        title = "Recent",
-                        icon = Icons.Default.DateRange,
-                        isExpanded = recentExpanded,
-                        onClick = {
-                            recentExpanded = !recentExpanded
-                            if (recentExpanded) searchExpanded = false
-                        },
-                        modifier = Modifier.weight(1f)
+                    Column(
+                        modifier = Modifier
+                            .widthIn(max = 500.dp) // Stops it from stretching on tablets
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        // Top Row
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            ActionToggleCard(
+                                title = "Summary",
+                                icon = Icons.Default.KeyboardArrowDown,
+                                isExpanded = summaryExpanded,
+                                onClick = {
+                                    summaryExpanded = !summaryExpanded
+                                    if (summaryExpanded) {
+                                        searchExpanded = false
+                                        recentExpanded = false
+                                    }
+                                },
+                                modifier = Modifier.weight(1f),
+                                emojiLabel = "📊"
+                            )
+
+                            ActionToggleCard(
+                                title = "Search",
+                                icon = Icons.Default.Search,
+                                isExpanded = searchExpanded,
+                                onClick = {
+                                    searchExpanded = !searchExpanded
+                                    if (searchExpanded) {
+                                        summaryExpanded = false
+                                        recentExpanded = false
+                                    }
+                                },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+
+                        // Bottom Row
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            ActionToggleCard(
+                                title = "Recent",
+                                icon = Icons.Default.DateRange,
+                                isExpanded = recentExpanded,
+                                onClick = {
+                                    recentExpanded = !recentExpanded
+                                    if (recentExpanded) {
+                                        summaryExpanded = false
+                                        searchExpanded = false
+                                    }
+                                },
+                                modifier = Modifier.weight(1f)
+                            )
+
+                            ActionToggleCard(
+                                title = "Assets",
+                                icon = Icons.Default.Image,
+                                isExpanded = false,
+                                onClick = { showAssetsSheet = true }, // Opens the sheet!
+                                modifier = Modifier.weight(1f),
+                                isNavigation = true
+                            )
+                        }
+                    }
+                }
+            }
+
+
+
+
+            // ── Summary Expanded Panel ──
+            item {
+                AnimatedVisibility(
+                    visible = summaryExpanded && orderedProjects.isNotEmpty(),
+                    enter = expandVertically(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessMediumLow
+                        )
+                    ) + fadeIn(animationSpec = tween(300)),
+                    exit = shrinkVertically(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessMedium
+                        )
+                    ) + fadeOut(animationSpec = tween(200))
+                ) {
+                    SummaryExpandedCard(
+                        totalSpent = totalSpent,
+                        totalProjects = orderedProjects.size,
+                        totalCategories = totalCategories,
+                        totalExpenses = totalExpenses
                     )
                 }
             }
 
-            // --- Search Filter Card ---
+            // ── Search Filter Panel ──
             item {
                 AnimatedVisibility(
                     visible = searchExpanded,
-                    enter = expandVertically() + fadeIn(),
-                    exit = shrinkVertically() + fadeOut()
+                    enter = expandVertically(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessMediumLow
+                        )
+                    ) + fadeIn(animationSpec = tween(300)),
+                    exit = shrinkVertically(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessMedium
+                        )
+                    ) + fadeOut(animationSpec = tween(200))
                 ) {
                     SearchFilterCard(
                         searchQuery = searchQuery,
@@ -295,23 +386,35 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
                 }
             }
 
-            // --- Recent Expenses Content ---
+            // ── Recent Transactions Panel — shows items directly ──
             item {
                 AnimatedVisibility(
                     visible = recentExpanded,
-                    enter = expandVertically() + fadeIn(),
-                    exit = shrinkVertically() + fadeOut()
+                    enter = expandVertically(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                            stiffness = Spring.StiffnessMediumLow
+                        )
+                    ) + fadeIn(animationSpec = tween(300)),
+                    exit = shrinkVertically(
+                        animationSpec = spring(
+                            dampingRatio = Spring.DampingRatioNoBouncy,
+                            stiffness = Spring.StiffnessMedium
+                        )
+                    ) + fadeOut(animationSpec = tween(200))
                 ) {
-                    Box(modifier = Modifier.padding(horizontal = 16.dp)) {
-                        RecentExpensesSection(viewModel = viewModel)
-                    }
+                    RecentTransactionsPanel(
+                        expenses = recentExpensesList,
+                        onExpenseClick = { expense ->
+                            navController.navigate("expense_details/${expense.id}")
+                        }
+                    )
                 }
             }
 
-            // --- Main Content Area ---
+            // ── Main Content Area ──
             if (orderedProjects.isEmpty()) {
                 item {
-                    // Wrapped in Box with height to center it properly in LazyColumn
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -325,47 +428,125 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
                 if (isSearchActive) {
                     if (searchResults.isNotEmpty()) {
                         item {
-                            Text(
-                                text = "Search Results (${searchResults.size})",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.SemiBold,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                            )
-                        }
-                        // Flattened Search Results Grid
-                        items(searchResults.chunked(2)) { rowItems ->
-                            Row(
+                            Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                shape = RoundedCornerShape(20.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surface
+                                ),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                             ) {
-                                rowItems.forEach { expense ->
-                                    SearchResultItemCard(
-                                        expense = expense,
-                                        modifier = Modifier.weight(1f)
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(14.dp),
+                                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    // Header
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(30.dp)
+                                                    .clip(CircleShape)
+                                                    .background(MaterialTheme.colorScheme.tertiaryContainer),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    Icons.Default.Search,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(14.dp),
+                                                    tint = MaterialTheme.colorScheme.tertiary
+                                                )
+                                            }
+                                            Text(
+                                                text = "Results",
+                                                style = MaterialTheme.typography.titleSmall,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f)
+                                        ) {
+                                            Text(
+                                                text = "${searchResults.size} found",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.tertiary,
+                                                fontWeight = FontWeight.SemiBold,
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                                fontSize = 10.sp
+                                            )
+                                        }
+                                    }
+
+                                    HorizontalDivider(
+                                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                                        thickness = 0.5.dp
                                     )
-                                }
-                                if (rowItems.size == 1) {
-                                    Spacer(modifier = Modifier.weight(1f))
+
+                                    // Grid
+                                    searchResults.chunked(2).forEach { rowItems ->
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            rowItems.forEach { expense ->
+                                                SearchResultItemCard(
+                                                    expense = expense,
+                                                    modifier = Modifier.weight(1f)
+                                                )
+                                            }
+                                            if (rowItems.size == 1) Spacer(modifier = Modifier.weight(1f))
+                                        }
+                                    }
                                 }
                             }
                         }
                     } else {
                         item {
-                            Box(
+                            Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(32.dp),
-                                contentAlignment = Alignment.Center
+                                    .padding(horizontal = 16.dp),
+                                shape = RoundedCornerShape(20.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surface
+                                ),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                             ) {
-                                Text("No results found")
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 28.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Text("🔍", fontSize = 28.sp)
+                                    Text(
+                                        "No results found",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
                             }
                         }
                     }
                 } else {
-                    // Normal Project List
-                    itemsIndexed(orderedProjects, key = { _, item -> item.project.id }) { index, projectWithTotal ->
+                    itemsIndexed(
+                        orderedProjects,
+                        key = { _, item -> item.project.id }
+                    ) { index, projectWithTotal ->
                         Box(modifier = Modifier.padding(horizontal = 16.dp)) {
                             ProjectListItemWithReorder(
                                 projectWithTotal = projectWithTotal,
@@ -382,7 +563,6 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
                                         }
                                     }
                                     customOrderMap = newOrderMap
-
                                     with(sharedPrefs.edit()) {
                                         newOrderMap.forEach { (projectId, position) ->
                                             putInt("project_$projectId", position)
@@ -396,7 +576,6 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
                                             lastModified = System.currentTimeMillis()
                                         )
                                     )
-
                                     val newOrderMap = mutableMapOf<Long, Int>()
                                     newOrderMap[projectWithTotal.project.id] = 0
                                     orderedProjects.forEachIndexed { idx, project ->
@@ -405,14 +584,12 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
                                         }
                                     }
                                     customOrderMap = newOrderMap
-
                                     with(sharedPrefs.edit()) {
                                         newOrderMap.forEach { (projectId, position) ->
                                             putInt("project_$projectId", position)
                                         }
                                         apply()
                                     }
-
                                     navController.navigate("project_details/${projectWithTotal.project.id}")
                                 },
                                 onEditClick = {
@@ -435,7 +612,7 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
         }
     }
 
-    // Bottom Sheet Logic remains exactly the same...
+    // Bottom Sheet Logic
     if (showSheet && currentSheetType != null) {
         ModalBottomSheet(
             onDismissRequest = {
@@ -479,10 +656,7 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
                             },
                             onConfirm = { newName, newEmoji ->
                                 viewModel.updateProject(
-                                    editProject.project.copy(
-                                        name = newName,
-                                        emoji = newEmoji
-                                    )
+                                    editProject.project.copy(name = newName, emoji = newEmoji)
                                 )
                                 scope.launch { sheetState.hide() }.invokeOnCompletion {
                                     showSheet = false
@@ -520,44 +694,389 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Summary Expanded Card — full-width, rich detail, shown below the row
+// ─────────────────────────────────────────────────────────────────────────────
+
 @Composable
-fun SearchResultItemCard(
-    expense: RecentExpense,
-    modifier: Modifier = Modifier
+private fun SummaryExpandedCard(
+    totalSpent: Double,
+    totalProjects: Int,
+    totalCategories: Int,
+    totalExpenses: Int
 ) {
     Card(
-        modifier = modifier.clickable { /* Navigate to expense details */ },
-        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = MaterialTheme.colorScheme.primaryContainer
         ),
-        elevation = CardDefaults.cardElevation(2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.horizontalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primaryContainer,
+                            MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f)
+                        )
+                    )
+                )
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Title row
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(text = "📊", fontSize = 18.sp)
+                        }
+                    }
+                    Text(
+                        text = "Overview",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.15f),
+                    thickness = 1.dp
+                )
+
+                // Total spending — hero number
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = "Total Spending",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = formatCurrency(totalSpent),
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontSize = 28.sp
+                        )
+                    }
+                }
+
+                // Stats row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    SummaryStatTile(
+                        emoji = "📁",
+                        label = "Projects",
+                        value = totalProjects.toString(),
+                        modifier = Modifier.weight(1f)
+                    )
+                    SummaryStatTile(
+                        emoji = "🏷️",
+                        label = "Categories",
+                        value = totalCategories.toString(),
+                        modifier = Modifier.weight(1f)
+                    )
+                    SummaryStatTile(
+                        emoji = "🧾",
+                        label = "Expenses",
+                        value = totalExpenses.toString(),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SummaryStatTile(
+    emoji: String,
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.65f)
+    ) {
+        Column(
+            modifier = Modifier.padding(10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(text = emoji, fontSize = 20.sp)
             Text(
-                text = expense.description,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
+                text = value,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.ExtraBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                fontSize = 20.sp
             )
-            Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = formatCurrency(expense.amount),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
-                    .format(Date(expense.date)),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                fontSize = 10.sp
             )
         }
     }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Recent Transactions Panel — 2-column grid, same style as WeeklyDashboard
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun RecentTransactionsPanel(
+    expenses: List<RecentExpense>,
+    onExpenseClick: (RecentExpense) -> Unit
+) {
+    val displayExpenses = expenses.take(10)
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            // ── Header ──
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(30.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("🕐", fontSize = 14.sp)
+                    }
+                    Text(
+                        text = "Recent",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                if (displayExpenses.isNotEmpty()) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                    ) {
+                        Text(
+                            text = "${displayExpenses.size} entries",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                            fontSize = 10.sp
+                        )
+                    }
+                }
+            }
+
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                thickness = 0.5.dp
+            )
+
+            if (displayExpenses.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 20.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text("🧾", fontSize = 28.sp)
+                        Text(
+                            "No recent transactions",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            } else {
+                // ── 2-column grid ──
+                displayExpenses.chunked(2).forEach { rowItems ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        rowItems.forEach { expense ->
+                            RecentGridTile(
+                                expense = expense,
+                                onClick = { onExpenseClick(expense) },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        if (rowItems.size == 1) Spacer(modifier = Modifier.weight(1f))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RecentGridTile(
+    expense: RecentExpense,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier,
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+        tonalElevation = 0.dp
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    brush = Brush.linearGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.18f),
+                            MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.08f)
+                        )
+                    )
+                )
+        ) {
+            Column(
+                modifier = Modifier.padding(10.dp),
+                verticalArrangement = Arrangement.spacedBy(7.dp)
+            ) {
+                // Top row: emoji + date pill
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = expense.categoryEmoji.ifBlank { "💸" },
+                            fontSize = 15.sp
+                        )
+                    }
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f)
+                    ) {
+                        Text(
+                            text = SimpleDateFormat("d MMM", Locale.getDefault())
+                                .format(Date(expense.date)),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+
+                // Description
+                Text(
+                    text = expense.description,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    fontSize = 12.sp
+                )
+
+                // Bottom row: category chip + amount
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(5.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                        modifier = Modifier.weight(1f, fill = false)
+                    ) {
+                        Text(
+                            text = expense.categoryName.ifBlank { "Other" },
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
+                            fontSize = 9.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = formatCurrency(expense.amount),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.error,
+                        fontSize = 12.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Action Toggle Card — updated to support emoji label + navigation-only mode
+// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 fun ActionToggleCard(
@@ -565,54 +1084,235 @@ fun ActionToggleCard(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     isExpanded: Boolean,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    emojiLabel: String? = null,
+    isNavigation: Boolean = false
 ) {
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
+    // Re-enabled your original rotation animation!
+    val rotationAngle by animateFloatAsState(
+        targetValue = if (isExpanded) 180f else 0f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        label = "chevron_rotation"
+    )
+
+    Card(
+        modifier = modifier
+            .height(60.dp) // FIXED SIZE: Ensures all cards are perfectly uniform
+            .clickable { onClick() },
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isExpanded)
+                MaterialTheme.colorScheme.primary
+            else
+                MaterialTheme.colorScheme.primaryContainer
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = if (isExpanded) 4.dp else 0.dp
+        )
     ) {
         Row(
             modifier = Modifier
-                .fillMaxWidth()
-                .clickable { onClick() }
-                .padding(horizontal = 12.dp, vertical = 14.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .fillMaxSize() // Fills the 60.dp height
+                .padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Start
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
-                    modifier = Modifier.size(32.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
+            // Cute Left Icon / Emoji Container
+            Surface(
+                shape = CircleShape,
+                color = if (isExpanded)
+                    MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f)
+                else
+                    MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
+                modifier = Modifier.size(34.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    if (emojiLabel != null) {
+                        Text(
+                            text = emojiLabel,
+                            fontSize = 16.sp
+                        )
+                    } else {
                         Icon(
                             imageVector = icon,
                             contentDescription = title,
                             modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.primary
+                            tint = if (isExpanded)
+                                MaterialTheme.colorScheme.onPrimary
+                            else
+                                MaterialTheme.colorScheme.primary
                         )
                     }
                 }
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    fontSize = 14.sp
-                )
             }
-            Icon(
-                imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                modifier = Modifier.size(20.dp)
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            // Text with weight(1f) to push the trailing icon to the far right edge
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = if (isExpanded)
+                    MaterialTheme.colorScheme.onPrimary
+                else
+                    MaterialTheme.colorScheme.onPrimaryContainer,
+                fontSize = 13.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
             )
+
+            // Trailing Icon (Animated Dropdown OR Right Arrow)
+            Box(
+                modifier = Modifier.size(24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                if (isNavigation) {
+                    // Right arrow for purely navigational cards (like Assets)
+                    Icon(
+                        imageVector = Icons.Default.KeyboardArrowRight,
+                        contentDescription = "Navigate to $title",
+                        modifier = Modifier.size(20.dp),
+                        tint = if (isExpanded)
+                            MaterialTheme.colorScheme.onPrimary
+                        else
+                            MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
+                    )
+                } else {
+                    // Animated dropdown chevron for toggleable cards
+                    Icon(
+                        imageVector = Icons.Default.KeyboardArrowDown,
+                        contentDescription = "Toggle $title",
+                        modifier = Modifier
+                            .size(20.dp)
+                            .rotate(rotationAngle), // Applies the smooth 180-degree flip
+                        tint = if (isExpanded)
+                            MaterialTheme.colorScheme.onPrimary
+                        else
+                            MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Remaining composables — unchanged from original
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Search Result Grid Tile — compact, matches WeeklyDashboard grid style
+// ─────────────────────────────────────────────────────────────────────────────
+
+@Composable
+fun SearchResultItemCard(
+    expense: RecentExpense,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        onClick = { /* Navigate to expense details */ },
+        modifier = modifier,
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    brush = Brush.linearGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.15f),
+                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.1f)
+                        )
+                    )
+                )
+        ) {
+            Column(
+                modifier = Modifier.padding(10.dp),
+                verticalArrangement = Arrangement.spacedBy(7.dp)
+            ) {
+                // Top: emoji + date
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(30.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = expense.categoryEmoji.ifBlank { "🔍" },
+                            fontSize = 14.sp
+                        )
+                    }
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)
+                    ) {
+                        Text(
+                            text = SimpleDateFormat("d MMM", Locale.getDefault())
+                                .format(Date(expense.date)),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+
+                // Description
+                Text(
+                    text = expense.description,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    fontSize = 12.sp
+                )
+
+                // Bottom: category + amount
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(5.dp),
+                        color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f),
+                        modifier = Modifier.weight(1f, fill = false)
+                    ) {
+                        Text(
+                            text = expense.categoryName.ifBlank { "Other" },
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.tertiary,
+                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
+                            fontSize = 9.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = formatCurrency(expense.amount),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontSize = 12.sp
+                    )
+                }
+            }
         }
     }
 }
@@ -635,7 +1335,6 @@ fun SearchFilterCard(
             .padding(horizontal = 16.dp, vertical = 4.dp),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            // Solid, non-transparent background for a cleaner, grounded look
             containerColor = MaterialTheme.colorScheme.surface
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -644,7 +1343,6 @@ fun SearchFilterCard(
             modifier = Modifier.padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Row 1: Search Bar with inline Clear button
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = onSearchQueryChange,
@@ -660,9 +1358,8 @@ fun SearchFilterCard(
                 trailingIcon = {
                     if (isSearchActive) {
                         IconButton(onClick = onClear, modifier = Modifier.size(24.dp)) {
-                            // Using standard Close/Clear icon
                             Icon(
-                                Icons.Default.Delete, // Or Icons.Default.Clear if imported
+                                Icons.Default.Delete,
                                 contentDescription = "Clear",
                                 modifier = Modifier.size(16.dp),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant
@@ -672,16 +1369,15 @@ fun SearchFilterCard(
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(50.dp), // Forced compact height
+                    .height(50.dp),
                 shape = RoundedCornerShape(12.dp),
                 singleLine = true,
-                textStyle = androidx.compose.material3.LocalTextStyle.current.copy(fontSize = 14.sp),                colors = OutlinedTextFieldDefaults.colors(
+                textStyle = androidx.compose.material3.LocalTextStyle.current.copy(fontSize = 14.sp),
+                colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = MaterialTheme.colorScheme.primary,
                     unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
                 )
             )
-
-            // Row 2: Min, Max, and Apply Button all on one line
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -692,33 +1388,29 @@ fun SearchFilterCard(
                     onValueChange = onMinAmountChange,
                     placeholder = { Text("Min ₹", fontSize = 14.sp) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(50.dp),
+                    modifier = Modifier.weight(1f).height(50.dp),
                     shape = RoundedCornerShape(12.dp),
                     singleLine = true,
-                    textStyle = androidx.compose.material3.LocalTextStyle.current.copy(fontSize = 14.sp),                    colors = OutlinedTextFieldDefaults.colors(
+                    textStyle = androidx.compose.material3.LocalTextStyle.current.copy(fontSize = 14.sp),
+                    colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
                         unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
                     )
                 )
-
                 OutlinedTextField(
                     value = maxAmount,
                     onValueChange = onMaxAmountChange,
                     placeholder = { Text("Max ₹", fontSize = 14.sp) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(50.dp),
+                    modifier = Modifier.weight(1f).height(50.dp),
                     shape = RoundedCornerShape(12.dp),
                     singleLine = true,
-                    textStyle = androidx.compose.material3.LocalTextStyle.current.copy(fontSize = 14.sp),                    colors = OutlinedTextFieldDefaults.colors(
+                    textStyle = androidx.compose.material3.LocalTextStyle.current.copy(fontSize = 14.sp),
+                    colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
                         unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
                     )
                 )
-
                 Button(
                     onClick = onSearch,
                     modifier = Modifier.height(50.dp),
@@ -728,197 +1420,6 @@ fun SearchFilterCard(
                     Text("Apply", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun CollapsibleSummary(
-    totalSpent: Double,
-    totalProjects: Int,
-    totalCategories: Int,
-    totalExpenses: Int,
-    isExpanded: Boolean,
-    onToggleExpand: () -> Unit
-) {
-    val rotationAngle by animateFloatAsState(
-        targetValue = if (isExpanded) 180f else 0f,
-        label = "arrow rotation"
-    )
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer
-        ),
-        elevation = CardDefaults.cardElevation(2.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    Brush.horizontalGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.primaryContainer,
-                            MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f)
-                        )
-                    )
-                )
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onToggleExpand() }
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Surface(
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                        modifier = Modifier.size(36.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Text(text = "📊", fontSize = 18.sp)
-                        }
-                    }
-
-                    Column {
-                        Text(
-                            text = "Summary",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
-                        if (!isExpanded) {
-                            Text(
-                                text = formatCurrency(totalSpent),
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 13.sp,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-                    }
-                }
-
-                IconButton(
-                    onClick = onToggleExpand,
-                    modifier = Modifier.size(32.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.KeyboardArrowDown,
-                        contentDescription = if (isExpanded) "Collapse" else "Expand",
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier
-                            .size(20.dp)
-                            .rotate(rotationAngle)
-                    )
-                }
-            }
-
-            AnimatedVisibility(
-                visible = isExpanded,
-                enter = expandVertically() + fadeIn(),
-                exit = shrinkVertically() + fadeOut()
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    androidx.compose.material3.HorizontalDivider(
-                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f),
-                        thickness = 1.dp
-                    )
-
-                    // Horizontal Stats Row
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        // Total Spending Stat
-                        Surface(
-                            modifier = Modifier.weight(1.5f),
-                            shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(10.dp),
-                                verticalArrangement = Arrangement.spacedBy(2.dp)
-                            ) {
-                                Text(
-                                    text = "Total Spending",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
-                                    fontSize = 10.sp
-                                )
-                                Text(
-                                    text = formatCurrency(totalSpent),
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    fontSize = 16.sp
-                                )
-                            }
-                        }
-
-                        // Grid of other stats
-                        Column(
-                            modifier = Modifier.weight(2f),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                CompactStatItem(label = "Projects", value = totalProjects.toString(), modifier = Modifier.weight(1f))
-                                CompactStatItem(label = "Categories", value = totalCategories.toString(), modifier = Modifier.weight(1f))
-                            }
-                            CompactStatItem(label = "Expenses", value = totalExpenses.toString(), modifier = Modifier.fillMaxWidth())
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun CompactStatItem(
-    label: String,
-    value: String,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(8.dp),
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f)
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = value,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                fontSize = 10.sp
-            )
         }
     }
 }
@@ -958,10 +1459,7 @@ private fun Header(onAddProjectClick: () -> Unit) {
                     shadowElevation = 4.dp,
                     modifier = Modifier.size(52.dp)
                 ) {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier.fillMaxSize()
-                    ) {
+                    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                         Icon(
                             painter = painterResource(id = R.drawable.ic_project_icon_header),
                             contentDescription = null,
@@ -970,10 +1468,7 @@ private fun Header(onAddProjectClick: () -> Unit) {
                         )
                     }
                 }
-
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
-                ) {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
                         text = "PaisaTracker",
                         style = MaterialTheme.typography.headlineMedium,
@@ -991,7 +1486,6 @@ private fun Header(onAddProjectClick: () -> Unit) {
                     )
                 }
             }
-
             FloatingActionButton(
                 onClick = onAddProjectClick,
                 containerColor = MaterialTheme.colorScheme.primary,
@@ -1003,11 +1497,7 @@ private fun Header(onAddProjectClick: () -> Unit) {
                     pressedElevation = 12.dp
                 )
             ) {
-                Icon(
-                    Icons.Default.Add,
-                    contentDescription = "Add Project",
-                    modifier = Modifier.size(26.dp)
-                )
+                Icon(Icons.Default.Add, contentDescription = "Add Project", modifier = Modifier.size(26.dp))
             }
         }
     }
@@ -1027,16 +1517,12 @@ fun ProjectListItemWithReorder(
     var isAmountVisible by remember { mutableStateOf(false) }
     val canMoveUp = currentIndex > 0
     val canMoveDown = currentIndex < totalItems - 1
+    val currency = CurrentCurrency.get()
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = 2.dp,
-            hoveredElevation = 6.dp
-        ),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp, hoveredElevation = 6.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(16.dp)
     ) {
         Box(
@@ -1052,11 +1538,7 @@ fun ProjectListItemWithReorder(
                     )
                 )
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
+            Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -1081,12 +1563,8 @@ fun ProjectListItemWithReorder(
                                 ),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = projectWithTotal.project.emoji,
-                                fontSize = 26.sp
-                            )
+                            Text(text = projectWithTotal.project.emoji, fontSize = 26.sp)
                         }
-
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = projectWithTotal.project.name,
@@ -1100,7 +1578,6 @@ fun ProjectListItemWithReorder(
                             )
                         }
                     }
-
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -1115,19 +1592,13 @@ fun ProjectListItemWithReorder(
                             ),
                             contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp)
                         ) {
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "Explore",
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 13.sp
-                                )
-                            }
+                            Text(
+                                text = "Explore",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 13.sp
+                            )
                         }
-
                         IconButton(
                             onClick = { menuExpanded = !menuExpanded },
                             modifier = Modifier.size(36.dp)
@@ -1148,16 +1619,13 @@ fun ProjectListItemWithReorder(
                     exit = shrinkVertically() + fadeOut()
                 ) {
                     Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 12.dp),
+                        modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        androidx.compose.material3.HorizontalDivider(
+                        HorizontalDivider(
                             color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
                             thickness = 1.dp
                         )
-
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -1165,50 +1633,31 @@ fun ProjectListItemWithReorder(
                             MenuActionButton(
                                 icon = Icons.Default.Edit,
                                 label = "Edit",
-                                onClick = {
-                                    onEditClick()
-                                    menuExpanded = false
-                                },
+                                onClick = { onEditClick(); menuExpanded = false },
                                 modifier = Modifier.weight(1f),
                                 containerColor = MaterialTheme.colorScheme.primaryContainer
                             )
-
                             MenuActionButton(
                                 icon = Icons.Default.KeyboardArrowUp,
                                 label = "To Top",
-                                onClick = {
-                                    if (canMoveUp) {
-                                        onReorder(currentIndex, 0)
-                                    }
-                                    menuExpanded = false
-                                },
+                                onClick = { if (canMoveUp) onReorder(currentIndex, 0); menuExpanded = false },
                                 enabled = canMoveUp,
                                 modifier = Modifier.weight(1f),
                                 containerColor = MaterialTheme.colorScheme.secondaryContainer
                             )
-
                             MenuActionButton(
                                 icon = Icons.Default.KeyboardArrowDown,
                                 label = "To Bottom",
-                                onClick = {
-                                    if (canMoveDown) {
-                                        onReorder(currentIndex, totalItems - 1)
-                                    }
-                                    menuExpanded = false
-                                },
+                                onClick = { if (canMoveDown) onReorder(currentIndex, totalItems - 1); menuExpanded = false },
                                 enabled = canMoveDown,
                                 modifier = Modifier.weight(1f),
                                 containerColor = MaterialTheme.colorScheme.secondaryContainer
                             )
                         }
-
                         MenuActionButton(
                             icon = Icons.Default.Delete,
                             label = "Delete Project",
-                            onClick = {
-                                onDeleteClick()
-                                menuExpanded = false
-                            },
+                            onClick = { onDeleteClick(); menuExpanded = false },
                             modifier = Modifier.fillMaxWidth(),
                             containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
                             contentColor = MaterialTheme.colorScheme.error
@@ -1226,12 +1675,10 @@ fun ProjectListItemWithReorder(
                         verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
                         Spacer(modifier = Modifier.height(0.dp))
-
-                        androidx.compose.material3.HorizontalDivider(
+                        HorizontalDivider(
                             color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
                             thickness = 0.5.dp
                         )
-
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -1241,22 +1688,18 @@ fun ProjectListItemWithReorder(
                                 value = "${projectWithTotal.categoryCount}",
                                 modifier = Modifier.weight(1f)
                             )
-
                             CompactStatBox(
                                 label = "Expenses",
                                 value = "${projectWithTotal.expenseCount}",
                                 modifier = Modifier.weight(1f)
                             )
                         }
-
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column(
-                                verticalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 DateChip(
                                     label = "Created",
                                     date = formatDateCompact(projectWithTotal.project.createdAt)
@@ -1266,7 +1709,6 @@ fun ProjectListItemWithReorder(
                                     date = formatDateCompact(projectWithTotal.project.lastModified)
                                 )
                             }
-
                             Column(
                                 horizontalAlignment = Alignment.End,
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -1293,7 +1735,7 @@ fun ProjectListItemWithReorder(
                                             text = if (isAmountVisible)
                                                 formatCurrency(projectWithTotal.totalAmount)
                                             else
-                                                "₹ ••••••",
+                                                "${currency.symbol} ••••••",
                                             style = MaterialTheme.typography.titleLarge,
                                             fontWeight = FontWeight.Bold,
                                             color = MaterialTheme.colorScheme.primary,
@@ -1317,11 +1759,7 @@ fun ProjectListItemWithReorder(
 }
 
 @Composable
-private fun CompactStatBox(
-    label: String,
-    value: String,
-    modifier: Modifier = Modifier
-) {
+private fun CompactStatBox(label: String, value: String, modifier: Modifier = Modifier) {
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(10.dp),
@@ -1350,10 +1788,7 @@ private fun CompactStatBox(
 }
 
 @Composable
-private fun DateChip(
-    label: String,
-    date: String
-) {
+private fun DateChip(label: String, date: String) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -1386,10 +1821,7 @@ private fun formatDateCompact(timestamp: Long): String {
 }
 
 @Composable
-fun AddProjectSheetContent(
-    onCancel: () -> Unit,
-    onConfirm: (String, String) -> Unit
-) {
+fun AddProjectSheetContent(onCancel: () -> Unit, onConfirm: (String, String) -> Unit) {
     var projectName by remember { mutableStateOf("") }
     var selectedEmoji by remember { mutableStateOf("📁") }
 
@@ -1416,54 +1848,21 @@ fun AddProjectSheetContent(
                 ),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = selectedEmoji,
-                style = MaterialTheme.typography.displaySmall,
-                fontSize = 40.sp
-            )
+            Text(text = selectedEmoji, style = MaterialTheme.typography.displaySmall, fontSize = 40.sp)
         }
-
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Text(
-                text = "Create New Project",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = "Choose an emoji and name",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("Create New Project", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            Text("Choose an emoji and name", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                text = "Select Emoji",
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-
+        Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Select Emoji", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
             Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(120.dp),
+                modifier = Modifier.fillMaxWidth().height(120.dp),
                 shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                )
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
             ) {
                 LazyRow(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(8.dp),
+                    modifier = Modifier.fillMaxSize().padding(8.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -1472,25 +1871,16 @@ fun AddProjectSheetContent(
                             modifier = Modifier
                                 .size(48.dp)
                                 .clip(CircleShape)
-                                .background(
-                                    if (emoji == selectedEmoji)
-                                        MaterialTheme.colorScheme.primaryContainer
-                                    else
-                                        MaterialTheme.colorScheme.surface
-                                )
+                                .background(if (emoji == selectedEmoji) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface)
                                 .clickable { selectedEmoji = emoji },
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = emoji,
-                                fontSize = 24.sp
-                            )
+                            Text(text = emoji, fontSize = 24.sp)
                         }
                     }
                 }
             }
         }
-
         OutlinedTextField(
             value = projectName,
             onValueChange = { projectName = it },
@@ -1504,54 +1894,28 @@ fun AddProjectSheetContent(
                 focusedLabelColor = MaterialTheme.colorScheme.primary
             )
         )
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             OutlinedButton(
                 onClick = onCancel,
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(
-                    1.5.dp,
-                    MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
-                ),
+                border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)),
                 contentPadding = PaddingValues(vertical = 14.dp)
             ) {
-                Text(
-                    "Cancel",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold
-                )
+                Text("Cancel", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
             }
-
             Button(
                 onClick = { onConfirm(projectName, selectedEmoji) },
                 enabled = projectName.isNotBlank(),
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(12.dp),
-                elevation = ButtonDefaults.buttonElevation(
-                    defaultElevation = 4.dp,
-                    pressedElevation = 8.dp
-                ),
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp, pressedElevation = 8.dp),
                 contentPadding = PaddingValues(vertical = 14.dp)
             ) {
-                Row(
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        Icons.Default.Add,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp)
-                    )
+                Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        "Create",
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Text("Create", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -1590,44 +1954,19 @@ fun EditProjectSheetContent(
                 ),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = selectedEmoji,
-                fontSize = 32.sp
-            )
+            Text(text = selectedEmoji, fontSize = 32.sp)
         }
-
-        Text(
-            "Edit Project",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold
-        )
-
-        Text(
-            text = "Update project details",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
+        Text("Edit Project", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        Text("Update project details", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(
-                text = "Select Emoji",
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-
+            Text("Select Emoji", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
             Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(100.dp),
+                modifier = Modifier.fillMaxWidth().height(100.dp),
                 shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                )
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
             ) {
                 LazyRow(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(8.dp),
+                    modifier = Modifier.fillMaxSize().padding(8.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -1636,25 +1975,16 @@ fun EditProjectSheetContent(
                             modifier = Modifier
                                 .size(42.dp)
                                 .clip(CircleShape)
-                                .background(
-                                    if (emoji == selectedEmoji)
-                                        MaterialTheme.colorScheme.primaryContainer
-                                    else
-                                        MaterialTheme.colorScheme.surface
-                                )
+                                .background(if (emoji == selectedEmoji) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface)
                                 .clickable { selectedEmoji = emoji },
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = emoji,
-                                fontSize = 22.sp
-                            )
+                            Text(text = emoji, fontSize = 22.sp)
                         }
                     }
                 }
             }
         }
-
         OutlinedTextField(
             value = editedName,
             onValueChange = { editedName = it },
@@ -1667,53 +1997,27 @@ fun EditProjectSheetContent(
                 focusedLabelColor = MaterialTheme.colorScheme.primary
             )
         )
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             OutlinedButton(
                 onClick = onCancel,
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(
-                    1.5.dp,
-                    MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
-                )
+                border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
             ) {
-                Text(
-                    "Cancel",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold
-                )
+                Text("Cancel", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
             }
-
             Button(
                 onClick = { onConfirm(editedName, selectedEmoji) },
                 enabled = editedName.isNotBlank() && (editedName != currentName || selectedEmoji != currentEmoji),
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(12.dp),
-                elevation = ButtonDefaults.buttonElevation(
-                    defaultElevation = 2.dp,
-                    pressedElevation = 6.dp
-                ),
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp, pressedElevation = 6.dp),
                 contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
             ) {
-                Row(
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        Icons.Default.Edit,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
+                Row(horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        "Save",
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Text("Save", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -1721,11 +2025,7 @@ fun EditProjectSheetContent(
 }
 
 @Composable
-fun DeleteProjectSheetContent(
-    projectName: String,
-    onCancel: () -> Unit,
-    onConfirm: () -> Unit
-) {
+fun DeleteProjectSheetContent(projectName: String, onCancel: () -> Unit, onConfirm: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -1747,30 +2047,12 @@ fun DeleteProjectSheetContent(
                 ),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                Icons.Default.Delete,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.error,
-                modifier = Modifier.size(32.dp)
-            )
+            Icon(Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(32.dp))
         }
-
-        Text(
-            "Delete Project?",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold
-        )
-
+        Text("Delete Project?", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(
-                "Are you sure you want to delete",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Surface(
-                shape = RoundedCornerShape(10.dp),
-                color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
-            ) {
+            Text("Are you sure you want to delete", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Surface(shape = RoundedCornerShape(10.dp), color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)) {
                 Text(
                     text = "'$projectName'",
                     style = MaterialTheme.typography.titleMedium,
@@ -1779,43 +2061,20 @@ fun DeleteProjectSheetContent(
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
                 )
             }
-            Text(
-                "This will permanently remove all categories and expenses.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Text("This will permanently remove all categories and expenses.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            OutlinedButton(
-                onClick = onCancel,
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text(
-                    "Cancel",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.SemiBold
-                )
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            OutlinedButton(onClick = onCancel, modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp)) {
+                Text("Cancel", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
             }
-
             Button(
                 onClick = onConfirm,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error
-                ),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(12.dp),
                 contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
             ) {
-                Text(
-                    "Delete",
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Bold
-                )
+                Text("Delete", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -1823,10 +2082,7 @@ fun DeleteProjectSheetContent(
 
 @Composable
 private fun EmptyProjectsState() {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
@@ -1838,20 +2094,11 @@ private fun EmptyProjectsState() {
                 modifier = Modifier.size(80.dp),
                 tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
             )
-
             Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = "No Projects Yet",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-
+            Text("No Projects Yet", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
             Spacer(modifier = Modifier.height(8.dp))
-
             Text(
-                text = "Create your first project to start\ntracking expenses",
+                "Create your first project to start\ntracking expenses",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
@@ -1878,9 +2125,7 @@ private fun MenuActionButton(
         color = if (enabled) containerColor else containerColor.copy(alpha = 0.5f)
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 12.dp),
+            modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -1898,77 +2143,6 @@ private fun MenuActionButton(
                 color = if (enabled) contentColor else contentColor.copy(alpha = 0.5f),
                 fontSize = 13.sp
             )
-        }
-    }
-}
-
-@Composable
-fun SearchResultsGrid(
-    searchResults: List<RecentExpense>,
-    modifier: Modifier = Modifier
-) {
-    LazyColumn(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp),
-        contentPadding = PaddingValues(bottom = 100.dp)
-    ) {
-        item {
-            Text(
-                "Search Results (${searchResults.size})",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(vertical = 12.dp)
-            )
-        }
-
-        items(searchResults.chunked(2)) { rowItems ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 6.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                rowItems.forEach { expense ->
-                    Card(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clickable { /* Navigate to expense details */ },
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surface
-                        ),
-                        elevation = CardDefaults.cardElevation(2.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(12.dp)) {
-                            Text(
-                                expense.description,
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                formatCurrency(expense.amount),
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
-                                    .format(Date(expense.date)),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-                if (rowItems.size == 1) {
-                    Spacer(modifier = Modifier.weight(1f))
-                }
-            }
         }
     }
 }

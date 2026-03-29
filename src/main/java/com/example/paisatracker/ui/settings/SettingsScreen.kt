@@ -36,6 +36,7 @@ import java.io.File
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.paisatracker.PaisaTrackerApplication
 import com.example.paisatracker.data.AppTheme
+import com.example.paisatracker.data.CurrencyPreferencesRepository
 import com.example.paisatracker.ui.assets.CompactHeader
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -46,16 +47,26 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
     val application = context.applicationContext as PaisaTrackerApplication
+
+    val currencyPreferencesRepository = remember {
+        CurrencyPreferencesRepository(context)
+    }
+
     val settingsViewModel: SettingsViewModel = viewModel(
-        factory = SettingsViewModelFactory(application.themePreferencesRepository)
+        factory = SettingsViewModelFactory(
+            application.themePreferencesRepository,
+            currencyPreferencesRepository
+        )
     )
+
     val currentTheme by settingsViewModel.currentTheme.collectAsState()
+    val selectedCurrency by settingsViewModel.selectedCurrency.collectAsState()
 
     var showNotificationDialog by remember { mutableStateOf(false) }
     var showBatteryDialog by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
     var showThemeSelectionDialog by remember { mutableStateOf(false) }
-
+    var showCurrencySelectionDialog by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize()) {
         CompactHeader(
@@ -69,13 +80,51 @@ fun SettingsScreen(
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 110.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            item { SectionHeader(title = "Notifications") }
-            item { SettingsCard(icon = Icons.Default.Notifications, title = "Daily Reminders", subtitle = "Configure time and frequency", onClick = { showNotificationDialog = true }) }
-            item { SettingsCard(icon = Icons.Default.BatteryChargingFull, title = "Battery Optimization", subtitle = "Required for notifications", onClick = { showBatteryDialog = true }) }
+            item { SectionHeader(title = "Appearance") }
+            item {
+                SettingsCard(
+                    icon = Icons.Default.Palette,
+                    title = "App Theme",
+                    subtitle = "Current: ${currentTheme.themeName}",
+                    onClick = { showThemeSelectionDialog = true }
+                )
+            }
+            item {
+                SettingsCard(
+                    icon = Icons.Default.AttachMoney,
+                    title = "Currency",
+                    subtitle = "${selectedCurrency.flag} ${selectedCurrency.code} - ${selectedCurrency.symbol}",
+                    onClick = { showCurrencySelectionDialog = true }
+                )
+            }
+
+            item { Spacer(modifier = Modifier.height(8.dp)); SectionHeader(title = "Notifications") }
+            item {
+                SettingsCard(
+                    icon = Icons.Default.Notifications,
+                    title = "Daily Reminders",
+                    subtitle = "Configure time and frequency",
+                    onClick = { showNotificationDialog = true }
+                )
+            }
+            item {
+                SettingsCard(
+                    icon = Icons.Default.BatteryChargingFull,
+                    title = "Battery Optimization",
+                    subtitle = "Required for notifications",
+                    onClick = { showBatteryDialog = true }
+                )
+            }
 
             item { Spacer(modifier = Modifier.height(8.dp)); SectionHeader(title = "App") }
-            item { SettingsCard(icon = Icons.Default.Palette, title = "App Theme", subtitle = "Current: ${currentTheme.themeName}", onClick = { showThemeSelectionDialog = true }) }
-            item { SettingsCard(icon = Icons.Default.Info, title = "About", subtitle = "Version, developer info", onClick = { showAboutDialog = true }) }
+            item {
+                SettingsCard(
+                    icon = Icons.Default.Info,
+                    title = "About",
+                    subtitle = "Version, developer info",
+                    onClick = { showAboutDialog = true }
+                )
+            }
             item {
                 SettingsCard(
                     icon = Icons.Default.Share,
@@ -93,13 +142,22 @@ fun SettingsScreen(
                                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                             }
                             context.startActivity(Intent.createChooser(shareIntent, "Share PaisaTracker APK"))
-                        } catch (e: Exception) { Toast.makeText(context, "Unable to share APK", Toast.LENGTH_SHORT).show() }
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "Unable to share APK", Toast.LENGTH_SHORT).show()
+                        }
                     }
                 )
             }
 
             item { Spacer(modifier = Modifier.height(8.dp)); SectionHeader(title = "Data & Privacy") }
-            item { SettingsCard(icon = Icons.Default.CloudSync, title = "Backup & Restore", subtitle = "Export and import your data", onClick = { navController.navigate("export") }) }
+            item {
+                SettingsCard(
+                    icon = Icons.Default.CloudSync,
+                    title = "Backup & Restore",
+                    subtitle = "Export and import your data",
+                    onClick = { navController.navigate("export") }
+                )
+            }
 
             item {
                 val appLockPrefs = remember { AppLockPreferences.getInstance(context) }
@@ -113,58 +171,143 @@ fun SettingsScreen(
                     icon = Icons.Default.Lock,
                     title = "App Lock",
                     subtitle = if (isAppLockEnabled) "Enabled with ${if (isBiometricEnabled) "Biometric" else "PIN"}" else "Secure with PIN or Fingerprint",
-                    onClick = { if (isAppLockEnabled) showAppLockSettingsDialog = true else showPinSetupDialog = true }
+                    onClick = {
+                        if (isAppLockEnabled) showAppLockSettingsDialog = true
+                        else showPinSetupDialog = true
+                    }
                 )
 
                 if (showPinSetupDialog) {
-                    SetupPinDialog(onDismiss = { showPinSetupDialog = false }, onPinSet = { pin ->
-                        scope.launch {
-                            appLockPrefs.setPinCode(pin)
-                            appLockPrefs.setAppLockEnabled(true)
-                            showPinSetupDialog = false
+                    SetupPinDialog(
+                        onDismiss = { showPinSetupDialog = false },
+                        onPinSet = { pin ->
+                            scope.launch {
+                                appLockPrefs.setPinCode(pin)
+                                appLockPrefs.setAppLockEnabled(true)
+                                showPinSetupDialog = false
+                            }
                         }
-                    })
+                    )
                 }
                 if (showAppLockSettingsDialog) {
-                    AppLockSettingsDialog(appLockPrefs = appLockPrefs, isAppLockEnabled = isAppLockEnabled, isBiometricEnabled = isBiometricEnabled, onDismiss = { showAppLockSettingsDialog = false })
+                    AppLockSettingsDialog(
+                        appLockPrefs = appLockPrefs,
+                        isAppLockEnabled = isAppLockEnabled,
+                        isBiometricEnabled = isBiometricEnabled,
+                        onDismiss = { showAppLockSettingsDialog = false }
+                    )
                 }
             }
         }
     }
 
-    if (showNotificationDialog) NotificationSettingsBottomSheet(viewModel = viewModel, onDismiss = { showNotificationDialog = false })
-    if (showBatteryDialog) BatteryOptimizationBottomSheet(onDismiss = { showBatteryDialog = false })
-    if (showAboutDialog) AboutBottomSheet(onDismiss = { showAboutDialog = false })
+    if (showNotificationDialog) {
+        NotificationSettingsBottomSheet(
+            viewModel = viewModel,
+            onDismiss = { showNotificationDialog = false }
+        )
+    }
+    if (showBatteryDialog) {
+        BatteryOptimizationBottomSheet(
+            onDismiss = { showBatteryDialog = false }
+        )
+    }
+    if (showAboutDialog) {
+        AboutBottomSheet(
+            onDismiss = { showAboutDialog = false }
+        )
+    }
     if (showThemeSelectionDialog) {
-        ThemeSelectionBottomSheet(currentTheme = currentTheme, onDismiss = { showThemeSelectionDialog = false }, onThemeSelected = { theme ->
-            settingsViewModel.saveTheme(theme)
-            showThemeSelectionDialog = false
-        })
+        ThemeSelectionBottomSheet(
+            currentTheme = currentTheme,
+            onDismiss = { showThemeSelectionDialog = false },
+            onThemeSelected = { theme ->
+                settingsViewModel.saveTheme(theme)
+                showThemeSelectionDialog = false
+            }
+        )
+    }
+    if (showCurrencySelectionDialog) {
+        CurrencySelectionBottomSheet(
+            currentCurrency = selectedCurrency,
+            onDismiss = { showCurrencySelectionDialog = false },
+            onCurrencySelected = { currency ->
+                settingsViewModel.saveCurrency(currency.code)
+                showCurrencySelectionDialog = false
+            }
+        )
     }
 }
 
 @Composable
 fun SectionHeader(title: String) {
-    Text(text = title, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 4.dp))
+    Text(
+        text = title,
+        style = MaterialTheme.typography.labelLarge,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 4.dp)
+    )
 }
 
 @Composable
-fun SettingsCard(icon: ImageVector, title: String, subtitle: String, enabled: Boolean = true, onClick: () -> Unit) {
+fun SettingsCard(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    enabled: Boolean = true,
+    onClick: () -> Unit
+) {
     Card(
-        modifier = Modifier.fillMaxWidth().clickable(enabled = enabled, onClick = onClick),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = enabled, onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+        )
     ) {
-        Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)), contentAlignment = Alignment.Center) {
-                Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    icon,
+                    null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
             }
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-                Text(text = subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
-            Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), modifier = Modifier.size(20.dp))
+            Icon(
+                Icons.Default.ChevronRight,
+                null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                modifier = Modifier.size(20.dp)
+            )
         }
     }
 }

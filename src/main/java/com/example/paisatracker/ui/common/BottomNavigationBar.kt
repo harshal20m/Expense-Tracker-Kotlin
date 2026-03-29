@@ -31,12 +31,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Dashboard
-import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.ImportExport
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Dashboard
-import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.ImportExport
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
@@ -82,12 +80,6 @@ fun BottomNavigationBar(navController: NavController) {
             unselectedIcon = Icons.Outlined.CalendarMonth
         ),
         NavItem(
-            route = "assets",
-            label = "Assets",
-            selectedIcon = Icons.Filled.Image,
-            unselectedIcon = Icons.Outlined.Image
-        ),
-        NavItem(
             route = "export",
             label = "Export",
             selectedIcon = Icons.Filled.ImportExport,
@@ -107,23 +99,19 @@ fun BottomNavigationBar(navController: NavController) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            // Provide enough padding so the large shadow isn't clipped by the edge of the screen
-            .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp), // <--- NEW LINE
+            .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
         contentAlignment = Alignment.Center
     ) {
         Row(
             modifier = Modifier
                 .wrapContentWidth()
                 .height(72.dp)
-                // 1. Beautiful, visible shadow. We pass solid colors because the system
-                // will automatically diffuse and fade it for us.
                 .shadow(
-                    elevation = 24.dp, // High elevation for a wide, soft spread
+                    elevation = 24.dp,
                     shape = RoundedCornerShape(36.dp),
-                    spotColor = MaterialTheme.colorScheme.primary, // Adds a subtle tint to the shadow
+                    spotColor = MaterialTheme.colorScheme.primary,
                     ambientColor = Color.Black
                 )
-                // 2. Solid, clean background
                 .background(
                     color = MaterialTheme.colorScheme.surface,
                     shape = RoundedCornerShape(36.dp)
@@ -169,17 +157,15 @@ private fun BottomNavItem(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
 
-    // Fluid spring animation for width
     val animatedWidth by animateDpAsState(
         targetValue = if (isSelected) 115.dp else 50.dp,
         animationSpec = spring(
-            dampingRatio = 0.65f, // Slightly bouncier
+            dampingRatio = 0.65f,
             stiffness = 300f
         ),
         label = "width"
     )
 
-    // Smooth color transitions
     val containerColor by animateColorAsState(
         targetValue = if (isSelected)
             MaterialTheme.colorScheme.primaryContainer
@@ -198,7 +184,6 @@ private fun BottomNavItem(
         label = "contentColor"
     )
 
-    // Continuous "Breathing" Animation generator
     val infiniteTransition = rememberInfiniteTransition(label = "breathing")
     val breathingScale by infiniteTransition.animateFloat(
         initialValue = 0.96f,
@@ -210,7 +195,6 @@ private fun BottomNavItem(
         label = "breathingScale"
     )
 
-    // Only apply the breathing scale if the item is currently selected
     val finalScale = if (isSelected) breathingScale else 1f
 
     Box(
@@ -243,7 +227,6 @@ private fun BottomNavItem(
                     .scale(finalScale)
             )
 
-            // Animated visibility for the text ensures it slides in beautifully
             AnimatedVisibility(
                 visible = isSelected,
                 enter = fadeIn(animationSpec = tween(400)) +

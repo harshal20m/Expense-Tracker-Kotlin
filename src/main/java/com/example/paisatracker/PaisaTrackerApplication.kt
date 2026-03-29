@@ -3,11 +3,12 @@ package com.example.paisatracker
 import android.app.Application
 import android.content.Context
 import androidx.work.*
-import com.example.paisatracker.data.PaisaTrackerDatabase
-import com.example.paisatracker.data.PaisaTrackerRepository
-import com.example.paisatracker.data.ThemePreferencesRepository
-import com.example.paisatracker.data.themeDataStore
+import com.example.paisatracker.data.*
+import com.example.paisatracker.util.CurrentCurrency
 import com.example.paisatracker.util.ExpenseReminderWorker
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
@@ -27,9 +28,20 @@ class PaisaTrackerApplication : Application() {
         ThemePreferencesRepository.getInstance(applicationContext)
     }
 
+    val currencyPreferencesRepository: CurrencyPreferencesRepository by lazy {
+        CurrencyPreferencesRepository(applicationContext)
+    }
+
     override fun onCreate() {
         super.onCreate()
         scheduleDailyReminder()
+
+        // Initialize currency from preferences
+        CoroutineScope(Dispatchers.IO).launch {
+            currencyPreferencesRepository.selectedCurrency.collect { currency ->
+                CurrentCurrency.set(currency)
+            }
+        }
     }
 
     private fun scheduleDailyReminder() {
@@ -40,12 +52,10 @@ class PaisaTrackerApplication : Application() {
         val workManager = WorkManager.getInstance(applicationContext)
 
         if (!isEnabled) {
-            // Cancel notifications if disabled
             workManager.cancelUniqueWork("daily_expense_reminder")
             return
         }
 
-        // Calculate next trigger time
         val currentTime = Calendar.getInstance()
         val targetTime = Calendar.getInstance().apply {
             set(Calendar.HOUR_OF_DAY, notificationHour)
@@ -54,7 +64,6 @@ class PaisaTrackerApplication : Application() {
             set(Calendar.MILLISECOND, 0)
         }
 
-        // If target time has passed today, schedule for tomorrow
         if (currentTime.after(targetTime)) {
             targetTime.add(Calendar.DAY_OF_MONTH, 1)
         }
@@ -68,13 +77,12 @@ class PaisaTrackerApplication : Application() {
             .setInitialDelay(initialDelay, TimeUnit.MILLISECONDS)
             .setConstraints(
                 Constraints.Builder()
-                    .setRequiresBatteryNotLow(false) // Changed to false for better reliability
+                    .setRequiresBatteryNotLow(false)
                     .build()
             )
             .addTag("expense_reminder")
             .build()
 
-        // Use REPLACE to update existing work with new schedule
         workManager.enqueueUniquePeriodicWork(
             "daily_expense_reminder",
             ExistingPeriodicWorkPolicy.REPLACE,

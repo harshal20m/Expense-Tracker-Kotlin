@@ -5,31 +5,31 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.paisatracker.data.Asset
-import com.example.paisatracker.data.BackupMetadata
-import com.example.paisatracker.data.Category
-import com.example.paisatracker.data.CategoryExpense
-import com.example.paisatracker.data.CategoryWithTotal
-import com.example.paisatracker.data.Expense
-import com.example.paisatracker.data.RecentExpense
-import com.example.paisatracker.data.PaisaTrackerRepository
-import com.example.paisatracker.data.Project
-import com.example.paisatracker.data.ProjectWithTotal
+import com.example.paisatracker.data.*
 import com.example.paisatracker.util.ImageUtils
+import com.example.paisatracker.util.CurrentCurrency
 import com.opencsv.CSVReader
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.InputStreamReader
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.flatMapLatest
 
+class PaisaTrackerViewModel(
+    private val repository: PaisaTrackerRepository,
+    private val currencyPreferencesRepository: CurrencyPreferencesRepository
+) : ViewModel() {
 
-class PaisaTrackerViewModel(private val repository: PaisaTrackerRepository) : ViewModel() {
+    // Currency State - Add this
+    val currentCurrency: StateFlow<Currency> = currencyPreferencesRepository.selectedCurrency
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = CurrencyList.getCurrencyByCode("INR")
+        )
 
     private val _recentExpensesLimit = MutableStateFlow(10)
     @kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -219,6 +219,13 @@ class PaisaTrackerViewModel(private val repository: PaisaTrackerRepository) : Vi
         viewModelScope.launch { repository.deleteExpense(expense) }
     }
 
+    // ---------------- Currency Management - Add this ----------------
+    fun saveCurrency(currencyCode: String) {
+        viewModelScope.launch {
+            currencyPreferencesRepository.saveCurrency(currencyCode)
+        }
+    }
+
     // ---------------- Export: CSV with emoji + paymentMethod ----------------
 
     suspend fun getExpensesForExport(projectId: Long): String {
@@ -284,7 +291,6 @@ class PaisaTrackerViewModel(private val repository: PaisaTrackerRepository) : Vi
             repository.insertCategory(newCategory)
         }
     }
-
 
     suspend fun importFromCsv(context: Context, uri: Uri, projectId: Long): Boolean {
         return try {
@@ -380,7 +386,7 @@ class PaisaTrackerViewModel(private val repository: PaisaTrackerRepository) : Vi
                         val paymentMethod = getSafe(paymentIdx)?.takeIf { it.isNotBlank() }
 
                         // Category create / fetch
-                        val categoryId = getOrCreateCategoryAndGetId(categoryName, projectId,emoji)
+                        val categoryId = getOrCreateCategoryAndGetId(categoryName, projectId, emoji)
                         if (categoryId == -1L) continue
 
                         val expense = Expense(
@@ -401,16 +407,16 @@ class PaisaTrackerViewModel(private val repository: PaisaTrackerRepository) : Vi
             false
         }
     }
-
 }
 
 class PaisaTrackerViewModelFactory(
-    private val repository: PaisaTrackerRepository
+    private val repository: PaisaTrackerRepository,
+    private val currencyPreferencesRepository: CurrencyPreferencesRepository
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(PaisaTrackerViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return PaisaTrackerViewModel(repository) as T
+            return PaisaTrackerViewModel(repository, currencyPreferencesRepository) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

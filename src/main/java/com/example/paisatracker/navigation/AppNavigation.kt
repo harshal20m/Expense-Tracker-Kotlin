@@ -9,7 +9,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.paisatracker.PaisaTrackerApplication
 import com.example.paisatracker.PaisaTrackerViewModel
-import com.example.paisatracker.ui.assets.AssetsScreen
 import com.example.paisatracker.ui.details.ProjectDetailsScreen
 import com.example.paisatracker.ui.details.ProjectInsightsScreen
 import com.example.paisatracker.ui.expense.ExpenseDetailScreen
@@ -40,9 +39,7 @@ fun AppNavigation(
                 }
             )
         }
-        composable("assets") {
-            AssetsScreen(viewModel = viewModel)
-        }
+
         composable("export") {
             ExportScreen(viewModel = viewModel, navController = navController)
         }

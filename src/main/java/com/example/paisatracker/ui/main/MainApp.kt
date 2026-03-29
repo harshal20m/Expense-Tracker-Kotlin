@@ -23,7 +23,6 @@ import com.example.paisatracker.ui.common.BreadcrumbNavigation
 @Composable
 fun MainApp(viewModel: PaisaTrackerViewModel) {
     val navController = rememberNavController()
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
     val application = LocalContext.current.applicationContext as PaisaTrackerApplication
 
     Surface(
@@ -47,7 +46,10 @@ fun MainApp(viewModel: PaisaTrackerViewModel) {
             ) {
                 Column {
                     // Breadcrumb just above bottom nav
-                    BreadcrumbNavigation(navController = navController, viewModel = PaisaTrackerViewModel(application.repository))
+                    BreadcrumbNavigation(
+                        navController = navController,
+                        viewModel = viewModel
+                    )
 
                     // Bottom navigation bar
                     BottomNavigationBar(navController = navController)

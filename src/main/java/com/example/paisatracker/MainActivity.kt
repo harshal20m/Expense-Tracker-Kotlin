@@ -16,9 +16,11 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
 import com.example.paisatracker.data.AppLockPreferences
+import com.example.paisatracker.data.CurrencyList
 import com.example.paisatracker.ui.applock.AppLockScreen
 import com.example.paisatracker.ui.main.MainApp
 import com.example.paisatracker.ui.theme.PaisaTrackerTheme
+import com.example.paisatracker.util.CurrentCurrency
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import com.example.paisatracker.data.ThemePreferencesRepository
@@ -26,7 +28,10 @@ import com.example.paisatracker.data.AppTheme
 
 class MainActivity : FragmentActivity() {
     private val viewModel: PaisaTrackerViewModel by viewModels {
-        PaisaTrackerViewModelFactory((application as PaisaTrackerApplication).repository)
+        PaisaTrackerViewModelFactory(
+            (application as PaisaTrackerApplication).repository,
+            (application as PaisaTrackerApplication).currencyPreferencesRepository
+        )
     }
 
     private val appLockPrefs by lazy { AppLockPreferences.getInstance(this) }
@@ -44,7 +49,6 @@ class MainActivity : FragmentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // Enable Edge-to-Edge handling
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
@@ -59,6 +63,15 @@ class MainActivity : FragmentActivity() {
 
         setContent {
             val currentTheme by themePreferencesRepository.appTheme.collectAsState(initial = AppTheme.SYSTEM_DEFAULT)
+
+            // Observe currency changes
+            val currentCurrency by viewModel.currentCurrency.collectAsState()
+
+            // Update CurrentCurrency singleton whenever currency changes
+            LaunchedEffect(currentCurrency) {
+                CurrentCurrency.set(currentCurrency)
+            }
+
             PaisaTrackerTheme(appTheme = currentTheme) {
                 AppContent()
             }
