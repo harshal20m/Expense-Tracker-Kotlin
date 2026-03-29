@@ -8,12 +8,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.example.paisatracker.PaisaTrackerApplication
 import com.example.paisatracker.PaisaTrackerViewModel
 import com.example.paisatracker.navigation.AppNavigation
 import com.example.paisatracker.ui.common.BottomNavigationBar
@@ -23,7 +19,6 @@ import com.example.paisatracker.ui.common.BreadcrumbNavigation
 @Composable
 fun MainApp(viewModel: PaisaTrackerViewModel) {
     val navController = rememberNavController()
-    val application = LocalContext.current.applicationContext as PaisaTrackerApplication
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -35,8 +30,7 @@ fun MainApp(viewModel: PaisaTrackerViewModel) {
             AppNavigation(
                 navController = navController,
                 viewModel = viewModel,
-                modifier = Modifier.fillMaxSize(),
-                application = application
+                modifier = Modifier.fillMaxSize()
             )
 
             // Floating breadcrumb and bottom nav (overlay)

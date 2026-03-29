@@ -5,14 +5,29 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.example.paisatracker.data.*
+import com.example.paisatracker.data.Asset
+import com.example.paisatracker.data.BackupMetadata
+import com.example.paisatracker.data.Category
+import com.example.paisatracker.data.CategoryExpense
+import com.example.paisatracker.data.CategoryWithTotal
+import com.example.paisatracker.data.Currency
+import com.example.paisatracker.data.CurrencyList
+import com.example.paisatracker.data.CurrencyPreferencesRepository
+import com.example.paisatracker.data.Expense
+import com.example.paisatracker.data.PaisaTrackerRepository
+import com.example.paisatracker.data.Project
+import com.example.paisatracker.data.ProjectWithTotal
+import com.example.paisatracker.data.RecentExpense
 import com.example.paisatracker.util.ImageUtils
-import com.example.paisatracker.util.CurrentCurrency
 import com.opencsv.CSVReader
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.io.File
 import java.io.InputStreamReader
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -20,7 +35,7 @@ import java.util.Locale
 
 class PaisaTrackerViewModel(
     private val repository: PaisaTrackerRepository,
-    private val currencyPreferencesRepository: CurrencyPreferencesRepository
+    currencyPreferencesRepository: CurrencyPreferencesRepository
 ) : ViewModel() {
 
     // Currency State - Add this
@@ -51,41 +66,10 @@ class PaisaTrackerViewModel(
         return repository.getRecentBackups()
     }
 
-    fun getAllBackups(): Flow<List<BackupMetadata>> {
-        return repository.getAllBackups()
-    }
-
-    suspend fun insertBackup(backup: BackupMetadata): Long {
-        return repository.insertBackup(backup)
-    }
-
-    suspend fun deleteBackup(backup: BackupMetadata) {
-        repository.deleteBackup(backup)
-    }
-
-    suspend fun getProjectCount(): Int {
-        return repository.getProjectCount()
-    }
-
-    suspend fun getCategoryCount(): Int {
-        return repository.getCategoryCount()
-    }
-
-    suspend fun getExpenseCount(): Int {
-        return repository.getExpenseCount()
-    }
-
-    suspend fun getTotalAmount(): Double {
-        return repository.getTotalAmount()
-    }
-
     // ---------------- Assets ----------------
 
     fun getAllAssets() = repository.getAllAssets()
     fun getAssetsForExpense(expenseId: Long) = repository.getAssetsForExpense(expenseId)
-    fun getIndependentAssets() = repository.getIndependentAssets()
-
-    suspend fun insertAsset(asset: Asset) = repository.insertAsset(asset)
 
     fun deleteAsset(asset: Asset) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -161,8 +145,6 @@ class PaisaTrackerViewModel(
     fun getCategoriesWithTotalForProject(projectId: Long): Flow<List<CategoryWithTotal>> =
         repository.getCategoriesWithTotalForProject(projectId)
 
-    fun getAllExpenses(): Flow<List<Expense>> =
-        repository.getAllExpenses()
 
     fun getProjectById(projectId: Long): Flow<Project> =
         repository.getProjectById(projectId)
@@ -170,8 +152,6 @@ class PaisaTrackerViewModel(
     fun getCategoryById(categoryId: Long): Flow<Category> =
         repository.getCategoryById(categoryId)
 
-    fun getCategoriesForProject(projectId: Long): Flow<List<Category>> =
-        repository.getCategoriesForProject(projectId)
 
     fun insertProject(project: Project) {
         viewModelScope.launch { repository.insertProject(project) }
@@ -200,9 +180,7 @@ class PaisaTrackerViewModel(
     fun getExpensesForCategory(categoryId: Long): Flow<List<Expense>> =
         repository.getExpensesForCategory(categoryId)
 
-    fun insertExpense(expense: Expense) {
-        viewModelScope.launch { repository.insertExpense(expense) }
-    }
+
 
     fun insertExpenseWithResult(expense: Expense, onInserted: (Long) -> Unit) {
         viewModelScope.launch {
@@ -219,12 +197,6 @@ class PaisaTrackerViewModel(
         viewModelScope.launch { repository.deleteExpense(expense) }
     }
 
-    // ---------------- Currency Management - Add this ----------------
-    fun saveCurrency(currencyCode: String) {
-        viewModelScope.launch {
-            currencyPreferencesRepository.saveCurrency(currencyCode)
-        }
-    }
 
     // ---------------- Export: CSV with emoji + paymentMethod ----------------
 

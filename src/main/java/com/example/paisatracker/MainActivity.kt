@@ -11,20 +11,24 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
 import com.example.paisatracker.data.AppLockPreferences
-import com.example.paisatracker.data.CurrencyList
+import com.example.paisatracker.data.AppTheme
+import com.example.paisatracker.data.ThemePreferencesRepository
 import com.example.paisatracker.ui.applock.AppLockScreen
 import com.example.paisatracker.ui.main.MainApp
 import com.example.paisatracker.ui.theme.PaisaTrackerTheme
 import com.example.paisatracker.util.CurrentCurrency
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import com.example.paisatracker.data.ThemePreferencesRepository
-import com.example.paisatracker.data.AppTheme
 
 class MainActivity : FragmentActivity() {
     private val viewModel: PaisaTrackerViewModel by viewModels {

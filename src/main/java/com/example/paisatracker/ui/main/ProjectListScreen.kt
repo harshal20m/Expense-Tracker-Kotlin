@@ -29,7 +29,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
@@ -37,14 +36,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import com.example.paisatracker.ui.assets.AssetsBottomSheet
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Search
@@ -67,26 +64,25 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -98,15 +94,17 @@ import com.example.paisatracker.R
 import com.example.paisatracker.data.Project
 import com.example.paisatracker.data.ProjectWithTotal
 import com.example.paisatracker.data.RecentExpense
+import com.example.paisatracker.ui.assets.AssetsBottomSheet
+import com.example.paisatracker.ui.common.WeeklyDashboardCalendar
 import com.example.paisatracker.ui.search.SearchViewModel
 import com.example.paisatracker.ui.search.SearchViewModelFactory
-import com.example.paisatracker.util.formatCurrency
 import com.example.paisatracker.util.CurrentCurrency
+import com.example.paisatracker.util.formatCurrency
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import com.example.paisatracker.ui.common.WeeklyDashboardCalendar
 
 private val projectEmojis = listOf(
     "📁", "💼", "🏠", "🚗", "✈️", "🎓", "💰", "🏥", "🛒", "🎯",
@@ -127,7 +125,7 @@ private val projectEmojis = listOf(
 
 private enum class SheetType { ADD, EDIT, DELETE }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalCoroutinesApi::class)
 @Composable
 fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavController) {
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -557,8 +555,8 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
                                     orderedProjects.forEachIndexed { idx, project ->
                                         newOrderMap[project.project.id] = when {
                                             idx == fromIndex -> toIndex
-                                            idx < fromIndex && idx >= toIndex -> idx + 1
-                                            idx > fromIndex && idx <= toIndex -> idx - 1
+                                            idx in toIndex..<fromIndex -> idx + 1
+                                            idx in (fromIndex + 1)..toIndex -> idx - 1
                                             else -> idx
                                         }
                                     }
@@ -1174,7 +1172,7 @@ fun ActionToggleCard(
                 if (isNavigation) {
                     // Right arrow for purely navigational cards (like Assets)
                     Icon(
-                        imageVector = Icons.Default.KeyboardArrowRight,
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                         contentDescription = "Navigate to $title",
                         modifier = Modifier.size(20.dp),
                         tint = if (isExpanded)

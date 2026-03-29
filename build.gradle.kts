@@ -1,6 +1,5 @@
-
-import java.util.Properties
 import java.io.FileInputStream
+import java.util.Properties
 
 // Load keystore properties
 val keystorePropertiesFile = rootProject.file("keystore.properties")
@@ -10,12 +9,11 @@ if (keystorePropertiesFile.exists()) {
 }
 
 plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.kotlin.plugin.compose")
-    id("com.google.devtools.ksp")
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.ksp)
 }
-
 
 android {
     namespace = "com.example.paisatracker"
@@ -23,10 +21,10 @@ android {
 
     signingConfigs {
         create("release") {
-            storeFile = file(keystoreProperties["storeFile"] as String)
-            storePassword = keystoreProperties["storePassword"] as String
-            keyAlias = keystoreProperties["keyAlias"] as String
-            keyPassword = keystoreProperties["keyPassword"] as String
+            storeFile = file(keystoreProperties["storeFile"] as String? ?: "")
+            storePassword = keystoreProperties["storePassword"] as String? ?: ""
+            keyAlias = keystoreProperties["keyAlias"] as String? ?: ""
+            keyPassword = keystoreProperties["keyPassword"] as String? ?: ""
         }
     }
 
@@ -64,45 +62,50 @@ android {
 }
 
 dependencies {
+    // Core AndroidX
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.activity.compose)
+    implementation("androidx.fragment:fragment-ktx:1.8.6")
 
-    implementation("androidx.core:core-ktx:1.15.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
-    implementation("androidx.activity:activity-compose:1.9.3")
-    implementation(platform("androidx.compose:compose-bom:2024.12.01"))
-    implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.ui:ui-graphics")
-    implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.compose.material3:material3:1.3.0")
-    implementation("androidx.room:room-runtime:2.8.4")
-    implementation("androidx.room:room-ktx:2.8.4")
-    ksp("androidx.room:room-compiler:2.8.4")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
-    implementation("androidx.navigation:navigation-compose:2.7.7")
+    // Compose
+    implementation(platform(libs.compose.bom))
+    implementation(libs.compose.ui)
+    implementation(libs.compose.ui.graphics)
+    implementation(libs.compose.ui.tooling)
+    implementation(libs.compose.ui.tooling.preview)
+    implementation(libs.compose.material3)
+    implementation("androidx.compose.material:material-icons-extended")
+    implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+
+    // Room Database - Updated to 2.7.0-alpha13 to support Kotlin 2.0+
+    implementation(libs.room.runtime)
+    implementation(libs.room.ktx)
+    ksp(libs.room.compiler)
+
+    // UI & Charts
     implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
-    implementation("androidx.compose.material:material-icons-extended:1.7.5")
-    implementation("com.opencsv:opencsv:5.9") // Added OpenCSV
-    testImplementation("junit:junit:4.13.2")
-    androidTestImplementation("androidx.test.ext:junit:1.3.0")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
-    androidTestImplementation(platform("androidx.compose:compose-bom:2024.12.01"))
-    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
-    debugImplementation("androidx.compose.ui:ui-tooling")
-    debugImplementation("androidx.compose.ui:ui-test-manifest")
-    implementation("io.coil-kt:coil-compose:2.5.0")
-    implementation ("com.itextpdf:itext7-core:7.2.6")
-    implementation("com.itextpdf:kernel:7.2.5")
-    implementation("com.itextpdf:layout:7.2.5")
-    implementation("com.itextpdf:io:7.2.5")
-    implementation("androidx.work:work-runtime-ktx:2.9.0")
+    implementation("io.coil-kt:coil-compose:2.6.0")
 
-    // Biometric Authentication
+    // Utilities & Background Work
+    implementation("androidx.work:work-runtime-ktx:2.10.0")
+    implementation("androidx.datastore:datastore-preferences:1.1.2")
     implementation("androidx.biometric:biometric:1.2.0-alpha05")
+    implementation("com.opencsv:opencsv:5.9")
 
-    // DataStore for secure preferences
-    implementation("androidx.datastore:datastore-preferences:1.0.0")
+    // PDF Generation
+    implementation("com.itextpdf:itext7-core:7.2.6")
+    implementation("com.itextpdf:kernel:7.2.6")
+    implementation("com.itextpdf:layout:7.2.6")
+    implementation("com.itextpdf:io:7.2.6")
 
-    // Fragment (for FragmentActivity)
-    implementation("androidx.fragment:fragment-ktx:1.6.2")
-
-
+    // Testing
+    testImplementation(libs.junit)
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(platform(libs.compose.bom))
+    androidTestImplementation(libs.compose.ui.test.junit4)
+    debugImplementation(libs.compose.ui.tooling)
+    debugImplementation(libs.compose.ui.test.manifest)
 }
