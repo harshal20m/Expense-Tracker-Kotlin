@@ -8,6 +8,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.paisatracker.PaisaTrackerViewModel
+import com.example.paisatracker.ui.budget.BudgetScreen
 import com.example.paisatracker.ui.common.CalendarTransactionView
 import com.example.paisatracker.ui.details.ProjectDetailsScreen
 import com.example.paisatracker.ui.details.ProjectInsightsScreen
@@ -61,6 +62,15 @@ fun AppNavigation(
             if (projectId != null) {
                 ProjectInsightsScreen(viewModel = viewModel, projectId = projectId, navController = navController)
             }
+        }
+
+        //budget
+        composable("budget") {
+            BudgetScreen(
+                viewModel = viewModel,
+                onNavigateBack = { navController.popBackStack() },
+                currencySymbol = "₹"   // or read from your settings/DataStore
+            )
         }
     }
 }

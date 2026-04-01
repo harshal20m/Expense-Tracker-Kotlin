@@ -7,8 +7,26 @@ class PaisaTrackerRepository(
     private val categoryDao: CategoryDao,
     private val expenseDao: ExpenseDao,
     private val assetDao: AssetDao,
-    private val backupDao: BackupDao
+    private val backupDao: BackupDao,
+    private val budgetDao: BudgetDao
 ) {
+
+    // --- Budget Methods ---
+
+    fun getAllActiveBudgets(): Flow<List<Budget>> =
+        budgetDao.getAllActiveBudgets()
+
+    fun getAllBudgets(): Flow<List<Budget>> =
+        budgetDao.getAllBudgets()
+
+    suspend fun insertBudget(budget: Budget): Long =
+        budgetDao.insertBudget(budget)
+
+    suspend fun deleteBudget(budget: Budget) =
+        budgetDao.deleteBudget(budget)
+
+    suspend fun toggleBudgetActive(budgetId: Long, isActive: Boolean) =
+        budgetDao.toggleBudgetActive(budgetId, isActive)
 
     fun getRecentExpensesWithDetails(limit: Int): Flow<List<RecentExpense>> {
         return expenseDao.getRecentExpensesWithDetails(limit)
@@ -29,6 +47,8 @@ class PaisaTrackerRepository(
     fun getCategoryExpenses(projectId: Long): Flow<List<CategoryExpense>> = projectDao.getCategoryExpenses(projectId)
 
     fun getCategoriesWithTotalForProject(projectId: Long): Flow<List<CategoryWithTotal>> = categoryDao.getCategoriesWithTotalForProject(projectId)
+
+    fun getAllCategories(): Flow<List<Category>> = categoryDao.getAllCategories()
 
     fun getAllExpenses(): Flow<List<Expense>> = expenseDao.getAllExpenses()
 

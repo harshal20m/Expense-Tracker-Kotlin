@@ -7,6 +7,9 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.paisatracker.data.Asset
 import com.example.paisatracker.data.BackupMetadata
+import com.example.paisatracker.data.Budget
+import com.example.paisatracker.data.BudgetPeriod
+import com.example.paisatracker.data.BudgetWithSpending
 import com.example.paisatracker.data.Category
 import com.example.paisatracker.data.CategoryExpense
 import com.example.paisatracker.data.CategoryWithTotal
@@ -25,11 +28,13 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.InputStreamReader
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -37,6 +42,98 @@ class PaisaTrackerViewModel(
     private val repository: PaisaTrackerRepository,
     currencyPreferencesRepository: CurrencyPreferencesRepository
 ) : ViewModel() {
+
+    //budget
+    val budgetsWithSpending: StateFlow<List<BudgetWithSpending>> = combine(
+        repository.getAllActiveBudgets(),
+        repository.getAllExpenses(),
+        repository.getAllProjects(),
+        repository.getAllCategories()
+    ) { budgets, expenses, projects, categories ->
+        budgets.map { budget ->
+            val now = Calendar.getInstance()
+            val periodStart = getPeriodStart(budget.period)
+
+            val filtered = expenses.filter { expense ->
+                val expenseDate = expense.date  // assuming Long timestamp
+                val matchesPeriod = expenseDate >= periodStart
+                val matchesProject = budget.projectId == null ||
+                        categories.find { it.id == expense.categoryId }?.projectId == budget.projectId
+                val matchesCategory = budget.categoryId == null ||
+                        expense.categoryId == budget.categoryId
+                matchesPeriod && matchesProject && matchesCategory
+            }
+
+            val categoryName = budget.categoryId?.let { catId ->
+                categories.find { it.id == catId }?.name
+            }
+            val projectName = budget.projectId?.let { projId ->
+                projects.find { it.id == projId }?.name
+            }
+
+            BudgetWithSpending(
+                budget = budget,
+                spent = filtered.sumOf { it.amount },
+                categoryName = categoryName,
+                projectName = projectName
+            )
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun addBudget(budget: Budget) {
+        viewModelScope.launch {
+            repository.insertBudget(budget)
+        }
+    }
+
+    fun deleteBudget(budget: Budget) {
+        viewModelScope.launch {
+            repository.deleteBudget(budget)
+        }
+    }
+
+    fun toggleBudgetActive(budgetId: Long, isActive: Boolean) {
+        viewModelScope.launch {
+            repository.toggleBudgetActive(budgetId, isActive)
+        }
+    }
+
+    private fun getPeriodStart(period: BudgetPeriod): Long {
+        val cal = Calendar.getInstance()
+        return when (period) {
+            BudgetPeriod.DAILY -> {
+                cal.set(Calendar.HOUR_OF_DAY, 0)
+                cal.set(Calendar.MINUTE, 0)
+                cal.set(Calendar.SECOND, 0)
+                cal.set(Calendar.MILLISECOND, 0)
+                cal.timeInMillis
+            }
+            BudgetPeriod.WEEKLY -> {
+                cal.set(Calendar.DAY_OF_WEEK, cal.firstDayOfWeek)
+                cal.set(Calendar.HOUR_OF_DAY, 0)
+                cal.set(Calendar.MINUTE, 0)
+                cal.set(Calendar.SECOND, 0)
+                cal.set(Calendar.MILLISECOND, 0)
+                cal.timeInMillis
+            }
+            BudgetPeriod.MONTHLY -> {
+                cal.set(Calendar.DAY_OF_MONTH, 1)
+                cal.set(Calendar.HOUR_OF_DAY, 0)
+                cal.set(Calendar.MINUTE, 0)
+                cal.set(Calendar.SECOND, 0)
+                cal.set(Calendar.MILLISECOND, 0)
+                cal.timeInMillis
+            }
+            BudgetPeriod.YEARLY -> {
+                cal.set(Calendar.DAY_OF_YEAR, 1)
+                cal.set(Calendar.HOUR_OF_DAY, 0)
+                cal.set(Calendar.MINUTE, 0)
+                cal.set(Calendar.SECOND, 0)
+                cal.set(Calendar.MILLISECOND, 0)
+                cal.timeInMillis
+            }
+        }
+    }
 
     // Currency State - Add this
     val currentCurrency: StateFlow<Currency> = currencyPreferencesRepository.selectedCurrency
@@ -133,6 +230,9 @@ class PaisaTrackerViewModel(
 
     // ---------------- Projects / Categories / Expenses basic APIs ----------------
 
+    fun getAllProjects(): Flow<List<Project>> =
+        repository.getAllProjects()
+
     fun getAllProjectsWithTotal(): Flow<List<ProjectWithTotal>> =
         repository.getAllProjectsWithTotal()
 
@@ -141,6 +241,9 @@ class PaisaTrackerViewModel(
 
     fun getExpenseById(id: Long): Flow<Expense?> =
         repository.getExpenseById(id)
+
+    fun getAllCategories(): Flow<List<Category>> =
+        repository.getAllCategories()
 
     fun getCategoriesWithTotalForProject(projectId: Long): Flow<List<CategoryWithTotal>> =
         repository.getCategoriesWithTotalForProject(projectId)

@@ -20,7 +20,8 @@ class PaisaTrackerApplication : Application() {
             database.categoryDao(),
             database.expenseDao(),
             database.assetDao(),
-            database.backupDao()
+            database.backupDao(),
+            database.budgetDao()
         )
     }
 
