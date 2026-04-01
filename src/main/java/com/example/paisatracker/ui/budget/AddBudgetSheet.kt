@@ -69,22 +69,26 @@ private val budgetEmojis = listOf(
 fun AddBudgetSheet(
     viewModel: PaisaTrackerViewModel,
     onDismiss: () -> Unit,
-    currencySymbol: String = "₹"
+    currencySymbol: String = "₹",
+    budgetToEdit: Budget? = null
 ) {
     val projects by viewModel.getAllProjects().collectAsState(initial = emptyList())
     val categories by viewModel.getAllCategories().collectAsState(initial = emptyList())
 
-    var selectedProjectId by remember { mutableStateOf<Long?>(null) }
-    var selectedCategoryId by remember { mutableStateOf<Long?>(null) }
-    var name by remember { mutableStateOf("") }
-    var emoji by remember { mutableStateOf("💰") }
-    var amountText by remember { mutableStateOf("") }
-    var selectedPeriod by remember { mutableStateOf(BudgetPeriod.MONTHLY) }
+    var selectedProjectId by remember { mutableStateOf(budgetToEdit?.projectId) }
+    var selectedCategoryId by remember { mutableStateOf(budgetToEdit?.categoryId) }
+    var name by remember { mutableStateOf(budgetToEdit?.name ?: "") }
+    var emoji by remember { mutableStateOf(budgetToEdit?.emoji ?: "💰") }
+    var amountText by remember { mutableStateOf(budgetToEdit?.limitAmount?.toString() ?: "") }
+    var selectedPeriod by remember { mutableStateOf(budgetToEdit?.period ?: BudgetPeriod.MONTHLY) }
     var nameError by remember { mutableStateOf(false) }
     var amountError by remember { mutableStateOf(false) }
     var projectError by remember { mutableStateOf(false) }
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val isEditMode = budgetToEdit != null
+    val title = if (isEditMode) "Edit Budget" else "New Budget"
+    val buttonText = if (isEditMode) "Update Budget" else "Create Budget"
 
     // Filter categories based on selected project
     val filteredCategories = if (selectedProjectId != null)
@@ -106,7 +110,7 @@ fun AddBudgetSheet(
                 .padding(bottom = 24.dp)
         ) {
             Text(
-                text = "New Budget",
+                text = title,
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 20.dp)
@@ -334,8 +338,9 @@ fun AddBudgetSheet(
                     amountError = amount == null || amount <= 0
 
                     if (!projectError && !nameError && !amountError && amount != null) {
-                        viewModel.addBudget(
-                            Budget(
+                        if (isEditMode && budgetToEdit != null) {
+                            // Update existing budget
+                            val updatedBudget = budgetToEdit.copy(
                                 name = name.trim(),
                                 emoji = emoji,
                                 limitAmount = amount,
@@ -343,7 +348,20 @@ fun AddBudgetSheet(
                                 projectId = selectedProjectId,
                                 categoryId = selectedCategoryId
                             )
-                        )
+                            viewModel.updateBudget(updatedBudget)
+                        } else {
+                            // Create new budget
+                            viewModel.addBudget(
+                                Budget(
+                                    name = name.trim(),
+                                    emoji = emoji,
+                                    limitAmount = amount,
+                                    period = selectedPeriod,
+                                    projectId = selectedProjectId,
+                                    categoryId = selectedCategoryId
+                                )
+                            )
+                        }
                         onDismiss()
                     }
                 },
@@ -353,7 +371,7 @@ fun AddBudgetSheet(
                 shape = RoundedCornerShape(14.dp)
             ) {
                 Text(
-                    text = "Create Budget",
+                    text = buttonText,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )

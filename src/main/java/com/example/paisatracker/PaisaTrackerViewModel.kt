@@ -45,7 +45,7 @@ class PaisaTrackerViewModel(
 
     //budget
     val budgetsWithSpending: StateFlow<List<BudgetWithSpending>> = combine(
-        repository.getAllActiveBudgets(),
+        repository.getAllBudgets(),
         repository.getAllExpenses(),
         repository.getAllProjects(),
         repository.getAllCategories()
@@ -91,6 +91,13 @@ class PaisaTrackerViewModel(
             repository.deleteBudget(budget)
         }
     }
+
+    fun updateBudget(budget: Budget) {
+        viewModelScope.launch {
+            repository.updateBudget(budget)
+        }
+    }
+
 
     fun toggleBudgetActive(budgetId: Long, isActive: Boolean) {
         viewModelScope.launch {

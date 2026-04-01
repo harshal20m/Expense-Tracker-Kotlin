@@ -25,6 +25,11 @@ class PaisaTrackerRepository(
     suspend fun deleteBudget(budget: Budget) =
         budgetDao.deleteBudget(budget)
 
+    suspend fun updateBudget(budget: Budget) =
+        budgetDao.updateBudget(budget)
+
+
+
     suspend fun toggleBudgetActive(budgetId: Long, isActive: Boolean) =
         budgetDao.toggleBudgetActive(budgetId, isActive)
 

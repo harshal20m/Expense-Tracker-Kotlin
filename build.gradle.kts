@@ -82,6 +82,7 @@ dependencies {
     // Room Database - Updated to 2.7.0-alpha13 to support Kotlin 2.0+
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
+    implementation(libs.androidx.foundation.layout)
     ksp(libs.room.compiler)
 
     // UI & Charts

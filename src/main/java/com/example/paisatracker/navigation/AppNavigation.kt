@@ -8,13 +8,13 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.example.paisatracker.PaisaTrackerViewModel
-import com.example.paisatracker.ui.budget.BudgetScreen
 import com.example.paisatracker.ui.common.CalendarTransactionView
 import com.example.paisatracker.ui.details.ProjectDetailsScreen
 import com.example.paisatracker.ui.details.ProjectInsightsScreen
 import com.example.paisatracker.ui.expense.ExpenseDetailScreen
 import com.example.paisatracker.ui.expense.ExpenseListScreen
 import com.example.paisatracker.ui.export.ExportScreen
+import com.example.paisatracker.ui.budget.BudgetScreen
 import com.example.paisatracker.ui.main.ProjectListScreen
 import com.example.paisatracker.ui.settings.SettingsScreen
 

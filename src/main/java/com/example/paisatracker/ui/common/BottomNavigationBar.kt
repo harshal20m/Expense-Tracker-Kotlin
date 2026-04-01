@@ -2,12 +2,8 @@ package com.example.paisatracker.ui.common
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.EaseInOutSine
-import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
@@ -17,6 +13,7 @@ import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -45,7 +42,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -58,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
+import kotlinx.coroutines.launch
 
 data class NavItem(
     val route: String,
@@ -164,7 +164,12 @@ private fun BottomNavItem(
     onClick: () -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
 
+    // Pop animation state for click feedback
+    var isAnimating by remember { mutableStateOf(false) }
+
+    // Width animation for selected/unselected state
     val animatedWidth by animateDpAsState(
         targetValue = if (isSelected) 115.dp else 50.dp,
         animationSpec = spring(
@@ -174,6 +179,21 @@ private fun BottomNavItem(
         label = "width"
     )
 
+    // Pop effect scale animation
+    val popScale by animateFloatAsState(
+        targetValue = when {
+            isAnimating -> 0.9f
+            isPressed -> 0.92f
+            else -> 1f
+        },
+        animationSpec = spring(
+            dampingRatio = 0.5f,
+            stiffness = 800f
+        ),
+        label = "popScale"
+    )
+
+    // Container color animation
     val containerColor by animateColorAsState(
         targetValue = if (isSelected)
             MaterialTheme.colorScheme.primaryContainer
@@ -183,6 +203,7 @@ private fun BottomNavItem(
         label = "containerColor"
     )
 
+    // Content color animation
     val contentColor by animateColorAsState(
         targetValue = if (isSelected)
             MaterialTheme.colorScheme.onPrimaryContainer
@@ -192,19 +213,6 @@ private fun BottomNavItem(
         label = "contentColor"
     )
 
-    val infiniteTransition = rememberInfiniteTransition(label = "breathing")
-    val breathingScale by infiniteTransition.animateFloat(
-        initialValue = 0.96f,
-        targetValue = 1.04f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1200, easing = EaseInOutSine),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "breathingScale"
-    )
-
-    val finalScale = if (isSelected) breathingScale else 1f
-
     Box(
         modifier = Modifier
             .width(animatedWidth)
@@ -212,11 +220,21 @@ private fun BottomNavItem(
             .clip(RoundedCornerShape(28.dp))
             .background(containerColor)
             .clickable(
-                onClick = onClick,
+                onClick = {
+                    // Trigger pop animation
+                    isAnimating = true
+                    onClick()
+                    // Reset animation after a short delay
+                    kotlinx.coroutines.MainScope().launch {
+                        kotlinx.coroutines.delay(150)
+                        isAnimating = false
+                    }
+                },
                 interactionSource = interactionSource,
                 indication = ripple(
                     bounded = true,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.primary,
+                    radius = 32.dp
                 )
             ),
         contentAlignment = Alignment.Center
@@ -232,7 +250,7 @@ private fun BottomNavItem(
                 tint = contentColor,
                 modifier = Modifier
                     .size(24.dp)
-                    .scale(finalScale)
+                    .scale(popScale)
             )
 
             AnimatedVisibility(
@@ -251,7 +269,7 @@ private fun BottomNavItem(
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
                         fontSize = 12.sp,
-                        modifier = Modifier.scale(finalScale)
+                        modifier = Modifier.scale(popScale)
                     )
                 }
             }
