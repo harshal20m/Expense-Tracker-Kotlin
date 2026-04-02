@@ -2,8 +2,14 @@ package com.example.paisatracker
 
 import android.app.Application
 import android.content.Context
-import androidx.work.*
-import com.example.paisatracker.data.*
+import androidx.work.Constraints
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
+import com.example.paisatracker.data.CurrencyPreferencesRepository
+import com.example.paisatracker.data.PaisaTrackerDatabase
+import com.example.paisatracker.data.PaisaTrackerRepository
+import com.example.paisatracker.data.ThemePreferencesRepository
 import com.example.paisatracker.util.CurrentCurrency
 import com.example.paisatracker.util.ExpenseReminderWorker
 import kotlinx.coroutines.CoroutineScope
@@ -21,7 +27,8 @@ class PaisaTrackerApplication : Application() {
             database.expenseDao(),
             database.assetDao(),
             database.backupDao(),
-            database.budgetDao()
+            database.budgetDao(),
+            database.flapDao()
         )
     }
 

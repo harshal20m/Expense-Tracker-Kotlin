@@ -8,8 +8,20 @@ class PaisaTrackerRepository(
     private val expenseDao: ExpenseDao,
     private val assetDao: AssetDao,
     private val backupDao: BackupDao,
-    private val budgetDao: BudgetDao
+    private val budgetDao: BudgetDao,
+    private val flapDao: FlapDao
 ) {
+
+    //flapmethods
+    // b) Add these methods:
+
+    fun getFlapData(): Flow<FlapData?> = flapDao.getFlapData()
+
+    suspend fun upsertFlapData(flapData: FlapData) =
+        flapDao.upsertFlapData(flapData)
+
+    suspend fun getFlapDataOnce(): FlapData? =
+        flapDao.getFlapDataOnce()
 
     // --- Budget Methods ---
 

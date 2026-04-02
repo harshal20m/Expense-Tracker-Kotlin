@@ -1,6 +1,7 @@
 package com.example.paisatracker
 
-import android.content.Context
+
+ import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -17,10 +18,14 @@ import com.example.paisatracker.data.Currency
 import com.example.paisatracker.data.CurrencyList
 import com.example.paisatracker.data.CurrencyPreferencesRepository
 import com.example.paisatracker.data.Expense
+import com.example.paisatracker.data.FlapData
+import com.example.paisatracker.data.FlapNote
 import com.example.paisatracker.data.PaisaTrackerRepository
 import com.example.paisatracker.data.Project
 import com.example.paisatracker.data.ProjectWithTotal
 import com.example.paisatracker.data.RecentExpense
+import com.example.paisatracker.data.serializeHistory
+import com.example.paisatracker.data.serializeNotes
 import com.example.paisatracker.util.ImageUtils
 import com.opencsv.CSVReader
 import kotlinx.coroutines.Dispatchers
@@ -29,7 +34,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.InputStreamReader
@@ -37,6 +47,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import java.util.UUID
 
 class PaisaTrackerViewModel(
     private val repository: PaisaTrackerRepository,
@@ -140,6 +151,78 @@ class PaisaTrackerViewModel(
                 cal.timeInMillis
             }
         }
+    }
+
+    //flap
+// ================================================================
+
+    // ── UI-only (not persisted) ───────────────────────────────────────────────
+    val isFlapExpanded    = MutableStateFlow(false)
+    val flapSelectedTab   = MutableStateFlow(0)       // 0 = Calculator, 1 = Notes
+    val calcShowHistory   = MutableStateFlow(false)   // calc history sub-screen
+
+    // ── Calculator ────────────────────────────────────────────────────────────
+    val calcDisplay    = MutableStateFlow("0")
+    val calcExpression = MutableStateFlow("")
+    val calcHistory    = MutableStateFlow<List<String>>(emptyList())
+
+    // ── Notes (list of FlapNote) ──────────────────────────────────────────────
+    val flapNotes = MutableStateFlow<List<FlapNote>>(emptyList())
+
+    // ── Startup load ──────────────────────────────────────────────────────────
+    init {
+        viewModelScope.launch {
+            val saved = repository.getFlapDataOnce()
+            if (saved != null) {
+                calcDisplay.value    = saved.calcDisplay
+                calcExpression.value = saved.calcExpression
+                calcHistory.value    = saved.calcHistoryList()
+                flapNotes.value      = saved.notesList()
+            }
+            startFlapPersistence()
+        }
+    }
+
+    // ── Notes CRUD ────────────────────────────────────────────────────────────
+
+    fun addFlapNote(text: String) {
+        if (text.isBlank()) return
+        val note = FlapNote(id = UUID.randomUUID().toString(), text = text.trim())
+        flapNotes.value = listOf(note) + flapNotes.value   // newest first
+    }
+
+    fun editFlapNote(id: String, newText: String) {
+        if (newText.isBlank()) { deleteFlapNote(id); return }
+        flapNotes.value = flapNotes.value.map { if (it.id == id) it.copy(text = newText.trim()) else it }
+    }
+
+    fun deleteFlapNote(id: String) {
+        flapNotes.value = flapNotes.value.filter { it.id != id }
+    }
+
+    // ── Debounced persistence ─────────────────────────────────────────────────
+    @OptIn(kotlinx.coroutines.FlowPreview::class)
+    private fun startFlapPersistence() {
+        combine(
+            calcDisplay,
+            calcExpression,
+            calcHistory,
+            flapNotes
+        ) { display, expr, history, notes ->
+            FlapData(
+                id = 1,
+                notesSerialized = notes.serializeNotes(),
+                calcHistorySerialized = history.serializeHistory(),
+                calcDisplay = display,
+                calcExpression = expr,
+                lastUpdatedAt = System.currentTimeMillis()
+            )
+        }
+            .drop(1)
+            .debounce(600L)
+            .distinctUntilChanged()
+            .onEach { repository.upsertFlapData(it) }
+            .launchIn(viewModelScope)
     }
 
     // Currency State - Add this

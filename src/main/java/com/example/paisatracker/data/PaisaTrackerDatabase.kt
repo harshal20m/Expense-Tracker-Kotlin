@@ -15,7 +15,8 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         Expense::class,
         Asset::class,
         BackupMetadata::class,
-        Budget::class
+        Budget::class,
+        FlapData::class
     ],
     version = 3,
     exportSchema = false
@@ -29,6 +30,10 @@ abstract class PaisaTrackerDatabase : RoomDatabase() {
     abstract fun assetDao(): AssetDao
     abstract fun backupDao(): BackupDao
     abstract fun budgetDao(): BudgetDao
+
+    abstract fun flapDao(): FlapDao
+
+
 
     companion object {
         @Volatile
@@ -97,6 +102,17 @@ abstract class PaisaTrackerDatabase : RoomDatabase() {
                     )
                     """.trimIndent()
                 )
+
+                            database.execSQL("""
+                CREATE TABLE IF NOT EXISTS `flap_data` (
+                    `id` INTEGER NOT NULL PRIMARY KEY,
+                    `notesText` TEXT NOT NULL DEFAULT '',
+                    `calcHistorySerialized` TEXT NOT NULL DEFAULT '',
+                    `calcDisplay` TEXT NOT NULL DEFAULT '0',
+                    `calcExpression` TEXT NOT NULL DEFAULT '',
+                    `lastUpdatedAt` INTEGER NOT NULL
+                )
+            """.trimIndent())
             }
         }
     }

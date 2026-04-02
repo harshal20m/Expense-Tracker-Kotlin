@@ -8,12 +8,15 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.rememberNavController
 import com.example.paisatracker.PaisaTrackerViewModel
 import com.example.paisatracker.navigation.AppNavigation
 import com.example.paisatracker.ui.common.BottomNavigationBar
 import com.example.paisatracker.ui.common.BreadcrumbNavigation
+import com.example.paisatracker.ui.flap.QuickAccessFlap
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -24,31 +27,38 @@ fun MainApp(viewModel: PaisaTrackerViewModel) {
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
     ) {
-        // Use safeDrawingPadding to respect system bars (status, nav, and cutouts)
-        Box(modifier = Modifier.fillMaxSize().safeDrawingPadding()) {
-            // Navigation content
+        Box(modifier = Modifier
+            .fillMaxSize()
+            .safeDrawingPadding()) {
+
+            // ── Layer 1: Screen content ──────────────────────────────────
             AppNavigation(
                 navController = navController,
                 viewModel = viewModel,
                 modifier = Modifier.fillMaxSize()
             )
 
-            // Floating breadcrumb and bottom nav (overlay)
+            // ── Layer 2: Breadcrumb + Bottom Nav (always on top of screens) ──
             Box(
                 modifier = Modifier.fillMaxSize(),
-                contentAlignment = androidx.compose.ui.Alignment.BottomCenter
+                contentAlignment = Alignment.BottomCenter
             ) {
                 Column {
-                    // Breadcrumb just above bottom nav
                     BreadcrumbNavigation(
                         navController = navController,
                         viewModel = viewModel
                     )
-
-                    // Bottom navigation bar
                     BottomNavigationBar(navController = navController)
                 }
             }
+
+            // ── Layer 3: Quick Access Flap (floats above everything) ─────
+            // It positions itself just above the bottom nav via bottomNavHeight.
+            // bottomNavHeight = BottomNavItem height (72dp) + vertical padding (8dp top + 24dp bottom) = 104dp
+            QuickAccessFlap(
+                viewModel = viewModel,
+                bottomNavHeight = 104.dp,
+            )
         }
     }
 }
