@@ -10,7 +10,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.rememberNavController
 import com.example.paisatracker.PaisaTrackerViewModel
 import com.example.paisatracker.navigation.AppNavigation
@@ -57,7 +56,6 @@ fun MainApp(viewModel: PaisaTrackerViewModel) {
             // bottomNavHeight = BottomNavItem height (72dp) + vertical padding (8dp top + 24dp bottom) = 104dp
             QuickAccessFlap(
                 viewModel = viewModel,
-                bottomNavHeight = 104.dp,
             )
         }
     }
