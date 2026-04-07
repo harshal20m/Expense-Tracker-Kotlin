@@ -96,6 +96,7 @@ import com.example.paisatracker.data.ProjectWithTotal
 import com.example.paisatracker.data.RecentExpense
 import com.example.paisatracker.ui.assets.AssetsBottomSheet
 import com.example.paisatracker.ui.common.WeeklyDashboardCalendar
+import com.example.paisatracker.ui.quickadd.QuickAddSheet
 import com.example.paisatracker.ui.search.SearchViewModel
 import com.example.paisatracker.ui.search.SearchViewModelFactory
 import com.example.paisatracker.util.CurrentCurrency
@@ -105,6 +106,7 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+
 
 private val projectEmojis = listOf(
     "📁", "💼", "🏠", "🚗", "✈️", "🎓", "💰", "🏥", "🛒", "🎯",
@@ -128,6 +130,11 @@ private enum class SheetType { ADD, EDIT, DELETE }
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalCoroutinesApi::class)
 @Composable
 fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavController) {
+
+        var showQuickAdd by remember { mutableStateOf(false) }
+    val quickAddSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+
     val context = androidx.compose.ui.platform.LocalContext.current
     val application = context.applicationContext as PaisaTrackerApplication
 
@@ -222,7 +229,11 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
                 projectToDelete = null
                 showSheet = true
                 scope.launch { sheetState.show() }
-            }
+            },
+            onQuickAddClick   = {
+                showQuickAdd = true
+                scope.launch { quickAddSheetState.show() }
+        }
         )
 
         LazyColumn(
@@ -607,6 +618,26 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
                     }
                 }
             }
+        }
+    }
+
+        if (showQuickAdd) {
+        ModalBottomSheet(
+            onDismissRequest = {
+                showQuickAdd = false
+            },
+            sheetState = quickAddSheetState,
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+            dragHandle = { BottomSheetDefaults.DragHandle() }
+        ) {
+            QuickAddSheet(
+                onDismiss = {
+                    scope.launch { quickAddSheetState.hide() }.invokeOnCompletion {
+                        showQuickAdd = false
+                    }
+                },
+                currencySymbol = currency.symbol
+            )
         }
     }
 
@@ -1423,7 +1454,10 @@ fun SearchFilterCard(
 }
 
 @Composable
-private fun Header(onAddProjectClick: () -> Unit) {
+private fun Header(
+    onAddProjectClick: () -> Unit,
+    onQuickAddClick: () -> Unit          // ← NEW parameter
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -1445,6 +1479,7 @@ private fun Header(onAddProjectClick: () -> Unit) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Left: logo + title (unchanged)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(14.dp),
@@ -1484,18 +1519,38 @@ private fun Header(onAddProjectClick: () -> Unit) {
                     )
                 }
             }
-            FloatingActionButton(
-                onClick = onAddProjectClick,
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.size(52.dp),
-                elevation = FloatingActionButtonDefaults.elevation(
-                    defaultElevation = 6.dp,
-                    pressedElevation = 12.dp
-                )
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Project", modifier = Modifier.size(26.dp))
+
+            // Right: Quick Add ⚡ + New Project +
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                // ── Quick Add button ─────────────────────────────────────────
+                FloatingActionButton(
+                    onClick = onQuickAddClick,
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.size(52.dp),
+                    elevation = FloatingActionButtonDefaults.elevation(
+                        defaultElevation = 2.dp,
+                        pressedElevation = 6.dp
+                    )
+                ) {
+                    Text("⚡", fontSize = 22.sp)
+                }
+
+                // ── New project button (unchanged) ───────────────────────────
+                FloatingActionButton(
+                    onClick = onAddProjectClick,
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.size(52.dp),
+                    elevation = FloatingActionButtonDefaults.elevation(
+                        defaultElevation = 6.dp,
+                        pressedElevation = 12.dp
+                    )
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Add Project", modifier = Modifier.size(26.dp))
+                }
             }
         }
     }

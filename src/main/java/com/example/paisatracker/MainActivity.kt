@@ -22,9 +22,11 @@ import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.lifecycleScope
 import com.example.paisatracker.data.AppLockPreferences
 import com.example.paisatracker.data.AppTheme
+import com.example.paisatracker.data.DataSeeder
 import com.example.paisatracker.data.ThemePreferencesRepository
 import com.example.paisatracker.ui.applock.AppLockScreen
 import com.example.paisatracker.ui.main.MainApp
+import com.example.paisatracker.ui.setup.FirstTimeSetupDialog
 import com.example.paisatracker.ui.theme.PaisaTrackerTheme
 import com.example.paisatracker.util.CurrentCurrency
 import kotlinx.coroutines.flow.first
@@ -41,7 +43,10 @@ class MainActivity : FragmentActivity() {
     private val appLockPrefs by lazy { AppLockPreferences.getInstance(this) }
     private val themePreferencesRepository by lazy { ThemePreferencesRepository.getInstance(this) }
 
+    private val dataSeeder by lazy { DataSeeder.getInstance((application as PaisaTrackerApplication).repository) }
     private var isUnlocked by mutableStateOf(false)
+
+    private var showFirstTimeSetup by mutableStateOf(false)
     private var isFinishing = false
 
     private val notificationPermissionLauncher = registerForActivityResult(
@@ -60,6 +65,9 @@ class MainActivity : FragmentActivity() {
             lifecycleScope.launch {
                 val isAppLockEnabled = appLockPrefs.isAppLockEnabled.first()
                 isUnlocked = !isAppLockEnabled
+
+                // Check if first time setup should be shown
+                showFirstTimeSetup = dataSeeder.shouldShowFirstTimeSetup(this@MainActivity)
             }
         }
 
@@ -77,7 +85,21 @@ class MainActivity : FragmentActivity() {
             }
 
             PaisaTrackerTheme(appTheme = currentTheme) {
-                AppContent()
+                // Show first-time setup dialog if needed
+                if (showFirstTimeSetup && !isFinishing) {
+                    FirstTimeSetupDialog(
+                        onSetupComplete = { shouldSeed ->
+                            lifecycleScope.launch {
+                                dataSeeder.seedInitialDataIfUserAccepts(
+                                    this@MainActivity,
+                                    shouldSeed
+                                )
+                                showFirstTimeSetup = false
+                            }
+                        }
+                    )} else {
+                    AppContent()
+                }
             }
         }
     }

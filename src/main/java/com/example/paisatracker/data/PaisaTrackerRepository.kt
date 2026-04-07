@@ -55,6 +55,11 @@ class PaisaTrackerRepository(
 
     fun getAllProjects(): Flow<List<Project>> = projectDao.getAllProjects()
 
+    // Add this method for seeding
+    suspend fun getAllProjectsList(): List<Project> {
+        return projectDao.getAllProjectsList()
+    }
+
     fun getProjectById(projectId: Long): Flow<Project> = projectDao.getProjectById(projectId)
 
     fun getCategoryById(categoryId: Long): Flow<Category> = categoryDao.getCategoryById(categoryId)
