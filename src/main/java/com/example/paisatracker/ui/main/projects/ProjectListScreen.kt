@@ -19,7 +19,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
@@ -33,6 +35,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -116,6 +119,15 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
         else projects.sortedBy { customOrderMap[it.project.id] ?: Int.MAX_VALUE }
     }
 
+    // ── Scroll state for hiding/showing labels under action buttons ───────────
+    val listState = rememberLazyListState()
+    val labelsVisible by remember {
+        derivedStateOf {
+            // Show labels only when near the very top of the list
+            listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset < 200
+        }
+    }
+
     // ── Sheet state ───────────────────────────────────────────────────────────
     var currentSheetType by remember { mutableStateOf<SheetType?>(null) }
     var projectToEdit    by remember { mutableStateOf<ProjectWithTotal?>(null) }
@@ -151,10 +163,12 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
             onQuickAddClick = {
                 showQuickAdd = true
                 scope.launch { quickAddState.show() }
-            }
+            },
+            labelsVisible = labelsVisible   // Pass scroll-aware visibility
         )
 
         LazyColumn(
+            state = listState,   // Attach scroll state
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(top = 8.dp, bottom = 110.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -382,7 +396,7 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
     }
 }
 
-// ── 2×2 toggle grid (extracted from the LazyColumn item to keep screen clean) ──
+// ── 2×2 toggle grid ───────────────────────────────────────────────────────────
 @Composable
 private fun ProjectActionGrid(
     summaryExpanded: Boolean,

@@ -1,6 +1,11 @@
 package com.example.paisatracker.ui.main.projects
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,7 +30,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
@@ -37,9 +41,10 @@ import com.example.paisatracker.R
 @Composable
 fun ProjectListHeader(
     onAddProjectClick: () -> Unit,
-    onQuickAddClick: () -> Unit
+    onQuickAddClick: () -> Unit,
+    labelsVisible: Boolean = true   // Controls visibility of the tiny labels below buttons
 ) {
-    // Pulsing elevation animation for a glowing shadow effect
+    // Pulsing elevation animation for Quick Add button shadow (glow effect)
     val infiniteTransition = rememberInfiniteTransition(label = "glowShadow")
     val animatedElevation by infiniteTransition.animateFloat(
         initialValue = 4f,
@@ -113,7 +118,7 @@ fun ProjectListHeader(
                 }
             }
 
-            // ── Action buttons ────────────────────────────────────────────────
+            // ── Action buttons with animated labels ───────────────────────────
             Row(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.Bottom
@@ -140,14 +145,20 @@ fun ProjectListHeader(
                             modifier = Modifier.size(26.dp)
                         )
                     }
-                    Text(
-                        text = "Project",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 1
-                    )
+                    AnimatedVisibility(
+                        visible = labelsVisible,
+                        enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                        exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
+                    ) {
+                        Text(
+                            text = "Project",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1
+                        )
+                    }
                 }
 
                 // ─── Quick Add (with pulsing shadow glow) ─────────────────────────────────
@@ -162,7 +173,7 @@ fun ProjectListHeader(
                         shape = RoundedCornerShape(14.dp),
                         modifier = Modifier.size(52.dp),
                         elevation = FloatingActionButtonDefaults.elevation(
-                            defaultElevation = animatedElevation.dp,   // Fixed
+                            defaultElevation = animatedElevation.dp,
                             pressedElevation = 12.dp
                         )
                     ) {
@@ -172,14 +183,20 @@ fun ProjectListHeader(
                             modifier = Modifier.size(28.dp)
                         )
                     }
-                    Text(
-                        text = "Expense",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 1
-                    )
+                    AnimatedVisibility(
+                        visible = labelsVisible,
+                        enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                        exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
+                    ) {
+                        Text(
+                            text = "Expense",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1
+                        )
+                    }
                 }
             }
         }
