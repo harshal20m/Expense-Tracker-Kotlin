@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Card
@@ -35,6 +36,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -56,6 +58,7 @@ import com.example.paisatracker.PaisaTrackerApplication
 import com.example.paisatracker.PaisaTrackerViewModel
 import com.example.paisatracker.data.AppLockPreferences
 import com.example.paisatracker.data.CurrencyPreferencesRepository
+import com.example.paisatracker.data.DataSeeder
 import com.example.paisatracker.ui.applock.AppLockSettingsDialog
 import com.example.paisatracker.ui.applock.SetupPinDialog
 import com.example.paisatracker.ui.assets.CompactHeader
@@ -218,6 +221,96 @@ fun SettingsScreen(
                         isAppLockEnabled = isAppLockEnabled,
                         isBiometricEnabled = isBiometricEnabled,
                         onDismiss = { showAppLockSettingsDialog = false }
+                    )
+                }
+            }
+
+            item { Spacer(modifier = Modifier.height(8.dp)); SectionHeader(title = "Data Management") }
+            item {
+                var showResetDialog by remember { mutableStateOf(false) }
+                var isResetting by remember { mutableStateOf(false) }
+                val scope = rememberCoroutineScope()
+
+                SettingsCard(
+                    icon = Icons.Default.Restore, // You'll need to add this import
+                    title = "Add Default Data",
+                    subtitle = "Add sample projects and categories",
+                    onClick = { showResetDialog = true }
+                )
+
+                if (showResetDialog) {
+                    androidx.compose.material3.AlertDialog(
+                        onDismissRequest = { showResetDialog = false },
+                        title = { Text("Add Default Data?") },
+                        text = {
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    "This will add the following default projects and categories:",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "• 🏠 Daily Living\n" +
+                                            "  - Groceries, Household Items, Personal Care\n\n" +
+                                            "• 🍔 Food & Dining\n" +
+                                            "  - Restaurants, Coffee & Snacks, Takeout\n\n" +
+                                            "• 🚗 Transportation\n" +
+                                            "  - Fuel, Public Transit, Ride Share, Parking\n\n" +
+                                            "• 🛍️ Shopping\n" +
+                                            "  - Clothing, Electronics, Gifts\n\n" +
+                                            "• 🎬 Entertainment\n" +
+                                            "  - Movies, Streaming Services, Games, Events\n\n" +
+                                            "• 💡 Bills & Utilities\n" +
+                                            "  - Electricity, Water, Internet, Mobile, Rent\n\n" +
+                                            "• 💊 Health & Wellness\n" +
+                                            "  - Pharmacy, Doctor Visits, Gym, Insurance\n\n" +
+                                            "• 📚 Education\n" +
+                                            "  - Books, Courses, Supplies",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    "Your existing data will NOT be deleted. Only new items will be added.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        },
+                        confirmButton = {
+                            TextButton(
+                                onClick = {
+                                    scope.launch {
+                                        isResetting = true
+                                        val dataSeeder = DataSeeder.getInstance(application.repository)
+                                        dataSeeder.seedInitialDataIfUserAccepts(context, true)
+                                        isResetting = false
+                                        showResetDialog = false
+                                        Toast.makeText(context, "Default data added successfully!", Toast.LENGTH_LONG).show()
+                                    }
+                                },
+                                enabled = !isResetting
+                            ) {
+                                if (isResetting) {
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        androidx.compose.material3.CircularProgressIndicator(
+                                            modifier = Modifier.size(16.dp),
+                                            strokeWidth = 2.dp
+                                        )
+                                        Text("Adding...")
+                                    }
+                                } else {
+                                    Text("Add Defaults")
+                                }
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showResetDialog = false }) {
+                                Text("Cancel")
+                            }
+                        }
                     )
                 }
             }

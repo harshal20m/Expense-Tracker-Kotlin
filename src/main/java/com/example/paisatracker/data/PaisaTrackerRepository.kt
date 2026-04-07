@@ -64,6 +64,9 @@ class PaisaTrackerRepository(
 
     fun getCategoryById(categoryId: Long): Flow<Category> = categoryDao.getCategoryById(categoryId)
 
+     suspend fun getCategoriesForProjectList(projectId: Long): List<Category> {
+         return categoryDao.getCategoriesForProjectList(projectId)
+     }
     fun getAllProjectsWithTotal(): Flow<List<ProjectWithTotal>> = projectDao.getAllProjectsWithTotal()
 
     fun getCategoryExpenses(projectId: Long): Flow<List<CategoryExpense>> = projectDao.getCategoryExpenses(projectId)
@@ -72,6 +75,9 @@ class PaisaTrackerRepository(
 
     fun getAllCategories(): Flow<List<Category>> = categoryDao.getAllCategories()
 
+    suspend fun getAllCategoriesList(): List<Category> {
+        return categoryDao.getAllCategoriesList()
+    }
     fun getAllExpenses(): Flow<List<Expense>> = expenseDao.getAllExpenses()
 
     suspend fun getExportRows(projectId: Long?): List<ExportRow> =

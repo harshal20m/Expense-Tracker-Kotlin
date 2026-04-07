@@ -31,6 +31,10 @@ interface CategoryDao {
     @Query("SELECT * FROM categories WHERE projectId = :projectId ORDER BY name ASC")
     fun getCategoriesForProject(projectId: Long): Flow<List<Category>>
 
+    @Query("SELECT * FROM categories WHERE projectId = :projectId ORDER BY name ASC")
+    suspend fun getCategoriesForProjectList(projectId: Long): List<Category>
+
+
     @Query("SELECT * FROM categories WHERE id = :categoryId")
     fun getCategoryById(categoryId: Long): Flow<Category>
 
@@ -56,6 +60,10 @@ interface CategoryDao {
 
     @Query("SELECT * FROM categories ORDER BY name ASC")
     fun getAllCategories(): Flow<List<Category>>
+
+    @Query("SELECT * FROM categories ORDER BY name ASC")
+    suspend fun getAllCategoriesList(): List<Category>
+
 
 
 }

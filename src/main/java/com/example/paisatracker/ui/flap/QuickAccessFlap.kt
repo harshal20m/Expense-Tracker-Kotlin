@@ -32,6 +32,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Calculate
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -334,16 +335,13 @@ private fun ExpandedFlapContent(
                     }
                 }
         ) {
+            // Row with drag handle AND close icon
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 12.dp)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null
-                    ) { onClose() },
-                horizontalArrangement = Arrangement.Start
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                // Drag handle on the left
                 Box(
                     modifier = Modifier
                         .width(48.dp)
@@ -351,11 +349,31 @@ private fun ExpandedFlapContent(
                         .clip(RoundedCornerShape(50))
                         .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f))
                 )
+
+                // Close icon on the right
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) { onClose() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Close",
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
 
-            // Resize hint text
+            // Resize hint text (moved slightly down)
+            Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "↕ Drag to resize | Click to close",
+                text = "↕ Drag to resize | Click ✕ to close",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
                 fontSize = 10.sp,

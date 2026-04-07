@@ -42,6 +42,10 @@ class DataSeeder(private val repository: PaisaTrackerRepository) {
     }
 
     private suspend fun seedProjects() {
+
+        val existingProjects = repository.getAllProjectsList()
+        val existingProjectNames = existingProjects.map { it.name }.toSet()
+
         val defaultProjects = listOf(
             Project(name = "Daily Living", emoji = "🏠", createdAt = System.currentTimeMillis()),
             Project(name = "Food & Dining", emoji = "🍔", createdAt = System.currentTimeMillis()),
@@ -53,8 +57,11 @@ class DataSeeder(private val repository: PaisaTrackerRepository) {
             Project(name = "Education", emoji = "📚", createdAt = System.currentTimeMillis())
         )
 
+        // Only insert projects that don't already exist
         defaultProjects.forEach { project ->
-            repository.insertProject(project)
+            if (project.name !in existingProjectNames) {
+                repository.insertProject(project)
+            }
         }
     }
 
@@ -63,7 +70,76 @@ class DataSeeder(private val repository: PaisaTrackerRepository) {
         val projects = repository.getAllProjectsList()
         val projectMap = projects.associateBy { it.name }
 
+        // Get existing categories to avoid duplicates
+        val existingCategories = mutableSetOf<String>()
+        projects.forEach { project ->
+            val categories = repository.getCategoriesForProjectList(project.id)
+            existingCategories.addAll(categories.map { "${project.name}:${it.name}" })
+        }
         val defaultCategories = mutableListOf<Category>()
+
+        // Helper to add category if not exists
+        fun addCategoryIfNotExists(projectName: String, categoryName: String, emoji: String) {
+            val key = "$projectName:$categoryName"
+            if (key !in existingCategories) {
+                projectMap[projectName]?.let { project ->
+                    defaultCategories.add(
+                        Category(
+                            projectId = project.id,
+                            name = categoryName,
+                            emoji = emoji,
+                            createdAt = System.currentTimeMillis()
+                        )
+                    )
+                }
+            }
+        }
+
+        // Daily Living categories
+        addCategoryIfNotExists("Daily Living", "Groceries", "🛒")
+        addCategoryIfNotExists("Daily Living", "Household Items", "🧹")
+        addCategoryIfNotExists("Daily Living", "Personal Care", "🧴")
+
+        // Food & Dining categories
+        addCategoryIfNotExists("Food & Dining", "Restaurants", "🍽️")
+        addCategoryIfNotExists("Food & Dining", "Coffee & Snacks", "☕")
+        addCategoryIfNotExists("Food & Dining", "Takeout", "🥡")
+
+        // Transportation categories
+        addCategoryIfNotExists("Transportation", "Fuel", "⛽")
+        addCategoryIfNotExists("Transportation", "Public Transit", "🚌")
+        addCategoryIfNotExists("Transportation", "Ride Share", "🚕")
+        addCategoryIfNotExists("Transportation", "Parking", "🅿️")
+
+        // Shopping categories
+        addCategoryIfNotExists("Shopping", "Clothing", "👕")
+        addCategoryIfNotExists("Shopping", "Electronics", "📱")
+        addCategoryIfNotExists("Shopping", "Gifts", "🎁")
+
+        // Entertainment categories
+        addCategoryIfNotExists("Entertainment", "Movies", "🎬")
+        addCategoryIfNotExists("Entertainment", "Streaming Services", "📺")
+        addCategoryIfNotExists("Entertainment", "Games", "🎮")
+        addCategoryIfNotExists("Entertainment", "Events & Concerts", "🎵")
+
+        // Bills & Utilities categories
+        addCategoryIfNotExists("Bills & Utilities", "Electricity", "⚡")
+        addCategoryIfNotExists("Bills & Utilities", "Water", "💧")
+        addCategoryIfNotExists("Bills & Utilities", "Internet", "🌐")
+        addCategoryIfNotExists("Bills & Utilities", "Mobile", "📱")
+        addCategoryIfNotExists("Bills & Utilities", "Rent", "🏠")
+
+        // Health & Wellness categories
+        addCategoryIfNotExists("Health & Wellness", "Pharmacy", "💊")
+        addCategoryIfNotExists("Health & Wellness", "Doctor Visits", "👨‍⚕️")
+        addCategoryIfNotExists("Health & Wellness", "Gym", "🏋️")
+        addCategoryIfNotExists("Health & Wellness", "Insurance", "🛡️")
+
+        // Education categories
+        addCategoryIfNotExists("Education", "Books", "📖")
+        addCategoryIfNotExists("Education", "Courses", "🎓")
+        addCategoryIfNotExists("Education", "Supplies", "✏️")
+
 
         // Daily Living categories
         projectMap["Daily Living"]?.let { project ->
