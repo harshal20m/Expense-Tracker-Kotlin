@@ -760,7 +760,7 @@ private fun NewCategoryInlineCard(
     }
     Spacer(modifier = Modifier.height(8.dp))
 }
-@Composable
+
 fun getPaymentMethodIconRes(method: String): Int? {
     return when (method) {
         "UPI" -> R.drawable.ic_upi_payment_icon

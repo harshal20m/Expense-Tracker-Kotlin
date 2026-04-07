@@ -15,7 +15,7 @@ import com.example.paisatracker.ui.expense.ExpenseDetailScreen
 import com.example.paisatracker.ui.expense.ExpenseListScreen
 import com.example.paisatracker.ui.export.ExportScreen
 import com.example.paisatracker.ui.budget.BudgetScreen
-import com.example.paisatracker.ui.main.ProjectListScreen
+import com.example.paisatracker.ui.main.projects.ProjectListScreen
 import com.example.paisatracker.ui.settings.SettingsScreen
 
 @Composable
