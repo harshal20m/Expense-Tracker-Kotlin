@@ -41,11 +41,9 @@ fun CalculatorTab(viewModel: PaisaTrackerViewModel) {
         targetState = showHistory,
         transitionSpec = {
             if (targetState) {
-                // Going to history → slide in from right
                 (slideInHorizontally { it } + fadeIn(tween(200))) togetherWith
                         (slideOutHorizontally { -it / 3 } + fadeOut(tween(150)))
             } else {
-                // Coming back from history → slide in from left
                 (slideInHorizontally { -it } + fadeIn(tween(200))) togetherWith
                         (slideOutHorizontally { it / 3 } + fadeOut(tween(150)))
             }
@@ -60,7 +58,7 @@ fun CalculatorTab(viewModel: PaisaTrackerViewModel) {
     }
 }
 
-// ── Main calculator screen (display + keypad, never moves) ─────────────────────
+// ── Main calculator screen (display + keypad) ────────────────────────────────
 @Composable
 private fun CalculatorMainScreen(viewModel: PaisaTrackerViewModel) {
     val display    by viewModel.calcDisplay.collectAsState()
@@ -73,7 +71,7 @@ private fun CalculatorMainScreen(viewModel: PaisaTrackerViewModel) {
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
     ) {
-        // ── Display ───────────────────────────────────────────────────────────
+        // ── Display (CLEAN — no backspace icon) ──────────────────────────────
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -111,7 +109,7 @@ private fun CalculatorMainScreen(viewModel: PaisaTrackerViewModel) {
                 )
             }
 
-            // History button — top-left corner of display
+            // ── History button (top-left) ─────────────────────────────────────
             if (history.isNotEmpty()) {
                 Box(
                     modifier = Modifier
@@ -140,13 +138,14 @@ private fun CalculatorMainScreen(viewModel: PaisaTrackerViewModel) {
                     }
                 }
             }
+            // ✅ Backspace icon REMOVED from display area
         }
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        // ── Keypad (NEVER moves) ──────────────────────────────────────────────
+        // ── Keypad with ⌫ key ─────────────────────────────────────────────────
         val keys = listOf(
-            listOf("AC", "+/-", "%", "÷"),
+            listOf("AC", "%", "⌫", "÷"),  // ✅ ⌫ only in numpad
             listOf("7",  "8",   "9", "×"),
             listOf("4",  "5",   "6", "−"),
             listOf("1",  "2",   "3", "+"),
@@ -177,7 +176,7 @@ private fun CalculatorMainScreen(viewModel: PaisaTrackerViewModel) {
     }
 }
 
-// ── History screen (full replacement, slides in from right) ────────────────────
+// ── History screen (unchanged) ───────────────────────────────────────────────
 @Composable
 private fun CalculatorHistoryScreen(viewModel: PaisaTrackerViewModel) {
     val history by viewModel.calcHistory.collectAsState()
@@ -235,7 +234,6 @@ private fun CalculatorHistoryScreen(viewModel: PaisaTrackerViewModel) {
         }
 
         if (history.isEmpty()) {
-            // Empty state
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -260,7 +258,6 @@ private fun CalculatorHistoryScreen(viewModel: PaisaTrackerViewModel) {
                 }
             }
         } else {
-            // History list — newest first (reverseLayout)
             LazyColumn(
                 state = listState,
                 modifier = Modifier
@@ -274,7 +271,6 @@ private fun CalculatorHistoryScreen(viewModel: PaisaTrackerViewModel) {
                     HistoryEntry(
                         entry = entry,
                         onTap = {
-                            // Tapping a history entry copies its result back to display
                             val result = entry.substringAfterLast("= ").trim()
                             viewModel.calcDisplay.value = result
                             viewModel.calcExpression.value = ""
@@ -291,7 +287,6 @@ private fun CalculatorHistoryScreen(viewModel: PaisaTrackerViewModel) {
 
 @Composable
 private fun HistoryEntry(entry: String, onTap: () -> Unit) {
-    // Split "120 + 80 = 200" into expr part and result part
     val eqIdx = entry.lastIndexOf("=")
     val exprPart   = if (eqIdx >= 0) entry.substring(0, eqIdx).trim() else entry
     val resultPart = if (eqIdx >= 0) entry.substring(eqIdx + 1).trim() else ""
@@ -328,16 +323,18 @@ private fun HistoryEntry(entry: String, onTap: () -> Unit) {
 @Composable
 private fun CalcKey(label: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val isOperator = label in listOf("÷", "×", "−", "+", "=")
-    val isFunction = label in listOf("AC", "+/-", "%")
+    val isFunction = label in listOf("AC", "%", "⌫")
 
     val bgColor = when {
         label == "=" -> MaterialTheme.colorScheme.primary
+        label == "⌫" -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f)
         isOperator   -> MaterialTheme.colorScheme.primaryContainer
         isFunction   -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f)
         else         -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
     }
     val textColor = when {
         label == "=" -> MaterialTheme.colorScheme.onPrimary
+        label == "⌫" -> MaterialTheme.colorScheme.error
         isOperator   -> MaterialTheme.colorScheme.primary
         isFunction   -> MaterialTheme.colorScheme.secondary
         else         -> MaterialTheme.colorScheme.onSurface
@@ -354,7 +351,7 @@ private fun CalcKey(label: String, modifier: Modifier = Modifier, onClick: () ->
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = label,
+            text = if (label == "⌫") "⌫" else label,
             style = MaterialTheme.typography.titleMedium.copy(
                 fontWeight = if (isOperator || label == "=") FontWeight.W400 else FontWeight.W500,
                 fontSize = if (label.length > 2) 14.sp else 18.sp
@@ -364,15 +361,36 @@ private fun CalcKey(label: String, modifier: Modifier = Modifier, onClick: () ->
     }
 }
 
-// ── Calculator logic ───────────────────────────────────────────────────────────
+// ── Calculator logic with backspace support ──────────────────────────────────
 private fun processKey(key: String, vm: PaisaTrackerViewModel) {
     val current = vm.calcDisplay.value
     val expr    = vm.calcExpression.value
 
     when (key) {
-        "AC"  -> { vm.calcDisplay.value = "0"; vm.calcExpression.value = "" }
-        "+/-" -> { vm.calcDisplay.value = formatResult(-(current.toDoubleOrNull() ?: return)) }
-        "%"   -> { vm.calcDisplay.value = formatResult((current.toDoubleOrNull() ?: return) / 100.0) }
+        "AC"  -> {
+            vm.calcDisplay.value = "0"
+            vm.calcExpression.value = ""
+        }
+
+        "⌫"   -> {
+            when {
+                current == "0" || current.isEmpty() -> return
+                current.length == 1 -> vm.calcDisplay.value = "0"
+                else -> {
+                    val newValue = current.dropLast(1)
+                    vm.calcDisplay.value = if (newValue == "-" || newValue.isEmpty()) "0" else newValue
+                }
+            }
+        }
+
+        "+/-" -> {
+            vm.calcDisplay.value = formatResult(-(current.toDoubleOrNull() ?: return))
+        }
+
+        "%"   -> {
+            vm.calcDisplay.value = formatResult((current.toDoubleOrNull() ?: return) / 100.0)
+        }
+
         "="   -> {
             if (expr.isEmpty()) return
             val full = "$expr $current"
@@ -383,6 +401,7 @@ private fun processKey(key: String, vm: PaisaTrackerViewModel) {
                 vm.calcExpression.value = ""
             }
         }
+
         "÷", "×", "−", "+" -> {
             if (expr.isNotEmpty()) {
                 val full = "$expr $current"
@@ -394,12 +413,21 @@ private fun processKey(key: String, vm: PaisaTrackerViewModel) {
                 vm.calcDisplay.value = "0"
             }
         }
-        "."  -> { if (!current.contains(".")) vm.calcDisplay.value = "$current." }
-        "00" -> { if (current != "0" && current.length < 12) vm.calcDisplay.value = "${current}00" }
+
+        "."  -> {
+            if (!current.contains(".")) vm.calcDisplay.value = "$current."
+        }
+
+        "00" -> {
+            if (current != "0" && current.length < 12) vm.calcDisplay.value = "${current}00"
+        }
+
         else -> {
-            vm.calcDisplay.value = if (current == "0") key
-            else if (current.length >= 12) current
-            else "$current$key"
+            vm.calcDisplay.value = when {
+                current == "0" -> key
+                current.length >= 12 -> current
+                else -> "$current$key"
+            }
         }
     }
 }

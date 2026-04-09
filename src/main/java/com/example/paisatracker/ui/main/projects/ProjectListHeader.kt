@@ -7,33 +7,24 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.outlined.FlashOn
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.FloatingActionButtonDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.paisatracker.R
@@ -42,21 +33,22 @@ import com.example.paisatracker.R
 fun ProjectListHeader(
     onAddProjectClick: () -> Unit,
     onQuickAddClick: () -> Unit,
-    labelsVisible: Boolean = true   // Controls visibility of the tiny labels below buttons
+    onScanClick: () -> Unit,
+    labelsVisible: Boolean = true
 ) {
-    // Pulsing elevation animation for Quick Add button shadow (glow effect)
-    val infiniteTransition = rememberInfiniteTransition(label = "glowShadow")
+    // Pulsing glow for Quick Add
+    val infiniteTransition = rememberInfiniteTransition(label = "glow")
     val animatedElevation by infiniteTransition.animateFloat(
-        initialValue = 4f,
-        targetValue = 12f,
+        initialValue = 3f,
+        targetValue  = 11f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1200, easing = FastOutSlowInEasing),
+            animation  = tween(1400, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "elevation"
+        label = "elev"
     )
 
-    Box(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .background(
@@ -65,139 +57,157 @@ fun ProjectListHeader(
                         MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
                         MaterialTheme.colorScheme.surface
                     ),
-                    startY = 0f,
-                    endY = 150f
+                    startY = 0f, endY = 160f
                 )
             )
     ) {
+        // ── Row 1: Logo + App title ───────────────────────────────────────────
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 18.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .padding(start = 24.dp, end = 24.dp, top = 18.dp, bottom = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // ── App title + logo ──────────────────────────────────────────────
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
-                modifier = Modifier.weight(1f)
+            // Logo
+            Surface(
+                shape           = CircleShape,
+                color           = MaterialTheme.colorScheme.primaryContainer,
+                tonalElevation  = 8.dp,
+                shadowElevation = 4.dp,
+                modifier        = Modifier.size(44.dp)
             ) {
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    tonalElevation = 8.dp,
-                    shadowElevation = 4.dp,
-                    modifier = Modifier.size(52.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_project_icon_header),
-                            contentDescription = null,
-                            tint = Color.Unspecified,
-                            modifier = Modifier.size(30.dp)
-                        )
-                    }
-                }
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(
-                        text = "PaisaTracker",
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontSize = 22.sp,
-                        letterSpacing = (-0.5).sp
-                    )
-                    Text(
-                        text = "Track Your Projects",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontWeight = FontWeight.Medium,
-                        fontSize = 13.sp
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                    Icon(
+                        painter           = painterResource(id = R.drawable.ic_project_icon_header),
+                        contentDescription= null,
+                        tint              = Color.Unspecified,
+                        modifier          = Modifier.size(26.dp)
                     )
                 }
             }
+            // Title block
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.weight(1f)) {
+                Text(
+                    text          = "PaisaTracker",
+                    style         = MaterialTheme.typography.headlineMedium,
+                    fontWeight    = FontWeight.Bold,
+                    color         = MaterialTheme.colorScheme.primary,
+                    fontSize      = 22.sp,
+                    letterSpacing = (-0.5).sp,
+                    maxLines      = 1
+                )
+                Text(
+                    text       = "Track Your Projects",
+                    style      = MaterialTheme.typography.bodySmall,
+                    color      = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.Medium,
+                    fontSize   = 12.sp,
+                    maxLines   = 1
+                )
+            }
+        }
 
-            // ── Action buttons with animated labels ───────────────────────────
+        // ── Row 2: Action buttons — full width, always below title ───────────
+        AnimatedVisibility(
+            visible = true,
+            enter   = slideInVertically { -it / 2 } + fadeIn(),
+            exit    = slideOutVertically { -it / 2 } + fadeOut()
+        ) {
             Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.Bottom
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 20.dp, end = 20.dp, bottom = 14.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // ─── New Project ─────────────────────────────────────────────────────────
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    FloatingActionButton(
-                        onClick = onAddProjectClick,
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                        shape = RoundedCornerShape(16.dp),
-                        modifier = Modifier.size(52.dp),
-                        elevation = FloatingActionButtonDefaults.elevation(
-                            defaultElevation = 6.dp,
-                            pressedElevation = 12.dp
-                        )
-                    ) {
-                        Icon(
-                            Icons.Default.Add,
-                            contentDescription = "Add Project",
-                            modifier = Modifier.size(26.dp)
-                        )
-                    }
-                    AnimatedVisibility(
-                        visible = labelsVisible,
-                        enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-                        exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
-                    ) {
-                        Text(
-                            text = "Project",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Medium,
-                            maxLines = 1
-                        )
-                    }
-                }
+                // ── New Project ───────────────────────────────────────────────
+                HeaderActionButton(
+                    label       = "New Project",
+                    icon        = Icons.Default.Add,
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor   = MaterialTheme.colorScheme.onSecondaryContainer,
+                    elevation      = 4.dp,
+                    showLabel      = labelsVisible,
+                    modifier       = Modifier.weight(1f),
+                    onClick        = onAddProjectClick
+                )
 
-                // ─── Quick Add (with pulsing shadow glow) ─────────────────────────────────
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    FloatingActionButton(
-                        onClick = onQuickAddClick,
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary,
-                        shape = RoundedCornerShape(14.dp),
-                        modifier = Modifier.size(52.dp),
-                        elevation = FloatingActionButtonDefaults.elevation(
-                            defaultElevation = animatedElevation.dp,
-                            pressedElevation = 12.dp
-                        )
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.FlashOn,
-                            contentDescription = "Quick Add Expense",
-                            modifier = Modifier.size(28.dp)
-                        )
-                    }
-                    AnimatedVisibility(
-                        visible = labelsVisible,
-                        enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-                        exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
-                    ) {
-                        Text(
-                            text = "Expense",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Medium,
-                            maxLines = 1
-                        )
-                    }
-                }
+                // ── Quick Add ─────────────────────────────────────────────────
+                HeaderActionButton(
+                    label       = "Quick Expense",
+                    icon        = Icons.Outlined.FlashOn,
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor   = MaterialTheme.colorScheme.onPrimary,
+                    elevation      = animatedElevation.dp,
+                    showLabel      = labelsVisible,
+                    modifier       = Modifier.weight(1f),
+                    onClick        = onQuickAddClick,
+                    isPrimary      = true
+                )
+
+                // ── Scan QR ───────────────────────────────────────────────────
+                HeaderActionButton(
+                    label       = "Scan & Pay",
+                    icon        = Icons.Default.QrCodeScanner,
+                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                    contentColor   = MaterialTheme.colorScheme.onTertiaryContainer,
+                    elevation      = 3.dp,
+                    showLabel      = labelsVisible,
+                    modifier       = Modifier.weight(1f),
+                    onClick        = onScanClick
+                )
+            }
+        }
+    }
+}
+
+// ─── Reusable action button tile ──────────────────────────────────────────────
+
+@Composable
+private fun HeaderActionButton(
+    label: String,
+    icon: ImageVector,
+    containerColor: androidx.compose.ui.graphics.Color,
+    contentColor: androidx.compose.ui.graphics.Color,
+    elevation: Dp,
+    showLabel: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+    isPrimary: Boolean = false
+) {
+    Card(
+        modifier  = modifier,
+        shape     = RoundedCornerShape(18.dp),
+        colors    = CardDefaults.cardColors(containerColor = containerColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = elevation),
+        onClick   = onClick
+    ) {
+        Column(
+            modifier            = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp, horizontal = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Icon(
+                imageVector        = icon,
+                contentDescription = label,
+                tint               = contentColor,
+                modifier           = Modifier.size(if (isPrimary) 28.dp else 24.dp)
+            )
+            AnimatedVisibility(
+                visible = showLabel,
+                enter   = fadeIn(tween(200)) + slideInVertically { it },
+                exit    = fadeOut(tween(150)) + slideOutVertically { it }
+            ) {
+                Text(
+                    text      = label,
+                    style     = MaterialTheme.typography.labelSmall,
+                    fontWeight= if (isPrimary) FontWeight.Bold else FontWeight.Medium,
+                    color     = contentColor.copy(alpha = 0.9f),
+                    fontSize  = 10.sp,
+                    maxLines  = 1
+                )
             }
         }
     }

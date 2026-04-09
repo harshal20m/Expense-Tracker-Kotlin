@@ -1,19 +1,31 @@
 package com.example.paisatracker.ui.expense
 
 import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,6 +36,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -32,13 +47,14 @@ import com.example.paisatracker.PaisaTrackerViewModel
 import com.example.paisatracker.R
 import com.example.paisatracker.data.Asset
 import com.example.paisatracker.data.Expense
+import com.example.paisatracker.data.UpiStatus
+import com.example.paisatracker.data.UpiTransaction
 import com.example.paisatracker.ui.common.ZoomableImageDialog
 import com.example.paisatracker.util.formatCurrency
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,24 +65,22 @@ fun ExpenseDetailScreen(
 ) {
     val context = LocalContext.current
 
-    val expense by viewModel.getExpenseById(expenseId)
-        .collectAsState(initial = null)
+    val expense by viewModel.getExpenseById(expenseId).collectAsState(initial = null)
+    val assets  by viewModel.getAssetsForExpense(expenseId).collectAsState(initial = emptyList())
+    val upiTxn  by viewModel.getUpiTransactionByExpenseId(expenseId).collectAsState(initial = null)
 
-    val assets by viewModel.getAssetsForExpense(expenseId)
-        .collectAsState(initial = emptyList())
+    // ── Edit state ────────────────────────────────────────────────────────────
+    var showEditSheet   by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    val editSheetState  = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    val pickImageLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-            if (uri != null && expense != null) {
-                viewModel.addLinkedAsset(
-                    context = context,
-                    uri = uri,
-                    title = expense!!.description,
-                    description = "",
-                    expenseId = expense!!.id
-                )
-            }
+    val pickImageLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null && expense != null) {
+            viewModel.addLinkedAsset(context = context, uri = uri, title = expense!!.description, description = "", expenseId = expense!!.id)
         }
+    }
 
     val backgroundGradient = Brush.verticalGradient(
         colors = listOf(
@@ -79,17 +93,27 @@ fun ExpenseDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = {
-                    Text(
-                        text = "Expense Details",
-                        style = MaterialTheme.typography.titleLarge
-                    )
-                },
+                title = { Text("Expense Details", style = MaterialTheme.typography.titleLarge) },
                 navigationIcon = {
                     IconButton(onClick = { navController.navigateUp() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
+                    }
+                },
+                actions = {
+                    // ── Edit button ───────────────────────────────────────────
+                    IconButton(onClick = { showEditSheet = true }) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            Icons.Default.Edit,
+                            contentDescription = "Edit expense",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    // ── Delete button ─────────────────────────────────────────
+                    IconButton(onClick = { showDeleteDialog = true }) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = "Delete expense",
+                            tint = MaterialTheme.colorScheme.error
                         )
                     }
                 },
@@ -103,343 +127,351 @@ fun ExpenseDetailScreen(
         containerColor = Color.Transparent
     ) { innerPadding ->
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(backgroundGradient)
-                .padding(innerPadding)
+            modifier = Modifier.fillMaxSize().background(backgroundGradient).padding(innerPadding)
         ) {
             expense?.let { data ->
-                ExpenseDetailContentSafe(
-                    expense = data,
-                    assets = assets,
-                    onAddAssetClick = { pickImageLauncher.launch("image/*") },
-                    onDeleteAssetClick = { asset -> viewModel.deleteAsset(asset) }
+                ExpenseDetailContent(
+                    expense       = data,
+                    assets        = assets,
+                    upiTxn        = upiTxn,
+                    onAddAsset    = { pickImageLauncher.launch("image/*") },
+                    onDeleteAsset = { asset -> viewModel.deleteAsset(asset) }
                 )
-            } ?: Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "Loading expense...",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
-                )
+            } ?: Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("Loading expense…", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f))
             }
         }
     }
-}
 
-@Composable
-private fun ExpenseDetailContentSafe(
-    expense: Expense,
-    assets: List<Asset>,
-    onAddAssetClick: () -> Unit,
-    onDeleteAssetClick: (Asset) -> Unit
-) {
-    var zoomImagePath by remember { mutableStateOf<String?>(null) }
-    var assetToDelete by remember { mutableStateOf<Asset?>(null) }
-
-    val scrollState = rememberScrollState()
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(scrollState)
-            .padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 110.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(20.dp)
-    ) {
-        // Amount card
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer
-            ),
-            shape = RoundedCornerShape(24.dp),
-            elevation = CardDefaults.cardElevation(6.dp)
+    // ── Edit bottom sheet ─────────────────────────────────────────────────────
+    if (showEditSheet && expense != null) {
+        ModalBottomSheet(
+            onDismissRequest = { showEditSheet = false },
+            sheetState       = editSheetState,
+            shape            = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+            dragHandle       = { BottomSheetDefaults.DragHandle() }
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Text(
-                    text = "Amount",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-                )
-                Text(
-                    text = formatCurrency(expense.amount),
-                    style = MaterialTheme.typography.headlineLarge,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Surface(
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                Icons.Default.DateRange,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp),
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = detailDate(expense.date),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        }
-                    }
+            EditExpenseSheetContent(
+                expense  = expense!!,
+                onDismiss= { showEditSheet = false },
+                onConfirm= { updated ->
+                    viewModel.updateExpense(updated)
+                    showEditSheet = false
+                    Toast.makeText(context, "Expense updated", Toast.LENGTH_SHORT).show()
                 }
-            }
+            )
         }
-
-        // Description + payment
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surface
-            ),
-            shape = RoundedCornerShape(20.dp),
-            elevation = CardDefaults.cardElevation(4.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Text(
-                    text = "Description",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = expense.description,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    lineHeight = 20.sp
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = "Payment method",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-
-                if (expense.paymentMethod != null) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        val iconRes = paymentIconRes(expense.paymentIcon)
-                        if (iconRes != null) {
-                            Icon(
-                                painter = painterResource(id = iconRes),
-                                contentDescription = expense.paymentMethod,
-                                modifier = Modifier.size(20.dp),
-                                tint = Color.Unspecified
-                            )
-                        }
-                        Text(
-                            text = expense.paymentMethod,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                } else {
-                    Text(
-                        text = "Not specified",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }
-
-        // Assets section (linked assets)
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant
-            ),
-            shape = RoundedCornerShape(20.dp),
-            elevation = CardDefaults.cardElevation(0.dp)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text = "Assets (${assets.size})",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    IconButton(onClick = onAddAssetClick) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "Add asset",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
-
-                if (assets.isEmpty()) {
-                    Text(
-                        text = "No assets attached yet",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                } else {
-                    // Manual 2-column grid, no scroll inside
-                    Column(
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        assets.chunked(2).forEach { rowItems ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                rowItems.forEach { asset ->
-                                    AssetGridTile(
-                                        asset = asset,
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .aspectRatio(1f),
-                                        onClick = { zoomImagePath = asset.imagePath },
-                                        onDeleteClick = { assetToDelete = asset }
-                                    )
-                                }
-                                if (rowItems.size == 1) {
-                                    Spacer(
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .aspectRatio(1f)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(110.dp))
     }
 
-    // Zoom viewer
-    zoomImagePath?.let { path ->
-        ZoomableImageDialog(
-            imageModel = path,
-            onDismiss = { zoomImagePath = null }
-        )
-    }
-
-    // Confirm delete dialog
-    assetToDelete?.let { asset ->
+    // ── Delete confirmation dialog ────────────────────────────────────────────
+    if (showDeleteDialog && expense != null) {
         AlertDialog(
-            onDismissRequest = { assetToDelete = null },
-            icon = {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.error
-                )
-            },
-            title = { Text("Delete asset?") },
-            text = {
+            onDismissRequest = { showDeleteDialog = false },
+            icon  = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
+            title = { Text("Delete Expense?") },
+            text  = {
                 Text(
-                    text = "This image will be removed from this expense and from the assets gallery.",
+                    "\"${expense!!.description}\" will be permanently deleted along with all its assets.",
                     style = MaterialTheme.typography.bodyMedium
                 )
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        onDeleteAssetClick(asset)
-                        assetToDelete = null
+                        viewModel.deleteExpense(expense!!)
+                        showDeleteDialog = false
+                        navController.navigateUp()
                     },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error
-                    )
-                ) {
-                    Text("Delete")
-                }
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) { Text("Delete") }
             },
             dismissButton = {
-                TextButton(onClick = { assetToDelete = null }) {
-                    Text("Cancel")
-                }
+                TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") }
             },
             shape = RoundedCornerShape(16.dp)
         )
     }
 }
 
+// ─── Edit expense sheet content ───────────────────────────────────────────────
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AssetGridTile(
-    asset: Asset,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit,
-    onDeleteClick: () -> Unit
+private fun EditExpenseSheetContent(
+    expense: Expense,
+    onDismiss: () -> Unit,
+    onConfirm: (Expense) -> Unit
 ) {
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
+    var amount      by remember { mutableStateOf(expense.amount.toString()) }
+    var description by remember { mutableStateOf(expense.description) }
+    var date        by remember { mutableStateOf(expense.date) }
+    var paymentMethod by remember { mutableStateOf(expense.paymentMethod ?: "") }
+    var dropdownExpanded by remember { mutableStateOf(false) }
+
+    val context  = LocalContext.current
+    val calendar = Calendar.getInstance().apply { timeInMillis = date }
+
+    val datePicker = android.app.DatePickerDialog(
+        context,
+        { _, y, m, d -> calendar.set(y, m, d); date = calendar.timeInMillis },
+        calendar.get(Calendar.YEAR),
+        calendar.get(Calendar.MONTH),
+        calendar.get(Calendar.DAY_OF_MONTH)
+    )
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+            .navigationBarsPadding()
+            .imePadding()
+            .padding(horizontal = 20.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        AsyncImage(
-            model = asset.imagePath,
-            contentDescription = asset.title.ifBlank { "Asset" },
-            modifier = Modifier
-                .fillMaxSize()
-                .clickable { onClick() },
-            contentScale = ContentScale.Crop
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text("Edit Expense", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+
+        OutlinedTextField(
+            value         = amount,
+            onValueChange = { if (it.matches(Regex("^\\d*\\.?\\d{0,2}\$"))) amount = it },
+            label         = { Text("Amount") },
+            leadingIcon   = { Text("₹", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(start = 12.dp)) },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            singleLine    = true,
+            shape         = RoundedCornerShape(14.dp),
+            modifier      = Modifier.fillMaxWidth()
         )
 
-        IconButton(
-            onClick = onDeleteClick,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(4.dp)
-                .size(22.dp)
+        OutlinedTextField(
+            value         = description,
+            onValueChange = { description = it },
+            label         = { Text("Description") },
+            singleLine    = false,
+            maxLines      = 3,
+            shape         = RoundedCornerShape(14.dp),
+            modifier      = Modifier.fillMaxWidth()
+        )
+
+        // Payment method dropdown
+        val paymentMethods = listOf("UPI", "GPay", "PhonePe", "Paytm", "Cash", "Card")
+        ExposedDropdownMenuBox(expanded = dropdownExpanded, onExpandedChange = { dropdownExpanded = it }, modifier = Modifier.fillMaxWidth()) {
+            OutlinedTextField(
+                value       = paymentMethod.ifBlank { "Not specified" },
+                onValueChange = {},
+                readOnly    = true,
+                label       = { Text("Payment method") },
+                trailingIcon= { ExposedDropdownMenuDefaults.TrailingIcon(expanded = dropdownExpanded) },
+                modifier    = Modifier.menuAnchor().fillMaxWidth(),
+                shape       = RoundedCornerShape(14.dp)
+            )
+            ExposedDropdownMenu(expanded = dropdownExpanded, onDismissRequest = { dropdownExpanded = false }) {
+                paymentMethods.forEach { m ->
+                    DropdownMenuItem(text = { Text(m) }, onClick = { paymentMethod = m; dropdownExpanded = false })
+                }
+                DropdownMenuItem(text = { Text("None") }, onClick = { paymentMethod = ""; dropdownExpanded = false })
+            }
+        }
+
+        // Date picker
+        OutlinedButton(onClick = { datePicker.show() }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) {
+            Icon(Icons.Default.DateRange, null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(SimpleDateFormat("EEE, dd MMM yyyy", Locale.getDefault()).format(Date(date)))
+        }
+
+        // Save button
+        Button(
+            onClick  = {
+                val parsedAmount = amount.toDoubleOrNull()
+                if (description.isNotBlank() && parsedAmount != null && parsedAmount > 0) {
+                    onConfirm(
+                        expense.copy(
+                            amount        = parsedAmount,
+                            description   = description.trim(),
+                            date          = date,
+                            paymentMethod = paymentMethod.ifBlank { null },
+                            paymentIcon   = paymentMethod.toIconKey()
+                        )
+                    )
+                } else {
+                    Toast.makeText(context, "Please enter a valid description and amount", Toast.LENGTH_SHORT).show()
+                }
+            },
+            modifier = Modifier.fillMaxWidth().height(52.dp),
+            shape    = RoundedCornerShape(14.dp)
         ) {
-            Surface(
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.9f)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Delete asset",
-                    modifier = Modifier.padding(4.dp),
-                    tint = MaterialTheme.colorScheme.onErrorContainer
-                )
+            Text("Save Changes", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        }
+
+        Spacer(Modifier.height(8.dp))
+    }
+}
+
+private fun String.toIconKey(): String? = when (this) {
+    "GPay"    -> "gpay"
+    "PhonePe" -> "phonepe"
+    "Paytm"   -> "paytm"
+    "Cash"    -> "cash"
+    "Card"    -> "card"
+    "UPI"     -> "upi"
+    else      -> null
+}
+
+// ─── Detail content (unchanged from previous, included for completeness) ──────
+
+@Composable
+private fun ExpenseDetailContent(
+    expense: Expense,
+    assets: List<Asset>,
+    upiTxn: UpiTransaction?,
+    onAddAsset: () -> Unit,
+    onDeleteAsset: (Asset) -> Unit
+) {
+    var zoomImagePath by remember { mutableStateOf<String?>(null) }
+    var assetToDelete by remember { mutableStateOf<Asset?>(null) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 110.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(20.dp)
+    ) {
+        // Amount card
+        Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer), shape = RoundedCornerShape(24.dp), elevation = CardDefaults.cardElevation(6.dp)) {
+            Column(modifier = Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Amount", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f))
+                Text(formatCurrency(expense.amount), style = MaterialTheme.typography.headlineLarge, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)) {
+                    Row(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.DateRange, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                        Spacer(Modifier.width(6.dp))
+                        Text(detailDate(expense.date), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                    }
+                }
+            }
+        }
+
+        // Description + payment
+        Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), shape = RoundedCornerShape(20.dp), elevation = CardDefaults.cardElevation(4.dp)) {
+            Column(modifier = Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Description", style = MaterialTheme.typography.titleMedium)
+                Text(expense.description, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, lineHeight = 20.sp)
+                Spacer(Modifier.height(4.dp))
+                Text("Payment method", style = MaterialTheme.typography.titleMedium)
+                if (expense.paymentMethod != null) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        val iconRes = paymentIconRes(expense.paymentIcon)
+                        if (iconRes != null) Icon(painter = painterResource(id = iconRes), contentDescription = expense.paymentMethod, modifier = Modifier.size(20.dp), tint = Color.Unspecified)
+                        Text(expense.paymentMethod, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                } else {
+                    Text("Not specified", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+
+        // UPI transaction card
+        if (upiTxn != null) UpiTransactionCard(txn = upiTxn)
+
+        // Assets
+        Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), shape = RoundedCornerShape(20.dp), elevation = CardDefaults.cardElevation(0.dp)) {
+            Column(modifier = Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+                    Text("Assets (${assets.size})", style = MaterialTheme.typography.titleMedium)
+                    IconButton(onClick = onAddAsset) { Icon(Icons.Default.Add, "Add asset", tint = MaterialTheme.colorScheme.primary) }
+                }
+                if (assets.isEmpty()) {
+                    Text("No assets attached yet", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        assets.chunked(2).forEach { row ->
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                row.forEach { asset -> AssetGridTile(asset, Modifier.weight(1f).aspectRatio(1f), { zoomImagePath = asset.imagePath }, { assetToDelete = asset }) }
+                                if (row.size == 1) Spacer(Modifier.weight(1f).aspectRatio(1f))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Spacer(Modifier.height(110.dp))
+    }
+
+    zoomImagePath?.let { ZoomableImageDialog(imageModel = it, onDismiss = { zoomImagePath = null }) }
+
+    assetToDelete?.let { asset ->
+        AlertDialog(
+            onDismissRequest = { assetToDelete = null },
+            icon    = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
+            title   = { Text("Delete asset?") },
+            text    = { Text("This image will be removed from this expense and from the assets gallery.") },
+            confirmButton = { Button(onClick = { onDeleteAsset(asset); assetToDelete = null }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) { Text("Delete") } },
+            dismissButton = { TextButton(onClick = { assetToDelete = null }) { Text("Cancel") } },
+            shape   = RoundedCornerShape(16.dp)
+        )
+    }
+}
+
+// ── UPI Transaction card (collapsible) ───────────────────────────────────────
+
+@Composable
+private fun UpiTransactionCard(txn: UpiTransaction) {
+    var expanded by remember { mutableStateOf(false) }
+    val statusColor = when (txn.status) {
+        UpiStatus.SUCCESS   -> MaterialTheme.colorScheme.tertiary
+        UpiStatus.FAILED    -> MaterialTheme.colorScheme.error
+        UpiStatus.SUBMITTED -> MaterialTheme.colorScheme.secondary
+        UpiStatus.PENDING   -> MaterialTheme.colorScheme.outline
+    }
+    val statusLabel = when (txn.status) { UpiStatus.SUCCESS -> "Success"; UpiStatus.FAILED -> "Failed"; UpiStatus.SUBMITTED -> "Submitted"; UpiStatus.PENDING -> "Pending" }
+    val statusEmoji = when (txn.status) { UpiStatus.SUCCESS -> "✅"; UpiStatus.FAILED -> "❌"; UpiStatus.SUBMITTED -> "⏳"; UpiStatus.PENDING -> "🕐" }
+
+    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(4.dp)) {
+        Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
+            Row(modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded }, horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Box(modifier = Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(statusColor.copy(alpha = 0.12f)), contentAlignment = Alignment.Center) { Text(statusEmoji, fontSize = 18.sp) }
+                    Column { Text("UPI Payment", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold); Text(txn.vpa, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)) }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Surface(shape = RoundedCornerShape(8.dp), color = statusColor.copy(alpha = 0.12f)) { Text(statusLabel, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = statusColor, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) }
+                    Icon(if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f))
+                }
+            }
+            AnimatedVisibility(visible = expanded, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
+                Column(modifier = Modifier.fillMaxWidth().padding(top = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f), thickness = 0.5.dp)
+                    UpiRow("Payee",    txn.payeeName.ifBlank { "—" })
+                    UpiRow("VPA",      txn.vpa)
+                    UpiRow("Amount",   "₹${"%.2f".format(txn.amount)}")
+                    if (txn.transactionNote.isNotBlank()) UpiRow("Note", txn.transactionNote)
+                    txn.transactionId?.let { UpiRow("Transaction ID", it) }
+                    txn.responseCode?.let  { UpiRow("Response code",  it) }
+                    UpiRow("Initiated", detailDate(txn.createdAt))
+                }
             }
         }
     }
 }
 
-private fun detailDate(timestamp: Long): String {
-    val sdf = SimpleDateFormat("EEE, dd MMM yyyy", Locale.getDefault())
-    return sdf.format(Date(timestamp))
+@Composable private fun UpiRow(label: String, value: String) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
+        Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f), modifier = Modifier.width(110.dp))
+        Text(value, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f), textAlign = TextAlign.End)
+    }
 }
+
+@Composable private fun AssetGridTile(asset: Asset, modifier: Modifier, onClick: () -> Unit, onDeleteClick: () -> Unit) {
+    Box(modifier = modifier.clip(RoundedCornerShape(12.dp))) {
+        AsyncImage(model = asset.imagePath, contentDescription = asset.title.ifBlank { "Asset" }, modifier = Modifier.fillMaxSize().clickable { onClick() }, contentScale = ContentScale.Crop)
+        IconButton(onClick = onDeleteClick, modifier = Modifier.align(Alignment.TopEnd).padding(4.dp).size(22.dp)) {
+            Surface(shape = CircleShape, color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.9f)) { Icon(Icons.Default.Close, "Delete asset", modifier = Modifier.padding(4.dp), tint = MaterialTheme.colorScheme.onErrorContainer) }
+        }
+    }
+}
+
+private fun detailDate(ts: Long): String = SimpleDateFormat("EEE, dd MMM yyyy", Locale.getDefault()).format(Date(ts))

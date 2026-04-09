@@ -3,7 +3,8 @@ package com.example.paisatracker
 
  import android.content.Context
 import android.net.Uri
-import androidx.lifecycle.ViewModel
+ import androidx.compose.runtime.mutableFloatStateOf
+ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.paisatracker.data.Asset
@@ -24,7 +25,8 @@ import com.example.paisatracker.data.PaisaTrackerRepository
 import com.example.paisatracker.data.Project
 import com.example.paisatracker.data.ProjectWithTotal
 import com.example.paisatracker.data.RecentExpense
-import com.example.paisatracker.data.serializeHistory
+ import com.example.paisatracker.data.UpiTransaction
+ import com.example.paisatracker.data.serializeHistory
 import com.example.paisatracker.data.serializeNotes
 import com.example.paisatracker.util.ImageUtils
 import com.opencsv.CSVReader
@@ -33,7 +35,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
+ import kotlinx.coroutines.flow.asStateFlow
+ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
@@ -91,11 +94,26 @@ class PaisaTrackerViewModel(
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+
+
+    // ✅ With this (lifecycle-aware StateFlow):
+    private val _flapButtonOffsetY = MutableStateFlow<Float>(Float.NaN)
+    val flapButtonOffsetY: StateFlow<Float> = _flapButtonOffsetY.asStateFlow()
+
+    // ✅ Helper function for cleaner UI updates
+    fun updateFlapButtonOffsetY(offsetDp: Float) {
+        _flapButtonOffsetY.value = offsetDp
+    }
+
+
     fun addBudget(budget: Budget) {
         viewModelScope.launch {
             repository.insertBudget(budget)
         }
     }
+
+        fun getUpiTransactionByExpenseId(expenseId: Long): Flow<UpiTransaction?> =
+        repository.getUpiTransactionByExpenseId(expenseId)
 
     fun deleteBudget(budget: Budget) {
         viewModelScope.launch {

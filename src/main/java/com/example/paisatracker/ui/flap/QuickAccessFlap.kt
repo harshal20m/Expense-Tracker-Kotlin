@@ -52,6 +52,7 @@ import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -71,35 +72,46 @@ private val DEFAULT_EXPANDED_WIDTH = 380.dp
 private val MIN_EXPANDED_HEIGHT = 400.dp
 private val MAX_EXPANDED_HEIGHT = 700.dp
 private val DEFAULT_EXPANDED_HEIGHT = 560.dp
-private val TOP_MARGIN = 60.dp
-private val BOTTOM_MARGIN = 60.dp
+private val VERTICAL_PADDING = 60.dp // Safe area padding for top/bottom
 
 @Composable
 fun QuickAccessFlap(
     viewModel: PaisaTrackerViewModel,
-    bottomNavHeight: Dp = 104.dp
 ) {
     val isExpanded by viewModel.isFlapExpanded.collectAsState()
     val selectedTab by viewModel.flapSelectedTab.collectAsState()
+    // ✅ Collect persisted offset from ViewModel
+    val persistedOffset by viewModel.flapButtonOffsetY.collectAsState()
 
     val configuration = LocalConfiguration.current
+    val density = LocalDensity.current
     val screenHeightDp = configuration.screenHeightDp.dp
-    val minOffset = TOP_MARGIN
-    val maxOffset = screenHeightDp - COLLAPSED_SIZE - BOTTOM_MARGIN
 
-    // Track button position (only when collapsed)
-    var buttonOffsetY by remember { mutableStateOf(TOP_MARGIN) }
+    // ✅ Dynamic bounds calculation based on screen height
+    val collapsedButtonSize = COLLAPSED_SIZE
+    val minOffset = VERTICAL_PADDING
+    val maxOffset = screenHeightDp - collapsedButtonSize - VERTICAL_PADDING
 
-    // Track drag state for button
+    // ✅ Initial position: vertically centered (clamped to safe bounds)
+    val initialOffset = ((screenHeightDp - collapsedButtonSize) / 2)
+        .coerceIn(minOffset, maxOffset)
+
+    // ✅ Track button position: use persisted value or fallback to calculated center
+    var buttonOffsetY by remember {
+        mutableStateOf(
+            persistedOffset.takeIf { !it.isNaN() } ?: initialOffset.value
+        )
+    }
+
+    // Track drag state for button (in pixels)
     var isDraggingButton by remember { mutableStateOf(false) }
-    var dragButtonDelta by remember { mutableStateOf(0f) }
+    var dragButtonDeltaPx by remember { mutableStateOf(0f) }
 
     // Track panel size (when expanded)
     var panelWidth by remember { mutableStateOf(DEFAULT_EXPANDED_WIDTH) }
     var panelHeight by remember { mutableStateOf(DEFAULT_EXPANDED_HEIGHT) }
     var isResizing by remember { mutableStateOf(false) }
     var resizeStartSize by remember { mutableStateOf(0.dp) }
-    var resizeStartDelta by remember { mutableStateOf(0f) }
 
     BackHandler(enabled = isExpanded) {
         viewModel.isFlapExpanded.value = false
@@ -130,18 +142,22 @@ fun QuickAccessFlap(
         label = "cornerRadius"
     )
 
-    // Current Y offset for dragging button
+    // ✅ Current Y offset with proper px→dp conversion for dragging
     val currentYOffset = if (isExpanded) {
         0.dp
     } else {
-        val rawOffset = buttonOffsetY.value + dragButtonDelta
-        val clampedOffset = rawOffset.coerceIn(minOffset.value, maxOffset.value)
-        if (!isDraggingButton && dragButtonDelta != 0f) {
-            // Update final position when drag ends
-            buttonOffsetY = clampedOffset.dp
-            dragButtonDelta = 0f
+        // Convert pixel delta to dp using density
+        val dragDeltaDp = with(density) { dragButtonDeltaPx.toDp() }
+        val rawOffset = buttonOffsetY.dp + dragDeltaDp
+        val clampedOffset = rawOffset.coerceIn(minOffset, maxOffset)
+
+        // ✅ Update local state + persist to ViewModel when drag ends
+        if (!isDraggingButton && dragButtonDeltaPx != 0f) {
+            buttonOffsetY = clampedOffset.value
+            dragButtonDeltaPx = 0f
+            viewModel.updateFlapButtonOffsetY(clampedOffset.value)
         }
-        clampedOffset.dp
+        clampedOffset
     }
 
     Box(
@@ -150,8 +166,7 @@ fun QuickAccessFlap(
     ) {
         // Flap container
         Box(
-            modifier = Modifier
-                .fillMaxSize(),
+            modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.TopEnd
         ) {
             Box(
@@ -185,44 +200,40 @@ fun QuickAccessFlap(
                     .background(MaterialTheme.colorScheme.surface)
                     .then(
                         if (!isExpanded) {
-                            // Draggable button when collapsed
+                            // ✅ Draggable button when collapsed
                             Modifier.pointerInput(Unit) {
                                 detectDragGestures(
                                     onDragStart = { isDraggingButton = true },
                                     onDragEnd = { isDraggingButton = false },
                                     onDragCancel = {
                                         isDraggingButton = false
-                                        dragButtonDelta = 0f
+                                        dragButtonDeltaPx = 0f
                                     },
                                     onDrag = { change, dragAmount ->
                                         change.consume()
-                                        dragButtonDelta += dragAmount.y
+                                        // dragAmount.y is in pixels - store as-is
+                                        dragButtonDeltaPx += dragAmount.y
                                     }
                                 )
                             }
                         } else {
-                            // Resizable panel when expanded
+                            // ✅ Resizable panel when expanded
                             Modifier.pointerInput(Unit) {
                                 detectDragGestures(
                                     onDragStart = {
                                         isResizing = true
                                         resizeStartSize = panelWidth
-                                        resizeStartDelta = 0f
                                     },
-                                    onDragEnd = {
-                                        isResizing = false
-                                        panelWidth = resizeStartSize
-                                    },
-                                    onDragCancel = {
-                                        isResizing = false
-                                    },
+                                    onDragEnd = { isResizing = false },
+                                    onDragCancel = { isResizing = false },
                                     onDrag = { change, dragAmount ->
                                         change.consume()
-                                        // Horizontal drag to resize width
-                                        val newWidth = (resizeStartSize.value - dragAmount.x).dp
-                                        panelWidth = newWidth.coerceIn(MIN_EXPANDED_WIDTH, MAX_EXPANDED_WIDTH)
-                                        resizeStartSize = panelWidth
-                                        resizeStartDelta = 0f
+                                        // Horizontal drag to resize width (dragAmount.x in pixels)
+                                        val dragDeltaDp = with(density) { dragAmount.x.toDp() }
+                                        val newWidth = (resizeStartSize - dragDeltaDp)
+                                            .coerceIn(MIN_EXPANDED_WIDTH, MAX_EXPANDED_WIDTH)
+                                        panelWidth = newWidth
+                                        resizeStartSize = newWidth
                                     }
                                 )
                             }
@@ -233,9 +244,11 @@ fun QuickAccessFlap(
                     ExpandedFlapContent(
                         viewModel = viewModel,
                         selectedTab = selectedTab,
-                        onResize = { delta ->
-                            // Vertical resize via drag handle
-                            val newHeight = (panelHeight.value - delta).coerceIn(MIN_EXPANDED_HEIGHT.value, MAX_EXPANDED_HEIGHT.value).dp
+                        onResize = { deltaPx ->
+                            // ✅ Vertical resize via drag handle (delta in pixels)
+                            val deltaDp = with(density) { deltaPx.toDp() }
+                            val newHeight = (panelHeight - deltaDp)
+                                .coerceIn(MIN_EXPANDED_HEIGHT, MAX_EXPANDED_HEIGHT)
                             panelHeight = newHeight
                         },
                         onClose = { viewModel.isFlapExpanded.value = false }
@@ -283,10 +296,6 @@ private fun Modifier.coloredShadow(
     }
 }
 
-// Helper extension to get value from Dp
-private val Dp.value: Float
-    get() = this.value
-
 // ── Collapsed: small circular button on right edge ────────────────────────────
 @Composable
 private fun CollapsedFlapButton(
@@ -317,7 +326,7 @@ private fun CollapsedFlapButton(
 private fun ExpandedFlapContent(
     viewModel: PaisaTrackerViewModel,
     selectedTab: Int,
-    onResize: (Float) -> Unit,
+    onResize: (Float) -> Unit, // delta in pixels
     onClose: () -> Unit
 ) {
     Column(
@@ -331,6 +340,7 @@ private fun ExpandedFlapContent(
                 .fillMaxWidth()
                 .pointerInput(Unit) {
                     detectVerticalDragGestures { _, dragAmount ->
+                        // dragAmount is in pixels
                         onResize(dragAmount)
                     }
                 }
@@ -370,7 +380,7 @@ private fun ExpandedFlapContent(
                 }
             }
 
-            // Resize hint text (moved slightly down)
+            // Resize hint text
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = "↕ Drag to resize | Click ✕ to close",
@@ -421,7 +431,8 @@ private fun ExpandedFlapContent(
                 .padding(top = 8.dp)
                 .pointerInput(Unit) {
                     detectVerticalDragGestures { _, dragAmount ->
-                        onResize(-dragAmount) // Inverted for bottom handle
+                        // Inverted for bottom handle (dragAmount in pixels)
+                        onResize(-dragAmount)
                     }
                 },
             contentAlignment = Alignment.Center
@@ -493,5 +504,3 @@ private fun FlapTabRow(
         }
     }
 }
-
-// Keep your existing CalculatorTab and NotesTab composables here

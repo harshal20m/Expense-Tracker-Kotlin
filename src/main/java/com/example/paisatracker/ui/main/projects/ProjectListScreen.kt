@@ -6,6 +6,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
+import android.content.Intent
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Arrangement
@@ -54,6 +55,7 @@ import com.example.paisatracker.data.ProjectWithTotal
 import com.example.paisatracker.ui.assets.AssetsBottomSheet
 import com.example.paisatracker.ui.common.WeeklyDashboardCalendar
 import com.example.paisatracker.ui.quickadd.QuickAddSheet
+import com.example.paisatracker.ui.scanner.UpiScannerActivity
 import com.example.paisatracker.ui.search.SearchViewModel
 import com.example.paisatracker.ui.search.SearchViewModelFactory
 import com.example.paisatracker.util.CurrentCurrency
@@ -163,6 +165,10 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
             onQuickAddClick = {
                 showQuickAdd = true
                 scope.launch { quickAddState.show() }
+            },
+            onScanClick = {
+                val intent = Intent(context, UpiScannerActivity::class.java)
+                context.startActivity(intent)
             },
             labelsVisible = labelsVisible   // Pass scroll-aware visibility
         )

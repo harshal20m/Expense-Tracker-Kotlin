@@ -119,8 +119,6 @@ fun ProjectDetailsScreen(
 ) {
     val categoriesWithTotal by viewModel.getCategoriesWithTotalForProject(projectId)
         .collectAsState(initial = emptyList())
-    val categoryExpenses: List<CategoryExpense> by viewModel.getCategoryExpenses(projectId)
-        .collectAsState(initial = emptyList())
 
     var categorySortOption by remember { mutableStateOf(SortOption.AMOUNT_HIGH_LOW) }
     var currentViewType by remember { mutableStateOf(ViewType.GRID) }

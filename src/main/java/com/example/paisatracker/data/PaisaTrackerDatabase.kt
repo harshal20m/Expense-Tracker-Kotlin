@@ -16,9 +16,10 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         Asset::class,
         BackupMetadata::class,
         Budget::class,
-        FlapData::class
+        FlapData::class,
+        UpiTransaction::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -30,8 +31,9 @@ abstract class PaisaTrackerDatabase : RoomDatabase() {
     abstract fun assetDao(): AssetDao
     abstract fun backupDao(): BackupDao
     abstract fun budgetDao(): BudgetDao
-
     abstract fun flapDao(): FlapDao
+    abstract fun upiTransactionDao(): UpiTransactionDao
+
 
 
 
@@ -46,7 +48,7 @@ abstract class PaisaTrackerDatabase : RoomDatabase() {
                     PaisaTrackerDatabase::class.java,
                     "paisa_tracker_database_v1_2"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_4_5)
                     .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance
@@ -113,6 +115,29 @@ abstract class PaisaTrackerDatabase : RoomDatabase() {
                     `lastUpdatedAt` INTEGER NOT NULL
                 )
             """.trimIndent())
+            }
+        }
+
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `upi_transactions` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `expenseId` INTEGER NOT NULL,
+                        `vpa` TEXT NOT NULL,
+                        `payeeName` TEXT NOT NULL,
+                        `amount` REAL NOT NULL,
+                        `transactionNote` TEXT NOT NULL DEFAULT '',
+                        `status` TEXT NOT NULL DEFAULT 'PENDING',
+                        `transactionId` TEXT,
+                        `responseCode` TEXT,
+                        `rawResponse` TEXT,
+                        `createdAt` INTEGER NOT NULL,
+                        `updatedAt` INTEGER NOT NULL,
+                        FOREIGN KEY(`expenseId`) REFERENCES `expenses`(`id`) ON DELETE CASCADE
+                    )
+                """.trimIndent())
+                database.execSQL("CREATE INDEX IF NOT EXISTS `index_upi_transactions_expenseId` ON `upi_transactions` (`expenseId`)")
             }
         }
     }

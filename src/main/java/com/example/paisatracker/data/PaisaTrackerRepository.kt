@@ -9,8 +9,27 @@ class PaisaTrackerRepository(
     private val assetDao: AssetDao,
     private val backupDao: BackupDao,
     private val budgetDao: BudgetDao,
-    private val flapDao: FlapDao
+    private val flapDao: FlapDao,
+    private val upiTransactionDao: UpiTransactionDao
+
 ) {
+
+    //upi scanner
+    suspend fun insertUpiTransaction(txn: UpiTransaction): Long =
+        upiTransactionDao.insert(txn)
+
+    suspend fun updateUpiTransactionStatus(
+        id: Long, status: UpiStatus,
+        txnId: String?, code: String?, raw: String?
+    ) = upiTransactionDao.updateStatus(id, status, txnId, code, raw)
+
+    fun getAllUpiTransactions() = upiTransactionDao.getAllTransactions()
+
+    fun getUpiTransactionByExpenseId(expenseId: Long): Flow<UpiTransaction?> = upiTransactionDao.getByExpenseIdAsFlow(expenseId)
+
+    suspend fun deleteExpenseById(expenseId: Long) {
+        expenseDao.deleteById(expenseId)
+    }
 
     //flapmethods
     // b) Add these methods:
