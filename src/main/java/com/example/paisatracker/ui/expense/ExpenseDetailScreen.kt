@@ -47,8 +47,6 @@ import com.example.paisatracker.PaisaTrackerViewModel
 import com.example.paisatracker.R
 import com.example.paisatracker.data.Asset
 import com.example.paisatracker.data.Expense
-import com.example.paisatracker.data.UpiStatus
-import com.example.paisatracker.data.UpiTransaction
 import com.example.paisatracker.ui.common.ZoomableImageDialog
 import com.example.paisatracker.util.formatCurrency
 import java.text.SimpleDateFormat
@@ -67,7 +65,6 @@ fun ExpenseDetailScreen(
 
     val expense by viewModel.getExpenseById(expenseId).collectAsState(initial = null)
     val assets  by viewModel.getAssetsForExpense(expenseId).collectAsState(initial = emptyList())
-    val upiTxn  by viewModel.getUpiTransactionByExpenseId(expenseId).collectAsState(initial = null)
 
     // ── Edit state ────────────────────────────────────────────────────────────
     var showEditSheet   by remember { mutableStateOf(false) }
@@ -133,7 +130,6 @@ fun ExpenseDetailScreen(
                 ExpenseDetailContent(
                     expense       = data,
                     assets        = assets,
-                    upiTxn        = upiTxn,
                     onAddAsset    = { pickImageLauncher.launch("image/*") },
                     onDeleteAsset = { asset -> viewModel.deleteAsset(asset) }
                 )
@@ -325,7 +321,6 @@ private fun String.toIconKey(): String? = when (this) {
 private fun ExpenseDetailContent(
     expense: Expense,
     assets: List<Asset>,
-    upiTxn: UpiTransaction?,
     onAddAsset: () -> Unit,
     onDeleteAsset: (Asset) -> Unit
 ) {
@@ -374,9 +369,6 @@ private fun ExpenseDetailContent(
             }
         }
 
-        // UPI transaction card
-        if (upiTxn != null) UpiTransactionCard(txn = upiTxn)
-
         // Assets
         Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), shape = RoundedCornerShape(20.dp), elevation = CardDefaults.cardElevation(0.dp)) {
             Column(modifier = Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -413,64 +405,6 @@ private fun ExpenseDetailContent(
             dismissButton = { TextButton(onClick = { assetToDelete = null }) { Text("Cancel") } },
             shape   = RoundedCornerShape(16.dp)
         )
-    }
-}
-
-// ── UPI Transaction card (collapsible) ───────────────────────────────────────
-
-@Composable
-private fun UpiTransactionCard(txn: UpiTransaction) {
-    var expanded by remember { mutableStateOf(false) }
-    val statusColor = when (txn.status) {
-        UpiStatus.SUCCESS   -> MaterialTheme.colorScheme.tertiary
-        UpiStatus.FAILED    -> MaterialTheme.colorScheme.error
-        UpiStatus.SUBMITTED -> MaterialTheme.colorScheme.secondary
-        UpiStatus.PENDING   -> MaterialTheme.colorScheme.outline
-    }
-    val statusLabel = when (txn.status) { UpiStatus.SUCCESS -> "Success"; UpiStatus.FAILED -> "Failed"; UpiStatus.SUBMITTED -> "Submitted"; UpiStatus.PENDING -> "Pending" }
-    val statusEmoji = when (txn.status) { UpiStatus.SUCCESS -> "✅"; UpiStatus.FAILED -> "❌"; UpiStatus.SUBMITTED -> "⏳"; UpiStatus.PENDING -> "🕐" }
-
-    Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(4.dp)) {
-        Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
-            Row(modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded }, horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Box(modifier = Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(statusColor.copy(alpha = 0.12f)), contentAlignment = Alignment.Center) { Text(statusEmoji, fontSize = 18.sp) }
-                    Column { Text("UPI Payment", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold); Text(txn.vpa, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)) }
-                }
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Surface(shape = RoundedCornerShape(8.dp), color = statusColor.copy(alpha = 0.12f)) { Text(statusLabel, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = statusColor, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) }
-                    Icon(if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f))
-                }
-            }
-            AnimatedVisibility(visible = expanded, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
-                Column(modifier = Modifier.fillMaxWidth().padding(top = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f), thickness = 0.5.dp)
-                    UpiRow("Payee",    txn.payeeName.ifBlank { "—" })
-                    UpiRow("VPA",      txn.vpa)
-                    UpiRow("Amount",   "₹${"%.2f".format(txn.amount)}")
-                    if (txn.transactionNote.isNotBlank()) UpiRow("Note", txn.transactionNote)
-                    txn.transactionId?.let { UpiRow("Transaction ID", it) }
-                    txn.responseCode?.let  { UpiRow("Response code",  it) }
-                    UpiRow("Initiated", detailDate(txn.createdAt))
-                }
-            }
-        }
-    }
-}
-
-@Composable private fun UpiRow(label: String, value: String) {
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
-        Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f), modifier = Modifier.width(110.dp))
-        Text(value, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f), textAlign = TextAlign.End)
-    }
-}
-
-@Composable private fun AssetGridTile(asset: Asset, modifier: Modifier, onClick: () -> Unit, onDeleteClick: () -> Unit) {
-    Box(modifier = modifier.clip(RoundedCornerShape(12.dp))) {
-        AsyncImage(model = asset.imagePath, contentDescription = asset.title.ifBlank { "Asset" }, modifier = Modifier.fillMaxSize().clickable { onClick() }, contentScale = ContentScale.Crop)
-        IconButton(onClick = onDeleteClick, modifier = Modifier.align(Alignment.TopEnd).padding(4.dp).size(22.dp)) {
-            Surface(shape = CircleShape, color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.9f)) { Icon(Icons.Default.Close, "Delete asset", modifier = Modifier.padding(4.dp), tint = MaterialTheme.colorScheme.onErrorContainer) }
-        }
     }
 }
 
