@@ -17,9 +17,9 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         BackupMetadata::class,
         Budget::class,
         FlapData::class,
-        UpiTransaction::class,PendingTransaction::class, SalaryRecord::class
-    ],
-    version = 6,
+        SalaryRecord::class,
+     ],
+    version = 7,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -32,8 +32,6 @@ abstract class PaisaTrackerDatabase : RoomDatabase() {
     abstract fun backupDao(): BackupDao
     abstract fun budgetDao(): BudgetDao
     abstract fun flapDao(): FlapDao
-    abstract fun upiTransactionDao(): UpiTransactionDao
-    abstract fun pendingTransactionDao(): PendingTransactionDao
     abstract fun salaryRecordDao(): SalaryRecordDao
 
 
@@ -51,7 +49,7 @@ abstract class PaisaTrackerDatabase : RoomDatabase() {
                     PaisaTrackerDatabase::class.java,
                     "paisa_tracker_database_v1_2"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_4_5, MIGRATION_5_6)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_4_5, MIGRATION_6_7 )
                     .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance
@@ -143,42 +141,12 @@ abstract class PaisaTrackerDatabase : RoomDatabase() {
                 database.execSQL("CREATE INDEX IF NOT EXISTS `index_upi_transactions_expenseId` ON `upi_transactions` (`expenseId`)")
             }
         }
-        val MIGRATION_5_6 = object : Migration(5, 6) {
-            override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL(
-                    """
-               CREATE TABLE IF NOT EXISTS `pending_transactions` (
-                   `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-                   `amount` REAL NOT NULL,
-                   `payeeName` TEXT NOT NULL,
-                   `payeeVpa` TEXT NOT NULL DEFAULT '',
-                   `utrNumber` TEXT NOT NULL DEFAULT '',
-                   `sourceApp` TEXT NOT NULL DEFAULT 'Unknown',
-                   `status` TEXT NOT NULL DEFAULT 'Success',
-                   `transactionDate` TEXT NOT NULL DEFAULT '',
-                   `categoryId` INTEGER,
-                   `projectId` INTEGER,
-                   `note` TEXT NOT NULL DEFAULT '',
-                   `rawNotificationText` TEXT NOT NULL DEFAULT '',
-                   `capturedAt` INTEGER NOT NULL,
-                   `isReviewed` INTEGER NOT NULL DEFAULT 0
-               )
-           """
-                )
-                db.execSQL(
-                    """
-               CREATE TABLE IF NOT EXISTS `salary_records` (
-                   `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-                   `amount` REAL NOT NULL,
-                   `receivedAt` INTEGER NOT NULL,
-                   `month` INTEGER NOT NULL,
-                   `year` INTEGER NOT NULL,
-                   `note` TEXT NOT NULL DEFAULT '',
-                   `currency` TEXT NOT NULL DEFAULT 'INR'
-               )
-           """
-                )
-            }
-        }
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+           override fun migrate(db: SupportSQLiteDatabase) {
+               db.execSQL("DROP TABLE IF EXISTS `upi_transactions`")
+               db.execSQL("DROP TABLE IF EXISTS `pending_transactions`")
+           }
+       }
+
 }
 }

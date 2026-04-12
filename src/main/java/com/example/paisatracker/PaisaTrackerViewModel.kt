@@ -25,7 +25,7 @@ import com.example.paisatracker.data.PaisaTrackerRepository
 import com.example.paisatracker.data.Project
 import com.example.paisatracker.data.ProjectWithTotal
 import com.example.paisatracker.data.RecentExpense
- import com.example.paisatracker.data.UpiTransaction
+
  import com.example.paisatracker.data.serializeHistory
 import com.example.paisatracker.data.serializeNotes
 import com.example.paisatracker.util.ImageUtils
@@ -111,9 +111,6 @@ class PaisaTrackerViewModel(
             repository.insertBudget(budget)
         }
     }
-
-        fun getUpiTransactionByExpenseId(expenseId: Long): Flow<UpiTransaction?> =
-        repository.getUpiTransactionByExpenseId(expenseId)
 
     fun deleteBudget(budget: Budget) {
         viewModelScope.launch {

@@ -10,20 +10,12 @@ class PaisaTrackerRepository(
     private val backupDao: BackupDao,
     private val budgetDao: BudgetDao,
     private val flapDao: FlapDao,
-    private val upiTransactionDao: UpiTransactionDao,
-    private val pendingTransactionDao: PendingTransactionDao,
+
     private val salaryRecordDao: SalaryRecordDao
 
 ) {
 
-    //pending transactions
-    fun getAllPendingTransactions() = pendingTransactionDao.getAllPending()
- fun getUnreviewedPendingCount() = pendingTransactionDao.getUnreviewedCount()
- suspend fun insertPendingTransaction(t: PendingTransaction): Long = pendingTransactionDao.insert(t)
- suspend fun updatePendingTransaction(t: PendingTransaction) = pendingTransactionDao.update(t)
- suspend fun deletePendingTransaction(t: PendingTransaction) = pendingTransactionDao.delete(t)
- suspend fun countPendingByUtr(utr: String): Int = pendingTransactionDao.countByUtr(utr)
- suspend fun countExpenseByUtr(utr: String): Int = pendingTransactionDao.countExpenseByUtr(utr)
+
 
  // ── Salary records ────────────────────────────────────────────
  fun getCurrentMonthSalary(month: Int, year: Int) = salaryRecordDao.getCurrentMonthRecord(month, year)
@@ -34,25 +26,9 @@ class PaisaTrackerRepository(
  suspend fun updateSalaryRecord(r: SalaryRecord) = salaryRecordDao.update(r)
  suspend fun deleteSalaryRecord(r: SalaryRecord) = salaryRecordDao.delete(r)
 
-    //upi scanner
-    suspend fun insertUpiTransaction(txn: UpiTransaction): Long =
-        upiTransactionDao.insert(txn)
-
-    suspend fun updateUpiTransactionStatus(
-        id: Long, status: UpiStatus,
-        txnId: String?, code: String?, raw: String?
-    ) = upiTransactionDao.updateStatus(id, status, txnId, code, raw)
-
-    fun getAllUpiTransactions() = upiTransactionDao.getAllTransactions()
-
-    fun getUpiTransactionByExpenseId(expenseId: Long): Flow<UpiTransaction?> = upiTransactionDao.getByExpenseIdAsFlow(expenseId)
-
-    suspend fun deleteExpenseById(expenseId: Long) {
-        expenseDao.deleteById(expenseId)
-    }
 
     //flapmethods
-    // b) Add these methods:
+
 
     fun getFlapData(): Flow<FlapData?> = flapDao.getFlapData()
 

@@ -3,49 +3,23 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="com.example.paisatracker">
 
-    <!-- ═══════════════════════════════════════════════════════════════════
-         PERMISSIONS — declare only what's strictly needed
-         Play Protect scores every permission. Remove unused ones entirely.
-         ═══════════════════════════════════════════════════════════════════ -->
-
-    <!-- Camera: needed for QR scanner -->
+    <!-- Camera for optional future features -->
     <uses-feature
         android:name="android.hardware.camera"
         android:required="false" />
-    <uses-permission android:name="android.permission.CAMERA" />
 
-    <!-- Storage: images for assets (scoped storage, no WRITE needed on API 29+) -->
+    <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32"
         tools:ignore="ScopedStorage" />
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-
-    <!-- Notifications -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-
-    <!-- Biometric -->
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
 
-
-    <!-- ═══════════════════════════════════════════════════════════════════
-         QUERIES — UPI apps visible to Intent resolution
-         ═══════════════════════════════════════════════════════════════════ -->
-    <queries>
-        <intent>
-            <action android:name="android.media.action.IMAGE_CAPTURE" />
-        </intent>
-        <intent>
-            <action android:name="android.intent.action.VIEW" />
-            <data android:scheme="upi" />
-        </intent>
-        <!-- UPI apps -->
-        <package android:name="com.google.android.apps.nbu.paisa.user" />
-        <package android:name="com.phonepe.app" />
-        <package android:name="net.one97.paytm" />
-        <package android:name="in.org.npci.upiapp" />
-        <package android:name="in.amazon.mShop.android.shopping" />
-    </queries>
+    <!-- REMOVED: REQUEST_IGNORE_BATTERY_OPTIMIZATIONS (Play Protect red flag) -->
+    <!-- REMOVED: UpiScannerActivity and all UPI queries                        -->
+    <!-- REMOVED: NotificationListenerService                                   -->
 
     <application
         android:name=".PaisaTrackerApplication"
@@ -59,7 +33,6 @@
         android:theme="@style/Theme.PaisaTracker"
         tools:targetApi="31">
 
-        <!-- ─── Main activity ──────────────────────────────────────────── -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -71,68 +44,7 @@
             </intent-filter>
         </activity>
 
-        <!-- ─── UPI Scanner activity ───────────────────────────────────── -->
-        <!--  FIX 1: Change exported="false" — it does NOT need to be true
-              for the share receipt feature. ACTION_SEND share targets work
-              with exported="false" on Android 12+ via ShareSheet.
-              Keep exported="true" ONLY if you need other apps to directly
-              launch this activity by its class name. You don't.            -->
-        <activity
-            android:name=".ui.scanner.UpiScannerActivity"
-            android:exported="false"
-            android:windowSoftInputMode="adjustResize"
-            android:screenOrientation="portrait"
-            android:theme="@style/Theme.PaisaTracker">
-            <!--  FIX 2: Remove the ACTION_SEND intent-filter from this activity.
-                  An exported=false activity cannot receive implicit intents anyway.
-                  For the "share receipt" feature, use a dedicated ShareActivity
-                  (see ShareReceiptActivity below) that is minimal and clearly scoped. -->
-        </activity>
-
-        <!-- ─── Portrait-only ZXing capture ───────────────────────────── -->
-        <activity
-            android:name=".ui.scanner.PortraitCaptureActivity"
-            android:exported="false"
-            android:screenOrientation="portrait"
-            android:stateNotNeeded="true"
-            android:theme="@style/zxing_CaptureTheme"
-            android:windowSoftInputMode="stateAlwaysHidden" />
-
-        <!-- ─── Share Receipt trampoline ───────────────────────────────── -->
-        <!--  This is the CORRECT pattern for receiving shared images.
-              A minimal, clearly-named activity that only handles image sharing.
-              Play Protect is far less suspicious of an activity named
-              "ShareReceiptActivity" than a payment scanner that also accepts images. -->
-        <activity
-            android:name=".ui.scanner.ShareReceiptActivity"
-            android:exported="true"
-            android:theme="@style/Theme.PaisaTracker"
-            android:windowSoftInputMode="adjustResize">
-            <intent-filter>
-                <action android:name="android.intent.action.SEND" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <data android:mimeType="image/*" />
-            </intent-filter>
-        </activity>
-
-        <!-- ─── Notification Listener ──────────────────────────────────── -->
-        <!--  FIX 3: NotificationListenerService MUST have exported="true" —
-              the system won't bind it otherwise. This is unavoidable.
-              However, you MUST add the android:description attribute with
-              a clear, honest explanation. Play Protect and Play Store review
-              both check for this. Without it, the service is auto-flagged. -->
-        <service
-            android:name=".service.UpiNotificationListener"
-            android:exported="true"
-            android:label="@string/notification_listener_label"
-            android:description="@string/notification_listener_description"
-            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
-            <intent-filter>
-                <action android:name="android.service.notification.NotificationListenerService" />
-            </intent-filter>
-        </service>
-
-        <!-- ─── FileProvider ───────────────────────────────────────────── -->
+        <!-- FileProvider for camera/image assets -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

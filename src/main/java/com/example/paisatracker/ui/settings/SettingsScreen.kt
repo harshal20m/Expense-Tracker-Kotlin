@@ -33,7 +33,6 @@ import com.example.paisatracker.PaisaTrackerViewModel
 import com.example.paisatracker.data.AppLockPreferences
 import com.example.paisatracker.data.CurrencyPreferencesRepository
 import com.example.paisatracker.data.DataSeeder
-import com.example.paisatracker.service.UpiNotificationListener
 import com.example.paisatracker.ui.applock.AppLockSettingsDialog
 import com.example.paisatracker.ui.applock.SetupPinDialog
 import com.example.paisatracker.ui.assets.CompactHeader
@@ -73,7 +72,7 @@ fun SettingsScreen(
     var showPinSetupDialog  by remember { mutableStateOf(false) }
     var showAppLockDialog   by remember { mutableStateOf(false) }
 
-    val isNotifPermGranted = UpiNotificationListener.isPermissionGranted(context)
+
 
     Column(modifier = Modifier.fillMaxSize()) {
         CompactHeader(
@@ -150,20 +149,7 @@ fun SettingsScreen(
                 )
             }
 
-            // Auto-capture — full row, shows permission status badge
-            item(span = StaggeredGridItemSpan.FullLine) {
-                MasonryCardWide(
-                    icon        = Icons.Default.NotificationsActive,
-                    title       = "Auto-capture transactions",
-                    subtitle    = if (isNotifPermGranted)
-                        "Reading UPI notifications automatically"
-                    else
-                        "Tap to set up automatic expense tracking from notifications",
-                    badgeText   = if (isNotifPermGranted) "Active" else "Setup",
-                    badgeGreen  = isNotifPermGranted,
-                    onClick     = { navController.navigate("auto_capture_settings") }
-                )
-            }
+
 
             item(span = StaggeredGridItemSpan.FullLine) { MasonryLabel("Security") }
 
@@ -199,15 +185,19 @@ fun SettingsScreen(
                     title    = "Share App",
                     subtitle = "Invite friends",
                     onClick  = {
-                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                            type = "text/plain"
-                            putExtra(Intent.EXTRA_SUBJECT, "PaisaTracker - Expense Tracker")
-                            putExtra(Intent.EXTRA_TEXT,
-                                "Track your expenses with PaisaTracker!\n" +
-                                        "Download: https://play.google.com/store/apps/details?id=com.example.paisatracker"
-                            )
+                        try {
+                            val pkgInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+                            val apkFile = File(pkgInfo.applicationInfo?.sourceDir ?: return@MasonryCard)
+                            val apkUri  = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", apkFile)
+                            val intent  = Intent(Intent.ACTION_SEND).apply {
+                                type = "application/vnd.android.package-archive"
+                                putExtra(Intent.EXTRA_STREAM, apkUri)
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                            context.startActivity(Intent.createChooser(intent, "Share PaisaTracker"))
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "Unable to share APK", Toast.LENGTH_SHORT).show()
                         }
-                        context.startActivity(Intent.createChooser(shareIntent, "Share PaisaTracker"))
                     }
                 )
             }
@@ -428,6 +418,45 @@ private fun MasonryCardWide(
                     )
                 }
             }
+        }
+    }
+}
+
+// Keep the old public helpers that other parts of the codebase reference
+@Composable
+fun SectionHeader(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.labelLarge,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(start = 4.dp, top = 8.dp, bottom = 4.dp)
+    )
+}
+
+@Composable
+fun SettingsCard(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    enabled: Boolean = true,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier  = Modifier.fillMaxWidth().clickable(enabled = enabled, onClick = onClick),
+        shape     = RoundedCornerShape(12.dp),
+        colors    = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border    = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+    ) {
+        Row(modifier = Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)), contentAlignment = Alignment.Center) {
+                Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), modifier = Modifier.size(20.dp))
         }
     }
 }

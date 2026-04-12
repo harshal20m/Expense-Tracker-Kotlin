@@ -16,8 +16,7 @@ import com.example.paisatracker.ui.expense.ExpenseListScreen
 import com.example.paisatracker.ui.export.ExportScreen
 import com.example.paisatracker.ui.budget.BudgetScreen
 import com.example.paisatracker.ui.main.projects.ProjectListScreen
-import com.example.paisatracker.ui.pending.AutoCaptureSettingsScreen
-import com.example.paisatracker.ui.pending.PendingTransactionsScreen
+
 import com.example.paisatracker.ui.settings.SettingsScreen
 
 @Composable
@@ -75,14 +74,6 @@ fun AppNavigation(
             )
         }
 
-         composable("auto_capture_settings") {
-     AutoCaptureSettingsScreen(
-         onBack      = { navController.navigateUp() },
-         onGoToReview= { navController.navigate("pending_review") }
-     )
- }
- composable("pending_review") {
-     PendingTransactionsScreen(onBack = { navController.navigateUp() })
- }
+
     }
 }

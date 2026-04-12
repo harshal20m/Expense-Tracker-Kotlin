@@ -101,18 +101,6 @@ dependencies {
     implementation("com.itextpdf:layout:7.2.6")
     implementation("com.itextpdf:io:7.2.6")
 
-    //QR Code for UPi
-    implementation("com.journeyapps:zxing-android-embedded:4.3.0")
-    implementation("com.google.zxing:core:3.5.3")
-
-    // ZXing Android Embedded is the #1 most-used Android QR scanner library
-// (50M+ downloads). It's the same engine that powers many UPI apps'
-// in-app scanners. No camera permission boilerplate needed — the library
-// handles it internally via its own Activity.
-
-    // Google ML Kit for reading text from Screenshots
-    implementation("com.google.mlkit:text-recognition:16.0.1")
-
     // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
