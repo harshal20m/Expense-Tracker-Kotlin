@@ -17,7 +17,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         BackupMetadata::class,
         Budget::class,
         FlapData::class,
-        UpiTransaction::class,PendingTransaction::class, SalaryRecord::class
+        SalaryRecord::class
     ],
     version = 6,
     exportSchema = false
@@ -32,8 +32,6 @@ abstract class PaisaTrackerDatabase : RoomDatabase() {
     abstract fun backupDao(): BackupDao
     abstract fun budgetDao(): BudgetDao
     abstract fun flapDao(): FlapDao
-    abstract fun upiTransactionDao(): UpiTransactionDao
-    abstract fun pendingTransactionDao(): PendingTransactionDao
     abstract fun salaryRecordDao(): SalaryRecordDao
 
 

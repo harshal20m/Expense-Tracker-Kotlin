@@ -38,10 +38,7 @@ import com.example.paisatracker.data.Project
 import com.example.paisatracker.data.ProjectWithTotal
 import com.example.paisatracker.ui.assets.AssetsBottomSheet
 import com.example.paisatracker.ui.common.WeeklyDashboardCalendar
-import com.example.paisatracker.ui.pending.PendingTransactionViewModel
-import com.example.paisatracker.ui.pending.PendingTransactionViewModelFactory
 import com.example.paisatracker.ui.quickadd.QuickAddSheet
-import com.example.paisatracker.ui.scanner.UpiScannerActivity
 import com.example.paisatracker.ui.search.SearchViewModel
 import com.example.paisatracker.ui.search.SearchViewModelFactory
 import com.example.paisatracker.util.CurrentCurrency
@@ -66,11 +63,6 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
     val searchResults  by searchViewModel.searchResults.collectAsState()
     val isSearchActive by searchViewModel.isSearchActive.collectAsState()
 
-    // Pending count for the review badge
-    val pendingVm: PendingTransactionViewModel = viewModel(
-        factory = PendingTransactionViewModelFactory(application.repository, context)
-    )
-    val pendingCount by pendingVm.unreviewedCount.collectAsState()
 
     val currency by viewModel.currentCurrency.collectAsState()
     LaunchedEffect(currency) { CurrentCurrency.set(currency) }
@@ -147,7 +139,6 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
                 scope.launch { quickAddState.show() }
             },
             onScanClick = {
-                context.startActivity(Intent(context, UpiScannerActivity::class.java))
             },
             labelsVisible = labelsVisible
         )
@@ -187,8 +178,6 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
                         if (recentExpanded) { summaryExpanded = false; searchExpanded = false }
                     },
                     onAssetsClick         = { showAssetsSheet = true },
-                    onAutoCaptureClick    = { navController.navigate("auto_capture_settings") },
-                    onReviewClick         = { navController.navigate("pending_review") }
                 )
             }
 
