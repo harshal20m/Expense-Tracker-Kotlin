@@ -1,3 +1,11 @@
 <resources>
     <string name="app_name">PaisaTracker</string>
+    <string name="notification_listener_label">PaisaTracker Auto-capture</string>
+    <string name="notification_listener_description">
+        PaisaTracker reads UPI payment notifications from apps like GPay,
+        PhonePe, and Paytm, and bank SMS messages, to automatically detect
+        expenses. No notification content is shared with any server.
+        All processing happens entirely on your device.
+        You can disable this at any time in Settings → Auto-capture.
+    </string>
 </resources>

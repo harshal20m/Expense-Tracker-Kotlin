@@ -1,31 +1,37 @@
 package com.example.paisatracker.ui.settings
 
 import android.os.Build
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -33,64 +39,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.paisatracker.data.AppTheme
-import com.example.paisatracker.ui.theme.CoffeePrimary
-import com.example.paisatracker.ui.theme.CoffeeSecondary
-import com.example.paisatracker.ui.theme.CoffeeSurface
-import com.example.paisatracker.ui.theme.CoffeeTertiary
-import com.example.paisatracker.ui.theme.DeepBluePrimary
-import com.example.paisatracker.ui.theme.DeepBlueSecondary
-import com.example.paisatracker.ui.theme.DeepBlueSurface
-import com.example.paisatracker.ui.theme.DeepBlueTertiary
-import com.example.paisatracker.ui.theme.ForestPrimary
-import com.example.paisatracker.ui.theme.ForestSecondary
-import com.example.paisatracker.ui.theme.ForestSurface
-import com.example.paisatracker.ui.theme.ForestTertiary
-import com.example.paisatracker.ui.theme.HotPinkPrimary
-import com.example.paisatracker.ui.theme.HotPinkSecondary
-import com.example.paisatracker.ui.theme.HotPinkSurface
-import com.example.paisatracker.ui.theme.HotPinkTertiary
-import com.example.paisatracker.ui.theme.LavenderPrimary
-import com.example.paisatracker.ui.theme.LavenderSecondary
-import com.example.paisatracker.ui.theme.LavenderSurface
-import com.example.paisatracker.ui.theme.LavenderTertiary
-import com.example.paisatracker.ui.theme.MidnightBackground
-import com.example.paisatracker.ui.theme.MidnightPrimary
-import com.example.paisatracker.ui.theme.MidnightSecondary
-import com.example.paisatracker.ui.theme.MidnightTertiary
-import com.example.paisatracker.ui.theme.OceanPrimary
-import com.example.paisatracker.ui.theme.OceanSecondary
-import com.example.paisatracker.ui.theme.OceanSurface
-import com.example.paisatracker.ui.theme.OceanTertiary
-import com.example.paisatracker.ui.theme.Pink40
-import com.example.paisatracker.ui.theme.Pink80
-import com.example.paisatracker.ui.theme.Purple40
-import com.example.paisatracker.ui.theme.Purple80
-import com.example.paisatracker.ui.theme.PurpleGrey40
-import com.example.paisatracker.ui.theme.PurpleGrey80
-import com.example.paisatracker.ui.theme.RoseGoldPrimary
-import com.example.paisatracker.ui.theme.RoseGoldSecondary
-import com.example.paisatracker.ui.theme.RoseGoldSurface
-import com.example.paisatracker.ui.theme.RoseGoldTertiary
-import com.example.paisatracker.ui.theme.RosePrimary
-import com.example.paisatracker.ui.theme.RoseSecondary
-import com.example.paisatracker.ui.theme.RoseSurface
-import com.example.paisatracker.ui.theme.RoseTertiary
-import com.example.paisatracker.ui.theme.SlatePrimary
-import com.example.paisatracker.ui.theme.SlateSecondary
-import com.example.paisatracker.ui.theme.SlateSurface
-import com.example.paisatracker.ui.theme.SlateTertiary
-import com.example.paisatracker.ui.theme.SoftLightPrimary
-import com.example.paisatracker.ui.theme.SoftLightSecondary
-import com.example.paisatracker.ui.theme.SoftLightSurface
-import com.example.paisatracker.ui.theme.SoftLightTertiary
-import com.example.paisatracker.ui.theme.SoftPinkPrimary
-import com.example.paisatracker.ui.theme.SoftPinkSecondary
-import com.example.paisatracker.ui.theme.SoftPinkSurface
-import com.example.paisatracker.ui.theme.SoftPinkTertiary
-import com.example.paisatracker.ui.theme.SunsetPrimary
-import com.example.paisatracker.ui.theme.SunsetSecondary
-import com.example.paisatracker.ui.theme.SunsetSurface
-import com.example.paisatracker.ui.theme.SunsetTertiary
+import com.example.paisatracker.ui.theme.*
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -100,275 +49,264 @@ fun ThemeSelectionBottomSheet(
     onDismiss: () -> Unit,
     onThemeSelected: (AppTheme) -> Unit
 ) {
-    val context = LocalContext.current
-    val showDynamicColorOption = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-    val scope = rememberCoroutineScope()
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val showDynamic   = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+    val scope         = rememberCoroutineScope()
+    val sheetState    = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val lazyRowState  = rememberLazyListState()
 
-    // Filter themes based on Android version
-    val availableThemes = remember(showDynamicColorOption) {
-        AppTheme.values().filter { theme ->
-            theme != AppTheme.WALLPAPER_ORIENTED || showDynamicColorOption
-        }
+    val availableThemes = remember(showDynamic) {
+        AppTheme.values().filter { it != AppTheme.WALLPAPER_ORIENTED || showDynamic }
     }
+
+    var hoveredTheme by remember { mutableStateOf(currentTheme) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
-        dragHandle = { BottomSheetDefaults.DragHandle() },
-        containerColor = MaterialTheme.colorScheme.surface,
-        tonalElevation = 8.dp
+        sheetState       = sheetState,
+        shape            = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        dragHandle       = { BottomSheetDefaults.DragHandle() },
+        containerColor   = MaterialTheme.colorScheme.surface
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 32.dp)
+                .navigationBarsPadding()
+                .padding(bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
-            // ── Header with gradient accent ───────────────────────────────────
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp)
+
+            // ── Header ────────────────────────────────────────────────────────
+            Column(
+                modifier            = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.fillMaxWidth()
+                Text("Choose your style", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                Text("Tap a theme to preview, tap again to apply", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+            }
+
+            Spacer(Modifier.height(20.dp))
+
+            // ── Large animated preview card ───────────────────────────────────
+            AnimatedContent(
+                targetState  = hoveredTheme,
+                transitionSpec = {
+                    (scaleIn(spring(Spring.DampingRatioMediumBouncy), 0.92f) + fadeIn(tween(180))) togetherWith
+                            fadeOut(tween(100))
+                },
+                label = "theme_preview"
+            ) { theme ->
+                val previewColors = getThemePreviewColors(theme)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp)
+                        .height(100.dp)
+                        .clip(RoundedCornerShape(22.dp))
+                        .background(previewColors.getOrElse(3) { MaterialTheme.colorScheme.surface })
+                        .border(
+                            1.dp,
+                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
+                            RoundedCornerShape(22.dp)
+                        )
                 ) {
-                    Text(
-                        text = "Choose Your Style",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontSize = 24.sp,
-                        letterSpacing = (-0.5).sp
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Select a color theme that suits you",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Row(modifier = Modifier.fillMaxSize().padding(18.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        // Colour blobs preview
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                previewColors.take(2).forEach { c ->
+                                    Box(modifier = Modifier.size(28.dp).clip(CircleShape).background(c))
+                                }
+                            }
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                previewColors.drop(2).take(2).forEach { c ->
+                                    Box(modifier = Modifier.size(28.dp).clip(CircleShape).background(c))
+                                }
+                            }
+                        }
+                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                theme.themeName,
+                                style      = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color      = previewColors.firstOrNull()?.let { pickTextColor(it) } ?: MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                getThemeDescription(theme),
+                                style    = MaterialTheme.typography.bodySmall,
+                                color    = (previewColors.firstOrNull()?.let { pickTextColor(it) } ?: MaterialTheme.colorScheme.onSurface).copy(alpha = 0.6f)
+                            )
+                            if (theme == currentTheme) {
+                                Surface(shape = RoundedCornerShape(20.dp), color = previewColors.getOrElse(0) { MaterialTheme.colorScheme.primary }.copy(alpha = 0.2f)) {
+                                    Text("Current", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, color = previewColors.getOrElse(0) { MaterialTheme.colorScheme.primary }, modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(Modifier.height(20.dp))
 
-            // ── Theme Cards Grid ───────────────────────────────────────────────
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxWidth()
+            // ── Horizontal scrolling swatch row ───────────────────────────────
+            LazyRow(
+                state               = lazyRowState,
+                contentPadding      = PaddingValues(horizontal = 24.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 items(availableThemes, key = { it.name }) { theme ->
-                    ThemeCard(
-                        theme = theme,
+                    ThemeSwatch(
+                        theme      = theme,
                         isSelected = theme == currentTheme,
-                        onThemeSelected = { selectedTheme ->
-                            scope.launch {
-                                sheetState.hide()
-                            }.invokeOnCompletion {
-                                onThemeSelected(selectedTheme)
-                            }
+                        isHovered  = theme == hoveredTheme,
+                        onHover    = { hoveredTheme = theme },
+                        onSelect   = {
+                            scope.launch { sheetState.hide() }.invokeOnCompletion { onThemeSelected(theme) }
                         }
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(Modifier.height(20.dp))
 
-            // ── Current selection hint ─────────────────────────────────────────
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            // ── Confirm button ────────────────────────────────────────────────
+            Button(
+                onClick  = {
+                    scope.launch { sheetState.hide() }.invokeOnCompletion { onThemeSelected(hoveredTheme) }
+                },
+                modifier = Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 24.dp),
+                shape    = RoundedCornerShape(16.dp)
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.CheckCircle,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = "Current: ${currentTheme.themeName}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
+                Icon(Icons.Default.Check, null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Apply ${hoveredTheme.themeName}", fontWeight = FontWeight.Bold)
             }
         }
     }
 }
+
+// ─── Single theme swatch (compact circle + name) ─────────────────────────────
 
 @Composable
-fun ThemeCard(
+private fun ThemeSwatch(
     theme: AppTheme,
     isSelected: Boolean,
-    onThemeSelected: (AppTheme) -> Unit
+    isHovered: Boolean,
+    onHover: () -> Unit,
+    onSelect: () -> Unit
 ) {
-    // Get color palette for theme preview
     val previewColors = getThemePreviewColors(theme)
+    val scale by animateFloatAsState(
+        targetValue    = if (isHovered) 1.08f else 1f,
+        animationSpec  = spring(Spring.DampingRatioMediumBouncy),
+        label          = "swatch_scale"
+    )
+    val borderColor by animateColorAsState(
+        targetValue   = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+        animationSpec = tween(200),
+        label         = "swatch_border"
+    )
 
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .aspectRatio(1.1f)
-            .clickable { onThemeSelected(theme) }
-            .then(
-                if (isSelected) {
-                    Modifier.shadow(
-                        elevation = 12.dp,
-                        shape = RoundedCornerShape(20.dp),
-                        ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
-                        spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
-                    )
-                } else {
-                    Modifier.shadow(elevation = 2.dp, shape = RoundedCornerShape(20.dp))
-                }
-            ),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isSelected)
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
-            else
-                MaterialTheme.colorScheme.surfaceVariant
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    Column(
+        modifier            = Modifier
+            .width(64.dp)
+            .scale(scale)
+            .clickable {
+                if (isHovered) onSelect() else onHover()
+            },
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        Column(
+        // Swatch circle with 4-quadrant colour split
+        Box(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(12.dp),
-            verticalArrangement = Arrangement.SpaceBetween
+                .size(52.dp)
+                .clip(CircleShape)
+                .border(2.dp, borderColor, CircleShape),
+            contentAlignment = Alignment.Center
         ) {
-            // Color palette preview
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                previewColors.forEach { color ->
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .aspectRatio(1f)
-                            .clip(CircleShape)
-                            .background(color)
-                    )
+            Row(modifier = Modifier.fillMaxSize()) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Box(modifier = Modifier.weight(1f).fillMaxWidth().background(previewColors.getOrElse(0) { Color.Gray }))
+                    Box(modifier = Modifier.weight(1f).fillMaxWidth().background(previewColors.getOrElse(2) { Color.LightGray }))
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Box(modifier = Modifier.weight(1f).fillMaxWidth().background(previewColors.getOrElse(1) { Color.DarkGray }))
+                    Box(modifier = Modifier.weight(1f).fillMaxWidth().background(previewColors.getOrElse(3) { Color.White }))
                 }
             }
-
-            // Theme name and selection indicator
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = theme.themeName,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                    color = if (isSelected)
-                        MaterialTheme.colorScheme.primary
-                    else
-                        MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                )
-
-                // Animated checkmark for selected state
-                AnimatedVisibility(
-                    visible = isSelected,
-                    enter = scaleIn(animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)) + fadeIn(),
-                    exit = scaleOut() + fadeOut()
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.CheckCircle,
-                        contentDescription = "Selected",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
+            if (isSelected) {
+                Box(modifier = Modifier.size(20.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary), contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.Check, null, modifier = Modifier.size(12.dp), tint = MaterialTheme.colorScheme.onPrimary)
                 }
             }
-
-            // Theme description (subtle)
-            Text(
-                text = getThemeDescription(theme),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(top = 4.dp)
-            )
         }
+        Text(
+            text      = theme.themeName.split(" ").first(), // first word to keep short
+            style     = MaterialTheme.typography.labelSmall,
+            fontWeight= if (isSelected) FontWeight.Bold else FontWeight.Normal,
+            color     = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
+            maxLines  = 1,
+            overflow  = TextOverflow.Ellipsis
+        )
     }
 }
 
-// Helper function to generate a representative color palette for each theme
+// ─── Helpers (kept from original) ────────────────────────────────────────────
+
+/** Pick readable text colour for a given background */
+private fun pickTextColor(bg: Color): Color {
+    val luminance = 0.299f * bg.red + 0.587f * bg.green + 0.114f * bg.blue
+    return if (luminance > 0.5f) Color(0xFF1A1A1A) else Color(0xFFF5F5F5)
+}
+
 @Composable
 fun getThemePreviewColors(theme: AppTheme): List<Color> {
     val isDark = isSystemInDarkTheme()
-
     return when (theme) {
-        AppTheme.LIGHT -> listOf(Purple40, PurpleGrey40, Pink40, Color(0xFFF3EDF7))
-        AppTheme.DARK -> listOf(Purple80, PurpleGrey80, Pink80, Color(0xFF1D1B20))
-        AppTheme.MIDNIGHT -> listOf(MidnightPrimary, MidnightSecondary, MidnightTertiary, MidnightBackground)
-        AppTheme.SOFT_LIGHT -> listOf(SoftLightPrimary, SoftLightSecondary, SoftLightTertiary, SoftLightSurface)
-        AppTheme.OCEAN -> listOf(OceanPrimary, OceanSecondary, OceanTertiary, OceanSurface)
-        AppTheme.SUNSET -> listOf(SunsetPrimary, SunsetSecondary, SunsetTertiary, SunsetSurface)
-        AppTheme.FOREST -> listOf(ForestPrimary, ForestSecondary, ForestTertiary, ForestSurface)
-        AppTheme.ROSE -> listOf(RosePrimary, RoseSecondary, RoseTertiary, RoseSurface)
-        AppTheme.LAVENDER -> listOf(LavenderPrimary, LavenderSecondary, LavenderTertiary, LavenderSurface)
-        AppTheme.DEEP_BLUE -> listOf(DeepBluePrimary, DeepBlueSecondary, DeepBlueTertiary, DeepBlueSurface)
-        AppTheme.COFFEE -> listOf(CoffeePrimary, CoffeeSecondary, CoffeeTertiary, CoffeeSurface)
-        AppTheme.SLATE -> listOf(SlatePrimary, SlateSecondary, SlateTertiary, SlateSurface)
-        AppTheme.SOFT_PINK -> listOf(SoftPinkPrimary, SoftPinkSecondary, SoftPinkTertiary, SoftPinkSurface)
-        AppTheme.HOT_PINK -> listOf(HotPinkPrimary, HotPinkSecondary, HotPinkTertiary, HotPinkSurface)
-        AppTheme.ROSE_GOLD -> listOf(RoseGoldPrimary, RoseGoldSecondary, RoseGoldTertiary, RoseGoldSurface)
-        AppTheme.SYSTEM_DEFAULT -> listOf(
-            Color(0xFF6750A4),
-            Color(0xFF625B71),
-            if (isDark) Color(0xFF4A4458) else Color(0xFFFFD8E4),
-            if (isDark) Color(0xFF1D1B20) else Color(0xFFF3EDF7)
-        )
+        AppTheme.LIGHT            -> listOf(Purple40, PurpleGrey40, Pink40, Color(0xFFF3EDF7))
+        AppTheme.DARK             -> listOf(Purple80, PurpleGrey80, Pink80, Color(0xFF1D1B20))
+        AppTheme.MIDNIGHT         -> listOf(MidnightPrimary, MidnightSecondary, MidnightTertiary, MidnightBackground)
+        AppTheme.SOFT_LIGHT       -> listOf(SoftLightPrimary, SoftLightSecondary, SoftLightTertiary, SoftLightSurface)
+        AppTheme.OCEAN            -> listOf(OceanPrimary, OceanSecondary, OceanTertiary, OceanSurface)
+        AppTheme.SUNSET           -> listOf(SunsetPrimary, SunsetSecondary, SunsetTertiary, SunsetSurface)
+        AppTheme.FOREST           -> listOf(ForestPrimary, ForestSecondary, ForestTertiary, ForestSurface)
+        AppTheme.ROSE             -> listOf(RosePrimary, RoseSecondary, RoseTertiary, RoseSurface)
+        AppTheme.LAVENDER         -> listOf(LavenderPrimary, LavenderSecondary, LavenderTertiary, LavenderSurface)
+        AppTheme.DEEP_BLUE        -> listOf(DeepBluePrimary, DeepBlueSecondary, DeepBlueTertiary, DeepBlueSurface)
+        AppTheme.COFFEE           -> listOf(CoffeePrimary, CoffeeSecondary, CoffeeTertiary, CoffeeSurface)
+        AppTheme.SLATE            -> listOf(SlatePrimary, SlateSecondary, SlateTertiary, SlateSurface)
+        AppTheme.SOFT_PINK        -> listOf(SoftPinkPrimary, SoftPinkSecondary, SoftPinkTertiary, SoftPinkSurface)
+        AppTheme.HOT_PINK         -> listOf(HotPinkPrimary, HotPinkSecondary, HotPinkTertiary, HotPinkSurface)
+        AppTheme.ROSE_GOLD        -> listOf(RoseGoldPrimary, RoseGoldSecondary, RoseGoldTertiary, RoseGoldSurface)
+        AppTheme.SYSTEM_DEFAULT   -> listOf(Color(0xFF6750A4), Color(0xFF625B71), if (isDark) Color(0xFF4A4458) else Color(0xFFFFD8E4), if (isDark) Color(0xFF1D1B20) else Color(0xFFF3EDF7))
         AppTheme.WALLPAPER_ORIENTED -> listOf(Color(0xFF9CA3AF), Color(0xFF6B7280), Color(0xFF4B5563), Color(0xFF374151))
     }
 }
 
 @Composable
-fun getThemeDescription(theme: AppTheme): String {
-    return when (theme) {
-        AppTheme.LIGHT -> "Bright and clean"
-        AppTheme.DARK -> "Easy on the eyes"
-        AppTheme.MIDNIGHT -> "Deep and moody"
-        AppTheme.SOFT_LIGHT -> "Warm and gentle"
-        AppTheme.OCEAN -> "Calm coastal vibes"
-        AppTheme.SUNSET -> "Vibrant and energetic"
-        AppTheme.FOREST -> "Fresh and natural"
-        AppTheme.ROSE -> "Soft romantic tones"
-        AppTheme.LAVENDER -> "Soothing pastel"
-        AppTheme.DEEP_BLUE -> "Serious and focused"
-        AppTheme.COFFEE -> "Rich earthy browns"
-        AppTheme.SLATE -> "Cool modern slate"
-        AppTheme.SOFT_PINK -> "Gentle pastel pink"
-        AppTheme.HOT_PINK -> "Bold and vibrant"
-        AppTheme.ROSE_GOLD -> "Elegant metallic blush"
-        AppTheme.SYSTEM_DEFAULT -> "Follows system"
-        AppTheme.WALLPAPER_ORIENTED -> "Matches wallpaper"
-    }
+fun getThemeDescription(theme: AppTheme): String = when (theme) {
+    AppTheme.LIGHT             -> "Bright and clean"
+    AppTheme.DARK              -> "Easy on the eyes"
+    AppTheme.MIDNIGHT          -> "Deep and moody"
+    AppTheme.SOFT_LIGHT        -> "Warm and gentle"
+    AppTheme.OCEAN             -> "Calm coastal vibes"
+    AppTheme.SUNSET            -> "Vibrant and energetic"
+    AppTheme.FOREST            -> "Fresh and natural"
+    AppTheme.ROSE              -> "Soft romantic tones"
+    AppTheme.LAVENDER          -> "Soothing pastel"
+    AppTheme.DEEP_BLUE         -> "Serious and focused"
+    AppTheme.COFFEE            -> "Rich earthy browns"
+    AppTheme.SLATE             -> "Cool modern slate"
+    AppTheme.SOFT_PINK         -> "Gentle pastel pink"
+    AppTheme.HOT_PINK          -> "Bold and vibrant"
+    AppTheme.ROSE_GOLD         -> "Elegant metallic blush"
+    AppTheme.SYSTEM_DEFAULT    -> "Follows system"
+    AppTheme.WALLPAPER_ORIENTED-> "Matches wallpaper"
+}
+
+// Keep old ThemeCard for any other callers
+@Composable
+fun ThemeCard(theme: AppTheme, isSelected: Boolean, onThemeSelected: (AppTheme) -> Unit) {
+    ThemeSwatch(theme = theme, isSelected = isSelected, isHovered = isSelected, onHover = { onThemeSelected(theme) }, onSelect = { onThemeSelected(theme) })
 }

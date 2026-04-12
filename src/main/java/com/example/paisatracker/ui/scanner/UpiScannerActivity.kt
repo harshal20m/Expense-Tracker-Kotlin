@@ -36,36 +36,30 @@ class UpiScannerActivity : FragmentActivity() {
 
     private val themePrefs by lazy { ThemePreferencesRepository.getInstance(this) }
 
-    // ── Launchers ─────────────────────────────────────────────────────────────
-
-    /** Result from GPay/PhonePe/etc after P2M payment */
     private val upiPaymentLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result: ActivityResult -> handleUpiResult(result) }
 
-    /** Image picker — user manually picks a receipt screenshot */
     private val receiptPickerLauncher = registerForActivityResult(
         ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        uri?.let { viewModel.onReceiptImageShared(this, it) }
-    }
+    ) { uri: Uri? -> uri?.let { viewModel.onReceiptImageShared(this, it) } }
 
-    // ── State held between scan and callback ──────────────────────────────────
     private var currentQrData: UpiQrData? = null
 
-    // ─────────────────────────────────────────────────────────────────────────
     override fun onCreate(savedInstanceState: Bundle?) {
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
         super.onCreate(savedInstanceState)
 
         val initialTheme = runBlocking { themePrefs.appTheme.first() }
 
-        // ── Handle ACTION_SEND (user shared a screenshot from GPay/PhonePe) ──
-        if (intent?.action == Intent.ACTION_SEND &&
-            intent.type?.startsWith("image/") == true
-        ) {
-            val sharedUri: Uri? = intent.getParcelableExtra(Intent.EXTRA_STREAM)
-            sharedUri?.let { viewModel.onReceiptImageShared(this, it) }
+        // ── Handle receipt URI forwarded from ShareReceiptActivity ────────────
+        // This replaces the old ACTION_SEND intent filter on this activity.
+        val sharedReceiptUriString =
+            intent?.getStringExtra(ShareReceiptActivity.EXTRA_SHARED_RECEIPT_URI)
+        if (sharedReceiptUriString != null) {
+            val uri = Uri.parse(sharedReceiptUriString)
+            // Process after the composable is ready — use a flag
+            viewModel.onReceiptImageShared(this, uri)
         }
 
         setContent {
@@ -74,11 +68,11 @@ class UpiScannerActivity : FragmentActivity() {
             PaisaTrackerTheme(appTheme = currentTheme) {
                 val uiState by viewModel.uiState.collectAsState()
 
-                // Fire UPI intent when ViewModel signals PaymentLaunching
                 LaunchedEffect(uiState) {
                     if (uiState is ScannerUiState.PaymentLaunching) {
                         currentQrData?.let { qr ->
-                            val amount = viewModel.amountText.value.toDoubleOrNull() ?: return@let
+                            val amount = viewModel.amountText.value.toDoubleOrNull()
+                                ?: return@let
                             launchUpiPayment(qr, amount)
                         }
                     }
@@ -91,15 +85,11 @@ class UpiScannerActivity : FragmentActivity() {
                     onClose         = { finish() },
                     onP2mPayAndRecord = { qrData ->
                         currentQrData = qrData
-                        viewModel.onP2mPayAndRecord(qrData) { _, _ -> /* IDs stored in VM */ }
+                        viewModel.onP2mPayAndRecord(qrData) { _, _ -> }
                     },
                     onReceiptSave   = { parsed, imageUri ->
-                        viewModel.onReceiptSave(this, parsed, imageUri) { expenseId ->
-                            Toast.makeText(
-                                this,
-                                "Expense saved! ✓",
-                                Toast.LENGTH_SHORT
-                            ).show()
+                        viewModel.onReceiptSave(this, parsed, imageUri) {
+                            Toast.makeText(this, "Expense saved ✓", Toast.LENGTH_SHORT).show()
                             finish()
                         }
                     }
@@ -107,10 +97,6 @@ class UpiScannerActivity : FragmentActivity() {
             }
         }
     }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    //  ZXing scanner
-    // ─────────────────────────────────────────────────────────────────────────
 
     private fun startZXingScanner() {
         IntentIntegrator(this).apply {
@@ -138,33 +124,17 @@ class UpiScannerActivity : FragmentActivity() {
         super.onActivityResult(requestCode, resultCode, data)
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    //  P2M UPI intent
-    // ─────────────────────────────────────────────────────────────────────────
-
     private fun launchUpiPayment(qrData: UpiQrData, amount: Double) {
-        val upiIntent = buildUpiPayIntent(this, qrData.rawUri, amount)
-
-        // Check a UPI app is available via base intent (chooser always resolves)
-        val probe = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(
-            "upi://pay?pa=${qrData.vpa}&am=1.00&cu=INR"
-        ))
+        val intent = buildUpiPayIntent(this, qrData.rawUri, amount)
+        val probe  = Intent(Intent.ACTION_VIEW,
+            android.net.Uri.parse("upi://pay?pa=${qrData.vpa}&am=1.00&cu=INR"))
         if (probe.resolveActivity(packageManager) == null) {
-            Toast.makeText(
-                this,
-                "No UPI app found. Install GPay, PhonePe or Paytm.",
-                Toast.LENGTH_LONG
-            ).show()
+            Toast.makeText(this, "No UPI app found.", Toast.LENGTH_LONG).show()
             viewModel.uiState.value = ScannerUiState.Error("No UPI app found on this device.")
             return
         }
-
-        upiPaymentLauncher.launch(upiIntent)
+        upiPaymentLauncher.launch(intent)
     }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    //  P2M result callback
-    // ─────────────────────────────────────────────────────────────────────────
 
     private fun handleUpiResult(result: ActivityResult) {
         val callbackResult: UpiCallbackResult = parseUpiCallbackResponse(result.data)
@@ -174,13 +144,11 @@ class UpiScannerActivity : FragmentActivity() {
             )
             return
         }
-
         if (result.resultCode == Activity.RESULT_CANCELED && callbackResult.rawData.isBlank()) {
             Toast.makeText(this, "Payment cancelled.", Toast.LENGTH_SHORT).show()
             viewModel.uiState.value = ScannerUiState.P2mConfirm(qrData)
             return
         }
-
         viewModel.onP2mPaymentResult(callbackResult, qrData)
     }
 }

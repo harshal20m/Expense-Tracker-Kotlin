@@ -104,6 +104,7 @@ dependencies {
     //QR Code for UPi
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
     implementation("com.google.zxing:core:3.5.3")
+
     // ZXing Android Embedded is the #1 most-used Android QR scanner library
 // (50M+ downloads). It's the same engine that powers many UPI apps'
 // in-app scanners. No camera permission boilerplate needed — the library

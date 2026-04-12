@@ -30,6 +30,8 @@ class PaisaTrackerApplication : Application() {
             database.budgetDao(),
             database.flapDao(),
             database.upiTransactionDao()
+            ,database.pendingTransactionDao()
+            ,database.salaryRecordDao()
         )
     }
 
