@@ -30,6 +30,8 @@
 
     <!-- ═══════════════════════════════════════════════════════════════════
          QUERIES — UPI apps visible to Intent resolution
+         NOTE: These declarations improve transparency and reduce Play Protect
+         false positives by explicitly stating which apps we interact with.
          ═══════════════════════════════════════════════════════════════════ -->
     <queries>
         <intent>
@@ -39,7 +41,7 @@
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="upi" />
         </intent>
-        <!-- UPI apps -->
+        <!-- UPI apps - explicitly declared for transparency -->
         <package android:name="com.google.android.apps.nbu.paisa.user" />
         <package android:name="com.phonepe.app" />
         <package android:name="net.one97.paytm" />
@@ -57,6 +59,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.PaisaTracker"
+        android:description="@string/app_description"
         tools:targetApi="31">
 
         <!-- ─── Main activity ──────────────────────────────────────────── -->
