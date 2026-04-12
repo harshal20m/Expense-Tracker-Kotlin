@@ -1,12 +1,13 @@
 <resources>
     <string name="app_name">PaisaTracker</string>
-    <string name="app_description">PaisaTracker is a personal expense tracking app that helps you manage UPI payments and transactions. All data is stored locally on your device.</string>
+    <string name="app_description">PaisaTracker is a personal expense tracking app that helps you manage UPI payments and transactions. All data is stored locally on your device with no internet permissions required.</string>
     <string name="notification_listener_label">PaisaTracker Auto-capture</string>
     <string name="notification_listener_description">
         PaisaTracker reads UPI payment notifications from apps like GPay,
         PhonePe, and Paytm, and bank SMS messages, to automatically detect
-        expenses. No notification content is shared with any server.
-        All processing happens entirely on your device.
+        expenses. No notification content is shared with any server or third party.
+        All processing happens entirely on your device. Data never leaves your phone.
         You can disable this at any time in Settings → Auto-capture.
+        This permission is optional - you can manually add transactions instead.
     </string>
 </resources>

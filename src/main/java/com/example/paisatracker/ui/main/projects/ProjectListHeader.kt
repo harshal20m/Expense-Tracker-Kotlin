@@ -33,7 +33,6 @@ import com.example.paisatracker.R
 fun ProjectListHeader(
     onAddProjectClick: () -> Unit,
     onQuickAddClick: () -> Unit,
-    onScanClick: () -> Unit,
     labelsVisible: Boolean = true
 ) {
     // Pulsing glow for Quick Add
@@ -143,18 +142,6 @@ fun ProjectListHeader(
                     modifier       = Modifier.weight(1f),
                     onClick        = onQuickAddClick,
                     isPrimary      = true
-                )
-
-                // ── Scan QR ───────────────────────────────────────────────────
-                HeaderActionButton(
-                    label       = "Scan & Pay",
-                    icon        = Icons.Default.QrCodeScanner,
-                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                    contentColor   = MaterialTheme.colorScheme.onTertiaryContainer,
-                    elevation      = 3.dp,
-                    showLabel      = labelsVisible,
-                    modifier       = Modifier.weight(1f),
-                    onClick        = onScanClick
                 )
             }
         }

@@ -1,6 +1,5 @@
 package com.example.paisatracker.ui.main.projects
 
-import android.content.Intent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -41,7 +40,7 @@ import com.example.paisatracker.ui.common.WeeklyDashboardCalendar
 import com.example.paisatracker.ui.pending.PendingTransactionViewModel
 import com.example.paisatracker.ui.pending.PendingTransactionViewModelFactory
 import com.example.paisatracker.ui.quickadd.QuickAddSheet
-import com.example.paisatracker.ui.scanner.UpiScannerActivity
+import com.example.paisatracker.ui.quickadd.QuickAddSheet
 import com.example.paisatracker.ui.search.SearchViewModel
 import com.example.paisatracker.ui.search.SearchViewModelFactory
 import com.example.paisatracker.util.CurrentCurrency
@@ -145,9 +144,6 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
             onQuickAddClick = {
                 showQuickAdd = true
                 scope.launch { quickAddState.show() }
-            },
-            onScanClick = {
-                context.startActivity(Intent(context, UpiScannerActivity::class.java))
             },
             labelsVisible = labelsVisible
         )
