@@ -2,6 +2,7 @@ package com.example.paisatracker.widget
 
 import android.content.Context
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.glance.GlanceId
 import androidx.glance.action.clickable
@@ -81,7 +82,10 @@ class QuickBalanceWidget : GlanceAppWidget() {
         val progress = if (monthlyBudget > 0) (monthTotal / monthlyBudget).coerceIn(0.0, 1.0) else 0.0
 
         provideContent {
-            ColorProviders {
+            ColorProviders(
+                light = androidx.glance.material3.ProvidedValues.lightColorScheme(),
+                dark = androidx.glance.material3.ProvidedValues.darkColorScheme()
+            ) {
                 Box(
                     modifier = GlanceModifier
                         .fillMaxSize()

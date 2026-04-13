@@ -71,7 +71,10 @@ class BudgetProgressWidget : GlanceAppWidget() {
         }
 
         provideContent {
-            ColorProviders {
+            ColorProviders(
+                light = androidx.glance.material3.ProvidedValues.lightColorScheme(),
+                dark = androidx.glance.material3.ProvidedValues.darkColorScheme()
+            ) {
                 Box(
                     modifier = GlanceModifier
                         .fillMaxSize()

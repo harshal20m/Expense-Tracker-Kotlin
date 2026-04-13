@@ -47,7 +47,10 @@ class RecentTransactionsWidget : GlanceAppWidget() {
         val recentExpenses = repository.getRecentExpensesWithDetails(5).first()
 
         provideContent {
-            ColorProviders {
+            ColorProviders(
+                light = androidx.glance.material3.ProvidedValues.lightColorScheme(),
+                dark = androidx.glance.material3.ProvidedValues.darkColorScheme()
+            ) {
                 Box(
                     modifier = GlanceModifier
                         .fillMaxSize()
