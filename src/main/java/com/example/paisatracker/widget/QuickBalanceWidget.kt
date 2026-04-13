@@ -12,7 +12,6 @@ import androidx.glance.appwidget.appWidgetBackground
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
 import androidx.glance.layout.*
-import androidx.glance.material3.ColorProviders
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
@@ -82,117 +81,112 @@ class QuickBalanceWidget : GlanceAppWidget() {
         val progress = if (monthlyBudget > 0) (monthTotal / monthlyBudget).coerceIn(0.0, 1.0) else 0.0
 
         provideContent {
-            ColorProviders(
-                light = androidx.glance.material3.ProvidedValues.lightColorScheme(),
-                dark = androidx.glance.material3.ProvidedValues.darkColorScheme()
+            Box(
+                modifier = GlanceModifier
+                    .fillMaxSize()
+                    .appWidgetBackground()
+                    .background(ColorProvider(Color(0xFF6200EE)))
+                    .clickable { },
+                contentAlignment = Alignment.Center
             ) {
-                Box(
-                    modifier = GlanceModifier
-                        .fillMaxSize()
-                        .appWidgetBackground()
-                        .background(ColorProvider(Color(0xFF6200EE)))
-                        .clickable { },
-                    contentAlignment = Alignment.Center
+                Column(
+                    modifier = GlanceModifier.padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(
-                        modifier = GlanceModifier.padding(16.dp),
+                    Text(
+                        text = "Quick Balance",
+                        style = TextStyle(
+                            color = ColorProvider(Color.White),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        ),
+                        modifier = GlanceModifier.padding(bottom = 8.dp)
+                    )
+                    
+                    Row(
+                        modifier = GlanceModifier.fillMaxWidth(),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "Quick Balance",
-                            style = TextStyle(
-                                color = ColorProvider(Color.White),
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold
-                            ),
-                            modifier = GlanceModifier.padding(bottom = 8.dp)
-                        )
-                        
-                        Row(
-                            modifier = GlanceModifier.fillMaxWidth(),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalAlignment = Alignment.CenterVertically
+                        Column(
+                            modifier = GlanceModifier.weight(1f),
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Column(
-                                modifier = GlanceModifier.weight(1f),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Text(
-                                    text = "Today",
-                                    style = TextStyle(
-                                        color = ColorProvider(Color.White.copy(alpha = 0.8f)),
-                                        fontSize = 12.sp
-                                    )
+                            Text(
+                                text = "Today",
+                                style = TextStyle(
+                                    color = ColorProvider(Color.White.copy(alpha = 0.8f)),
+                                    fontSize = 12.sp
                                 )
-                                Text(
-                                    text = CurrencyUtils.formatCurrency(todayTotal),
-                                    style = TextStyle(
-                                        color = ColorProvider(Color.White),
-                                        fontSize = 18.sp,
-                                        fontWeight = FontWeight.Bold
-                                    ),
-                                    modifier = GlanceModifier.padding(top = 4.dp)
-                                )
-                            }
-                            
-                            Spacer(GlanceModifier.width(16.dp))
-                            
-                            Column(
-                                modifier = GlanceModifier.weight(1f),
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Text(
-                                    text = "Monthly",
-                                    style = TextStyle(
-                                        color = ColorProvider(Color.White.copy(alpha = 0.8f)),
-                                        fontSize = 12.sp
-                                    )
-                                )
-                                Text(
-                                    text = CurrencyUtils.formatCurrency(monthTotal),
-                                    style = TextStyle(
-                                        color = ColorProvider(Color.White),
-                                        fontSize = 18.sp,
-                                        fontWeight = FontWeight.Bold
-                                    ),
-                                    modifier = GlanceModifier.padding(top = 4.dp)
-                                )
-                            }
+                            )
+                            Text(
+                                text = CurrencyUtils.formatCurrency(todayTotal),
+                                style = TextStyle(
+                                    color = ColorProvider(Color.White),
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold
+                                ),
+                                modifier = GlanceModifier.padding(top = 4.dp)
+                            )
                         }
                         
-                        if (monthlyBudget > 0) {
-                            Box(
-                                modifier = GlanceModifier
-                                    .size(80.dp)
-                                    .padding(top = 12.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                CircularProgressIndicator(
-                                    progress = progress.toFloat(),
-                                    modifier = GlanceModifier.size(80.dp),
-                                    color = ColorProvider(Color.White),
-                                    trackColor = ColorProvider(Color.White.copy(alpha = 0.3f))
+                        Spacer(GlanceModifier.width(16.dp))
+                        
+                        Column(
+                            modifier = GlanceModifier.weight(1f),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = "Monthly",
+                                style = TextStyle(
+                                    color = ColorProvider(Color.White.copy(alpha = 0.8f)),
+                                    fontSize = 12.sp
                                 )
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    Text(
-                                        text = "${(progress * 100).toInt()}%",
-                                        style = TextStyle(
-                                            color = ColorProvider(Color.White),
-                                            fontSize = 14.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
+                            )
+                            Text(
+                                text = CurrencyUtils.formatCurrency(monthTotal),
+                                style = TextStyle(
+                                    color = ColorProvider(Color.White),
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold
+                                ),
+                                modifier = GlanceModifier.padding(top = 4.dp)
+                            )
+                        }
+                    }
+                    
+                    if (monthlyBudget > 0) {
+                        Box(
+                            modifier = GlanceModifier
+                                .size(80.dp)
+                                .padding(top = 12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(
+                                progress = progress.toFloat(),
+                                modifier = GlanceModifier.size(80.dp),
+                                color = ColorProvider(Color.White),
+                                trackColor = ColorProvider(Color.White.copy(alpha = 0.3f))
+                            )
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = "${(progress * 100).toInt()}%",
+                                    style = TextStyle(
+                                        color = ColorProvider(Color.White),
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold
                                     )
-                                    Text(
-                                        text = "of budget",
-                                        style = TextStyle(
-                                            color = ColorProvider(Color.White.copy(alpha = 0.7f)),
-                                            fontSize = 10.sp
-                                        )
+                                )
+                                Text(
+                                    text = "of budget",
+                                    style = TextStyle(
+                                        color = ColorProvider(Color.White.copy(alpha = 0.7f)),
+                                        fontSize = 10.sp
                                     )
-                                }
+                                )
                             }
                         }
                     }

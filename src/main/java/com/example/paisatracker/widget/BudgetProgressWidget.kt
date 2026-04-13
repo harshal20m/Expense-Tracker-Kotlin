@@ -2,6 +2,7 @@ package com.example.paisatracker.widget
 
 import android.content.Context
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.glance.GlanceId
 import androidx.glance.action.clickable
@@ -11,7 +12,6 @@ import androidx.glance.appwidget.appWidgetBackground
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
 import androidx.glance.layout.*
-import androidx.glance.material3.ColorProviders
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
@@ -71,123 +71,118 @@ class BudgetProgressWidget : GlanceAppWidget() {
         }
 
         provideContent {
-            ColorProviders(
-                light = androidx.glance.material3.ProvidedValues.lightColorScheme(),
-                dark = androidx.glance.material3.ProvidedValues.darkColorScheme()
+            Box(
+                modifier = GlanceModifier
+                    .fillMaxSize()
+                    .appWidgetBackground()
+                    .background(ColorProvider(Color(0xFFE8F5E9)))
+                    .clickable { },
+                contentAlignment = Alignment.Center
             ) {
-                Box(
-                    modifier = GlanceModifier
-                        .fillMaxSize()
-                        .appWidgetBackground()
-                        .background(ColorProvider(Color(0xFFE8F5E9)))
-                        .clickable { },
-                    contentAlignment = Alignment.Center
+                Column(
+                    modifier = GlanceModifier.padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(
-                        modifier = GlanceModifier.padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalAlignment = Alignment.CenterVertically
+                    Text(
+                        text = monthlyBudget?.name ?: "Monthly Budget",
+                        style = TextStyle(
+                            color = ColorProvider(Color.White),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        ),
+                        modifier = GlanceModifier.padding(bottom = 12.dp)
+                    )
+                    
+                    Box(
+                        modifier = GlanceModifier.size(100.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = monthlyBudget?.name ?: "Monthly Budget",
-                            style = TextStyle(
-                                color = ColorProvider(Color.White),
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold
-                            ),
-                            modifier = GlanceModifier.padding(bottom = 12.dp)
-                        )
-                        
-                        Box(
+                        CircularProgressIndicator(
+                            progress = progress.toFloat(),
                             modifier = GlanceModifier.size(100.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator(
-                                progress = progress.toFloat(),
-                                modifier = GlanceModifier.size(100.dp),
-                                color = ColorProvider(progressColor),
-                                trackColor = ColorProvider(Color.White.copy(alpha = 0.3f))
-                            )
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                Text(
-                                    text = "$percentage%",
-                                    style = TextStyle(
-                                        color = ColorProvider(Color.White),
-                                        fontSize = 20.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                )
-                                Text(
-                                    text = "used",
-                                    style = TextStyle(
-                                        color = ColorProvider(Color.White.copy(alpha = 0.8f)),
-                                        fontSize = 11.sp
-                                    )
-                                )
-                            }
-                        }
-                        
-                        Spacer(GlanceModifier.height(12.dp))
-                        
-                        Row(
-                            modifier = GlanceModifier.fillMaxWidth(),
+                            color = ColorProvider(progressColor),
+                            trackColor = ColorProvider(Color.White.copy(alpha = 0.3f))
+                        )
+                        Column(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = GlanceModifier.weight(1f)
-                            ) {
-                                Text(
-                                    text = "Spent",
-                                    style = TextStyle(
-                                        color = ColorProvider(Color.White.copy(alpha = 0.8f)),
-                                        fontSize = 11.sp
-                                    )
-                                )
-                                Text(
-                                    text = CurrencyUtils.formatCurrency(monthTotal),
-                                    style = TextStyle(
-                                        color = ColorProvider(Color.White),
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                )
-                            }
-                            
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                modifier = GlanceModifier.weight(1f)
-                            ) {
-                                Text(
-                                    text = "Remaining",
-                                    style = TextStyle(
-                                        color = ColorProvider(Color.White.copy(alpha = 0.8f)),
-                                        fontSize = 11.sp
-                                    )
-                                )
-                                Text(
-                                    text = CurrencyUtils.formatCurrency(remaining.coerceAtLeast(0.0)),
-                                    style = TextStyle(
-                                        color = ColorProvider(if (remaining >= 0) Color(0xFF4CAF50) else Color(0xFFF44336)),
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                )
-                            }
-                        }
-                        
-                        if (budgetLimit > 0) {
                             Text(
-                                text = "of ${CurrencyUtils.formatCurrency(budgetLimit)}",
+                                text = "$percentage%",
                                 style = TextStyle(
-                                    color = ColorProvider(Color.White.copy(alpha = 0.7f)),
+                                    color = ColorProvider(Color.White),
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            )
+                            Text(
+                                text = "used",
+                                style = TextStyle(
+                                    color = ColorProvider(Color.White.copy(alpha = 0.8f)),
                                     fontSize = 11.sp
-                                ),
-                                modifier = GlanceModifier.padding(top = 8.dp)
+                                )
                             )
                         }
+                    }
+                    
+                    Spacer(GlanceModifier.height(12.dp))
+                    
+                    Row(
+                        modifier = GlanceModifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = GlanceModifier.weight(1f)
+                        ) {
+                            Text(
+                                text = "Spent",
+                                style = TextStyle(
+                                    color = ColorProvider(Color.White.copy(alpha = 0.8f)),
+                                    fontSize = 11.sp
+                                )
+                            )
+                            Text(
+                                text = CurrencyUtils.formatCurrency(monthTotal),
+                                style = TextStyle(
+                                    color = ColorProvider(Color.White),
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            )
+                        }
+                        
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = GlanceModifier.weight(1f)
+                        ) {
+                            Text(
+                                text = "Remaining",
+                                style = TextStyle(
+                                    color = ColorProvider(Color.White.copy(alpha = 0.8f)),
+                                    fontSize = 11.sp
+                                )
+                            )
+                            Text(
+                                text = CurrencyUtils.formatCurrency(remaining.coerceAtLeast(0.0)),
+                                style = TextStyle(
+                                    color = ColorProvider(if (remaining >= 0) Color(0xFF4CAF50) else Color(0xFFF44336)),
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            )
+                        }
+                    }
+                    
+                    if (budgetLimit > 0) {
+                        Text(
+                            text = "of ${CurrencyUtils.formatCurrency(budgetLimit)}",
+                            style = TextStyle(
+                                color = ColorProvider(Color.White.copy(alpha = 0.7f)),
+                                fontSize = 11.sp
+                            ),
+                            modifier = GlanceModifier.padding(top = 8.dp)
+                        )
                     }
                 }
             }
