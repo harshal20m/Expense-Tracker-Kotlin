@@ -16,7 +16,7 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
-import com.example.paisatracker.data.PaisaTrackerDatabase
+import com.example.paisatracker.data.*
 import com.example.paisatracker.util.CurrencyUtils
 import kotlinx.coroutines.flow.first
 import java.text.SimpleDateFormat
@@ -30,18 +30,24 @@ class RecentTransactionsWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val db = PaisaTrackerDatabase.getDatabase(context)
-        val repository = db.repository
+        
+        // Create repository instance with all required DAOs
+        val repository = PaisaTrackerRepository(
+            projectDao = db.projectDao(),
+            categoryDao = db.categoryDao(),
+            expenseDao = db.expenseDao(),
+            assetDao = db.assetDao(),
+            backupDao = db.backupDao(),
+            budgetDao = db.budgetDao(),
+            flapDao = db.flapDao(),
+            salaryRecordDao = db.salaryRecordDao()
+        )
         
         // Get recent expenses (last 5)
         val recentExpenses = repository.getRecentExpensesWithDetails(5).first()
 
         provideContent {
-            ColorProviders(
-                colors = androidx.glance.material3.ColorProviders(
-                    light = androidx.compose.material3.lightColorScheme(),
-                    dark = androidx.compose.material3.darkColorScheme()
-                )
-            ) {
+            ColorProviders {
                 Box(
                     modifier = GlanceModifier
                         .fillMaxSize()

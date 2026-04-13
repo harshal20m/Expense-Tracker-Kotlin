@@ -16,7 +16,7 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
-import com.example.paisatracker.data.PaisaTrackerDatabase
+import com.example.paisatracker.data.*
 import com.example.paisatracker.util.CurrencyUtils
 import kotlinx.coroutines.flow.first
 import java.text.SimpleDateFormat
@@ -30,7 +30,18 @@ class QuickBalanceWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val db = PaisaTrackerDatabase.getDatabase(context)
-        val repository = db.repository
+        
+        // Create repository instance with all required DAOs
+        val repository = PaisaTrackerRepository(
+            projectDao = db.projectDao(),
+            categoryDao = db.categoryDao(),
+            expenseDao = db.expenseDao(),
+            assetDao = db.assetDao(),
+            backupDao = db.backupDao(),
+            budgetDao = db.budgetDao(),
+            flapDao = db.flapDao(),
+            salaryRecordDao = db.salaryRecordDao()
+        )
         
         // Get today's expenses
         val calendar = Calendar.getInstance().apply {
@@ -65,17 +76,12 @@ class QuickBalanceWidget : GlanceAppWidget() {
         
         // Get active budget
         val budgets = repository.getAllActiveBudgets().first()
-        val monthlyBudget = budgets.find { it.period == com.example.paisatracker.data.BudgetPeriod.MONTHLY }?.limitAmount ?: 0.0
+        val monthlyBudget = budgets.find { it.period == BudgetPeriod.MONTHLY }?.limitAmount ?: 0.0
         
         val progress = if (monthlyBudget > 0) (monthTotal / monthlyBudget).coerceIn(0.0, 1.0) else 0.0
 
         provideContent {
-            ColorProviders(
-                colors = androidx.glance.material3.ColorProviders(
-                    light = androidx.compose.material3.lightColorScheme(),
-                    dark = androidx.compose.material3.darkColorScheme()
-                )
-            ) {
+            ColorProviders {
                 Box(
                     modifier = GlanceModifier
                         .fillMaxSize()
@@ -158,7 +164,7 @@ class QuickBalanceWidget : GlanceAppWidget() {
                                     .padding(top = 12.dp),
                                 contentAlignment = Alignment.Center
                             ) {
-                                androidx.glance.appwidget.CircularProgressIndicator(
+                                CircularProgressIndicator(
                                     progress = progress.toFloat(),
                                     modifier = GlanceModifier.size(80.dp),
                                     color = ColorProvider(Color.White),
