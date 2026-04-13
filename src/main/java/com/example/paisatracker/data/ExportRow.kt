@@ -8,5 +8,6 @@ data class ExportRow(
     val description: String,
     val amount: Double,
     val date: Long,
-    val paymentMethod: String?     // optional
+    val paymentMethod: String?,// optional
+    val paymentMethodEmoji: String? // optional
 )

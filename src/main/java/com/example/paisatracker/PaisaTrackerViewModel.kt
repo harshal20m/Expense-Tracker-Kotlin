@@ -412,11 +412,14 @@ class PaisaTrackerViewModel(
         val rows = repository.getExportRows(projectId)
         val sb = StringBuilder()
 
-        // Final CSV header – import bhi isi order ko use karega
-        sb.appendLine("Project,Project Emoji,Category,Category Emoji,Description,Amount,Date,Payment Method")
+        // Header (9 columns):
+        sb.appendLine("Project,Project Emoji,Category,Category Emoji,Description,Amount,Date,Payment Method,Payment Method Emoji")
+
 
         val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+        var totalAmount = 0.0
 
+        // Helper function to escape CSV values
         fun esc(value: String?): String {
             val v = value ?: ""
             return if (v.contains(Regex("[,\n\"]"))) {
@@ -424,8 +427,10 @@ class PaisaTrackerViewModel(
             } else v
         }
 
+        // Write each expense row
         rows.forEach { r ->
             val dateStr = sdf.format(Date(r.date))
+            totalAmount += r.amount  // ✅ Accumulate total
 
             sb.appendLine(
                 listOf(
@@ -436,10 +441,29 @@ class PaisaTrackerViewModel(
                     esc(r.description),
                     r.amount.toString(),
                     esc(dateStr),
-                    esc(r.paymentMethod)
+                    esc(r.paymentMethod),
+                    esc(r.paymentMethodEmoji)  // ✅ Added
                 ).joinToString(",")
             )
         }
+
+        val currency = currentCurrency.value.symbol
+        val formattedTotal = String.format(Locale.US, "%.2f %s", totalAmount, currency)
+
+        // ✅ Add TOTAL row at the bottom
+        sb.appendLine(
+            listOf(
+                "TOTAL",
+                "",
+                "",
+                "",
+                "",
+               formattedTotal,
+                "",
+                "",
+                ""
+            ).joinToString(",")
+        )
 
         return sb.toString()
     }

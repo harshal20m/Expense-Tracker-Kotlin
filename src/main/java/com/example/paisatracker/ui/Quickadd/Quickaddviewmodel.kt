@@ -37,6 +37,7 @@ class QuickAddViewModel(
     val selectedProject = MutableStateFlow<Project?>(null)
     val selectedCategory= MutableStateFlow<Category?>(null)
     val paymentMethod   = MutableStateFlow("UPI")
+    val paymentIcon     = MutableStateFlow("UPI")
     val selectedDate    = MutableStateFlow(System.currentTimeMillis())
 
     // ── New-category inline creation ──────────────────────────────────────────
@@ -139,7 +140,8 @@ class QuickAddViewModel(
                     description   = description.value.trim().ifBlank { "Quick expense" },
                     date          = selectedDate.value,
                     categoryId    = category.id,
-                    paymentMethod = paymentMethod.value
+                    paymentMethod = paymentMethod.value,
+                    paymentIcon = paymentMethod.value.toPaymentIconKey()
                 )
                 repository.insertExpense(expense)
                 submitResult.value = QuickAddResult.Success
@@ -156,12 +158,24 @@ class QuickAddViewModel(
         description.value      = ""
         selectedCategory.value = null
         paymentMethod.value    = "UPI"
+        paymentIcon.value = "UPI"
         selectedDate.value     = System.currentTimeMillis()
         submitResult.value     = QuickAddResult.Idle
         isCreatingCategory.value = false
         newCategoryName.value  = ""
         // Keep selectedProject — user likely adds to same project consecutively
     }
+}
+
+
+private fun String?.toPaymentIconKey(): String? = when (this) {
+    "UPI" -> "UPI"
+    "PhonePe" -> "PhonePe"
+    "GPay" -> "GPay"
+    "Paytm" -> "Paytm"
+    "Cash" -> "Cash"
+    "Card" -> "Card"
+    else -> null
 }
 
 // ── Factory ───────────────────────────────────────────────────────────────────

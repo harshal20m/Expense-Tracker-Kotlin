@@ -120,7 +120,7 @@ fun ProjectDetailsScreen(
     val categoriesWithTotal by viewModel.getCategoriesWithTotalForProject(projectId)
         .collectAsState(initial = emptyList())
 
-    var categorySortOption by remember { mutableStateOf(SortOption.AMOUNT_HIGH_LOW) }
+    var categorySortOption by remember { mutableStateOf(SortOption.DATE_NEW_OLD) }
     var currentViewType by remember { mutableStateOf(ViewType.GRID) }
 
     var currentSheetType by remember { mutableStateOf<CategorySheetType?>(null) }

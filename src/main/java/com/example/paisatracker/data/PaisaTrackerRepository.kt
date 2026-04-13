@@ -10,7 +10,6 @@ class PaisaTrackerRepository(
     private val backupDao: BackupDao,
     private val budgetDao: BudgetDao,
     private val flapDao: FlapDao,
-
     private val salaryRecordDao: SalaryRecordDao
 
 ) {

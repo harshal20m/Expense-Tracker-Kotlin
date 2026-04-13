@@ -108,12 +108,12 @@ private fun debugLog(context: Context, msg: String) {
 
 @DrawableRes
 fun paymentIconRes(key: String?): Int? = when (key) {
-    "upi" -> R.drawable.ic_upi_payment_icon
-    "phonepe" -> R.drawable.ic_phonepe_icon
-    "gpay" -> R.drawable.ic_google_pay_icon
-    "paytm" -> R.drawable.ic_paytm_icon
-    "cash" -> R.drawable.ic_cash_icon
-    "card" -> R.drawable.ic_card_icon
+    "UPI" -> R.drawable.ic_upi_payment_icon
+    "PhonePe" -> R.drawable.ic_phonepe_icon
+    "GPay" -> R.drawable.ic_google_pay_icon
+    "Paytm" -> R.drawable.ic_paytm_icon
+    "Cash" -> R.drawable.ic_cash_icon
+    "Card" -> R.drawable.ic_card_icon
     else -> null
 }
 
@@ -1266,11 +1266,11 @@ private fun formatDate(timestamp: Long): String {
 }
 
 private fun String?.toPaymentIconKey(): String? = when (this) {
-    "UPI" -> "upi"
-    "PhonePe" -> "phonepe"
-    "GPay" -> "gpay"
-    "Paytm" -> "paytm"
-    "Cash" -> "cash"
-    "Card" -> "card"
+    "UPI" -> "UPI"
+    "PhonePe" -> "PhonePe"
+    "GPay" -> "GPay"
+    "Paytm" -> "Paytm"
+    "Cash" -> "Cash"
+    "Card" -> "Card"
     else -> null
 }

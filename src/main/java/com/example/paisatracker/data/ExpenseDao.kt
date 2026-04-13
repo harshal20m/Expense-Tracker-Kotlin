@@ -61,7 +61,8 @@ interface ExpenseDao {
         e.description AS description,
         e.amount AS amount,
         e.date AS date,
-        e.paymentMethod AS paymentMethod
+        e.paymentMethod AS paymentMethod,
+        e.paymentIcon AS paymentIcon
     FROM expenses e
     INNER JOIN categories c ON e.categoryId = c.id
     INNER JOIN projects p ON c.projectId = p.id

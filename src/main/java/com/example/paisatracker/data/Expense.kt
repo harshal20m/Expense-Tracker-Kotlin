@@ -26,5 +26,5 @@ data class Expense(
 
     // NEW
     val paymentMethod: String? = null,   // "UPI", "PhonePe", "GPay", "Cash", "Card", ...
-    val paymentIcon: String? = null      // "upi", "phonepe", "gpay", "paytm", "cash", "card" etc.
+    val paymentIcon: String? = null // "UPI", "PhonePe", "GPay", "Cash", "Card", ...
 )
