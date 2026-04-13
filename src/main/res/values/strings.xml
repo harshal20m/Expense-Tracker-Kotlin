@@ -8,4 +8,9 @@
         All processing happens entirely on your device.
         You can disable this at any time in Settings → Auto-capture.
     </string>
+    
+    <!-- Widget descriptions -->
+    <string name="quick_balance_widget_description">View today\'s and monthly expenses with budget progress</string>
+    <string name="recent_transactions_widget_description">Display your recent transactions with details</string>
+    <string name="budget_progress_widget_description">Track your monthly budget usage with visual progress indicator</string>
 </resources>
