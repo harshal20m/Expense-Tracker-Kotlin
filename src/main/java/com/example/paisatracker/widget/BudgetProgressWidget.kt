@@ -5,8 +5,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.glance.GlanceId
 import androidx.glance.action.clickable
-import androidx.glance.appwidget.CircularProgressIndicator
-import androidx.glance.appwidget.ExperimentalGlanceApi
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.appWidgetBackground
@@ -24,7 +22,6 @@ import com.example.paisatracker.util.CurrencyUtils
 import kotlinx.coroutines.flow.first
 import java.util.*
 
-@OptIn(ExperimentalGlanceApi::class)
 class BudgetProgressWidget : GlanceAppWidget() {
 
     override val sizeMode = SizeMode.Responsive(
@@ -40,13 +37,13 @@ class BudgetProgressWidget : GlanceAppWidget() {
         val monthlyBudget = budgets.find { it.period == BudgetPeriod.MONTHLY }
         
         // Calculate monthly expenses
-        val calendarMonth = Calendar.getInstance()
-        calendarMonth.set(Calendar.DAY_OF_MONTH, 1)
-        calendarMonth.set(Calendar.HOUR_OF_DAY, 0)
-        calendarMonth.set(Calendar.MINUTE, 0)
-        calendarMonth.set(Calendar.SECOND, 0)
-        calendarMonth.set(Calendar.MILLISECOND, 0)
-        val startOfMonth = calendarMonth.timeInMillis
+        val startOfMonth = Calendar.getInstance().apply {
+            set(Calendar.DAY_OF_MONTH, 1)
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
         
         val monthExpenses = repository.searchExpensesByDateRange(startOfMonth, System.currentTimeMillis(), null).first()
         val monthTotal = monthExpenses.sumOf { it.amount }
@@ -65,14 +62,16 @@ class BudgetProgressWidget : GlanceAppWidget() {
 
         provideContent {
             ColorProviders(
-                light = androidx.compose.material3.MaterialTheme.colorScheme,
-                dark = androidx.compose.material3.darkColorScheme()
+                colors = androidx.glance.material3.ColorProviders(
+                    light = androidx.compose.material3.lightColorScheme(),
+                    dark = androidx.compose.material3.darkColorScheme()
+                )
             ) {
                 Box(
                     modifier = GlanceModifier
                         .fillMaxSize()
                         .appWidgetBackground()
-                        .background(ColorProviders(light = Color(0xFFE8F5E9), dark = Color(0xFF1B5E20)))
+                        .background(ColorProvider(Color(0xFFE8F5E9)))
                         .clickable { },
                     contentAlignment = Alignment.Center
                 ) {
@@ -85,7 +84,7 @@ class BudgetProgressWidget : GlanceAppWidget() {
                             text = monthlyBudget?.name ?: "Monthly Budget",
                             style = TextStyle(
                                 color = ColorProvider(Color.White),
-                                fontSize = androidx.compose.ui.unit.sp(14.sp),
+                                fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold
                             ),
                             modifier = GlanceModifier.padding(bottom = 12.dp)
@@ -95,7 +94,7 @@ class BudgetProgressWidget : GlanceAppWidget() {
                             modifier = GlanceModifier.size(100.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            CircularProgressIndicator(
+                            androidx.glance.appwidget.CircularProgressIndicator(
                                 progress = progress.toFloat(),
                                 modifier = GlanceModifier.size(100.dp),
                                 color = ColorProvider(progressColor),
@@ -108,7 +107,7 @@ class BudgetProgressWidget : GlanceAppWidget() {
                                     text = "$percentage%",
                                     style = TextStyle(
                                         color = ColorProvider(Color.White),
-                                        fontSize = androidx.compose.ui.unit.sp(20.sp),
+                                        fontSize = 20.sp,
                                         fontWeight = FontWeight.Bold
                                     )
                                 )
@@ -116,7 +115,7 @@ class BudgetProgressWidget : GlanceAppWidget() {
                                     text = "used",
                                     style = TextStyle(
                                         color = ColorProvider(Color.White.copy(alpha = 0.8f)),
-                                        fontSize = androidx.compose.ui.unit.sp(11.sp)
+                                        fontSize = 11.sp
                                     )
                                 )
                             }
@@ -126,43 +125,45 @@ class BudgetProgressWidget : GlanceAppWidget() {
                         
                         Row(
                             modifier = GlanceModifier.fillMaxWidth(),
-                            horizontalAlignment = Alignment.Horizontal.SpaceEvenly
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Column(
-                                horizontalAlignment = Alignment.CenterHorizontally
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = GlanceModifier.weight(1f)
                             ) {
                                 Text(
                                     text = "Spent",
                                     style = TextStyle(
                                         color = ColorProvider(Color.White.copy(alpha = 0.8f)),
-                                        fontSize = androidx.compose.ui.unit.sp(11.sp)
+                                        fontSize = 11.sp
                                     )
                                 )
                                 Text(
                                     text = CurrencyUtils.formatCurrency(monthTotal),
                                     style = TextStyle(
                                         color = ColorProvider(Color.White),
-                                        fontSize = androidx.compose.ui.unit.sp(14.sp),
+                                        fontSize = 14.sp,
                                         fontWeight = FontWeight.Bold
                                     )
                                 )
                             }
                             
                             Column(
-                                horizontalAlignment = Alignment.CenterHorizontally
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = GlanceModifier.weight(1f)
                             ) {
                                 Text(
                                     text = "Remaining",
                                     style = TextStyle(
                                         color = ColorProvider(Color.White.copy(alpha = 0.8f)),
-                                        fontSize = androidx.compose.ui.unit.sp(11.sp)
+                                        fontSize = 11.sp
                                     )
                                 )
                                 Text(
                                     text = CurrencyUtils.formatCurrency(remaining.coerceAtLeast(0.0)),
                                     style = TextStyle(
                                         color = ColorProvider(if (remaining >= 0) Color(0xFF4CAF50) else Color(0xFFF44336)),
-                                        fontSize = androidx.compose.ui.unit.sp(14.sp),
+                                        fontSize = 14.sp,
                                         fontWeight = FontWeight.Bold
                                     )
                                 )
@@ -174,7 +175,7 @@ class BudgetProgressWidget : GlanceAppWidget() {
                                 text = "of ${CurrencyUtils.formatCurrency(budgetLimit)}",
                                 style = TextStyle(
                                     color = ColorProvider(Color.White.copy(alpha = 0.7f)),
-                                    fontSize = androidx.compose.ui.unit.sp(11.sp)
+                                    fontSize = 11.sp
                                 ),
                                 modifier = GlanceModifier.padding(top = 8.dp)
                             )

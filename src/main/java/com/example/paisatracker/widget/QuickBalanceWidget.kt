@@ -1,15 +1,10 @@
 package com.example.paisatracker.widget
 
 import android.content.Context
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.glance.GlanceId
-import androidx.glance.LocalContext
 import androidx.glance.action.clickable
-import androidx.glance.appwidget.CircularProgressIndicator
-import androidx.glance.appwidget.ExperimentalGlanceApi
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.appWidgetBackground
@@ -19,18 +14,14 @@ import androidx.glance.layout.*
 import androidx.glance.material3.ColorProviders
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
-import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
-import androidx.lifecycle.lifecycleScope
 import com.example.paisatracker.data.PaisaTrackerDatabase
 import com.example.paisatracker.util.CurrencyUtils
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
-@OptIn(ExperimentalGlanceApi::class)
 class QuickBalanceWidget : GlanceAppWidget() {
 
     override val sizeMode = SizeMode.Responsive(
@@ -42,31 +33,32 @@ class QuickBalanceWidget : GlanceAppWidget() {
         val repository = db.repository
         
         // Get today's expenses
-        val calendar = Calendar.getInstance()
-        calendar.set(Calendar.HOUR_OF_DAY, 0)
-        calendar.set(Calendar.MINUTE, 0)
-        calendar.set(Calendar.SECOND, 0)
-        calendar.set(Calendar.MILLISECOND, 0)
+        val calendar = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
         val startOfDay = calendar.timeInMillis
         
-        val calendarEnd = Calendar.getInstance()
-        calendarEnd.set(Calendar.HOUR_OF_DAY, 23)
-        calendarEnd.set(Calendar.MINUTE, 59)
-        calendarEnd.set(Calendar.SECOND, 59)
-        calendarEnd.set(Calendar.MILLISECOND, 999)
-        val endOfDay = calendarEnd.timeInMillis
+        val endOfDay = calendar.apply {
+            set(Calendar.HOUR_OF_DAY, 23)
+            set(Calendar.MINUTE, 59)
+            set(Calendar.SECOND, 59)
+            set(Calendar.MILLISECOND, 999)
+        }.timeInMillis
         
         val todayExpenses = repository.searchExpensesByDateRange(startOfDay, endOfDay, null).first()
         val todayTotal = todayExpenses.sumOf { it.amount }
         
         // Get monthly expenses
-        val calendarMonth = Calendar.getInstance()
-        calendarMonth.set(Calendar.DAY_OF_MONTH, 1)
-        calendarMonth.set(Calendar.HOUR_OF_DAY, 0)
-        calendarMonth.set(Calendar.MINUTE, 0)
-        calendarMonth.set(Calendar.SECOND, 0)
-        calendarMonth.set(Calendar.MILLISECOND, 0)
-        val startOfMonth = calendarMonth.timeInMillis
+        val startOfMonth = Calendar.getInstance().apply {
+            set(Calendar.DAY_OF_MONTH, 1)
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
         
         val monthExpenses = repository.searchExpensesByDateRange(startOfMonth, System.currentTimeMillis(), null).first()
         val monthTotal = monthExpenses.sumOf { it.amount }
@@ -79,14 +71,16 @@ class QuickBalanceWidget : GlanceAppWidget() {
 
         provideContent {
             ColorProviders(
-                light = androidx.compose.material3.MaterialTheme.colorScheme,
-                dark = androidx.compose.material3.darkColorScheme()
+                colors = androidx.glance.material3.ColorProviders(
+                    light = androidx.compose.material3.lightColorScheme(),
+                    dark = androidx.compose.material3.darkColorScheme()
+                )
             ) {
                 Box(
                     modifier = GlanceModifier
                         .fillMaxSize()
                         .appWidgetBackground()
-                        .background(ColorProviders(light = Color(0xFF6200EE), dark = Color(0xFF3700B3)))
+                        .background(ColorProvider(Color(0xFF6200EE)))
                         .clickable { },
                     contentAlignment = Alignment.Center
                 ) {
@@ -99,7 +93,7 @@ class QuickBalanceWidget : GlanceAppWidget() {
                             text = "Quick Balance",
                             style = TextStyle(
                                 color = ColorProvider(Color.White),
-                                fontSize = androidx.compose.ui.unit.sp(14.sp),
+                                fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold
                             ),
                             modifier = GlanceModifier.padding(bottom = 8.dp)
@@ -107,8 +101,8 @@ class QuickBalanceWidget : GlanceAppWidget() {
                         
                         Row(
                             modifier = GlanceModifier.fillMaxWidth(),
-                            horizontalAlignment = Alignment.Horizontal.CenterHorizontally,
-                            verticalAlignment = Alignment.Vertical.CenterVertically
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(
                                 modifier = GlanceModifier.weight(1f),
@@ -118,14 +112,14 @@ class QuickBalanceWidget : GlanceAppWidget() {
                                     text = "Today",
                                     style = TextStyle(
                                         color = ColorProvider(Color.White.copy(alpha = 0.8f)),
-                                        fontSize = androidx.compose.ui.unit.sp(12.sp)
+                                        fontSize = 12.sp
                                     )
                                 )
                                 Text(
                                     text = CurrencyUtils.formatCurrency(todayTotal),
                                     style = TextStyle(
                                         color = ColorProvider(Color.White),
-                                        fontSize = androidx.compose.ui.unit.sp(18.sp),
+                                        fontSize = 18.sp,
                                         fontWeight = FontWeight.Bold
                                     ),
                                     modifier = GlanceModifier.padding(top = 4.dp)
@@ -142,14 +136,14 @@ class QuickBalanceWidget : GlanceAppWidget() {
                                     text = "Monthly",
                                     style = TextStyle(
                                         color = ColorProvider(Color.White.copy(alpha = 0.8f)),
-                                        fontSize = androidx.compose.ui.unit.sp(12.sp)
+                                        fontSize = 12.sp
                                     )
                                 )
                                 Text(
                                     text = CurrencyUtils.formatCurrency(monthTotal),
                                     style = TextStyle(
                                         color = ColorProvider(Color.White),
-                                        fontSize = androidx.compose.ui.unit.sp(18.sp),
+                                        fontSize = 18.sp,
                                         fontWeight = FontWeight.Bold
                                     ),
                                     modifier = GlanceModifier.padding(top = 4.dp)
@@ -164,7 +158,7 @@ class QuickBalanceWidget : GlanceAppWidget() {
                                     .padding(top = 12.dp),
                                 contentAlignment = Alignment.Center
                             ) {
-                                CircularProgressIndicator(
+                                androidx.glance.appwidget.CircularProgressIndicator(
                                     progress = progress.toFloat(),
                                     modifier = GlanceModifier.size(80.dp),
                                     color = ColorProvider(Color.White),
@@ -177,7 +171,7 @@ class QuickBalanceWidget : GlanceAppWidget() {
                                         text = "${(progress * 100).toInt()}%",
                                         style = TextStyle(
                                             color = ColorProvider(Color.White),
-                                            fontSize = androidx.compose.ui.unit.sp(14.sp),
+                                            fontSize = 14.sp,
                                             fontWeight = FontWeight.Bold
                                         )
                                     )
@@ -185,7 +179,7 @@ class QuickBalanceWidget : GlanceAppWidget() {
                                         text = "of budget",
                                         style = TextStyle(
                                             color = ColorProvider(Color.White.copy(alpha = 0.7f)),
-                                            fontSize = androidx.compose.ui.unit.sp(10.sp)
+                                            fontSize = 10.sp
                                         )
                                     )
                                 }

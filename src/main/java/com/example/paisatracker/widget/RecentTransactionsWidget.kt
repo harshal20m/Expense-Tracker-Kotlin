@@ -5,7 +5,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.glance.GlanceId
 import androidx.glance.action.clickable
-import androidx.glance.appwidget.ExperimentalGlanceApi
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.appWidgetBackground
@@ -23,7 +22,6 @@ import kotlinx.coroutines.flow.first
 import java.text.SimpleDateFormat
 import java.util.*
 
-@OptIn(ExperimentalGlanceApi::class)
 class RecentTransactionsWidget : GlanceAppWidget() {
 
     override val sizeMode = SizeMode.Responsive(
@@ -39,26 +37,28 @@ class RecentTransactionsWidget : GlanceAppWidget() {
 
         provideContent {
             ColorProviders(
-                light = androidx.compose.material3.MaterialTheme.colorScheme,
-                dark = androidx.compose.material3.darkColorScheme()
+                colors = androidx.glance.material3.ColorProviders(
+                    light = androidx.compose.material3.lightColorScheme(),
+                    dark = androidx.compose.material3.darkColorScheme()
+                )
             ) {
                 Box(
                     modifier = GlanceModifier
                         .fillMaxSize()
                         .appWidgetBackground()
-                        .background(ColorProviders(light = Color(0xFF03DAC6), dark = Color(0xFF018786)))
+                        .background(ColorProvider(Color(0xFF03DAC6)))
                         .clickable { },
                     contentAlignment = Alignment.TopStart
                 ) {
                     Column(
                         modifier = GlanceModifier.padding(16.dp),
-                        verticalAlignment = Alignment.Vertical.Top
+                        verticalAlignment = Alignment.Top
                     ) {
                         Text(
                             text = "Recent Transactions",
                             style = TextStyle(
                                 color = ColorProvider(Color.White),
-                                fontSize = androidx.compose.ui.unit.sp(16.sp),
+                                fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold
                             ),
                             modifier = GlanceModifier.padding(bottom = 12.dp)
@@ -69,27 +69,27 @@ class RecentTransactionsWidget : GlanceAppWidget() {
                                 text = "No recent transactions",
                                 style = TextStyle(
                                     color = ColorProvider(Color.White.copy(alpha = 0.7f)),
-                                    fontSize = androidx.compose.ui.unit.sp(14.sp)
+                                    fontSize = 14.sp
                                 ),
                                 modifier = GlanceModifier.padding(vertical = 8.dp)
                             )
                         } else {
-                            recentExpenses.take(5).forEach { expense ->
+                            recentExpenses.take(5).forEachIndexed { index, expense ->
                                 Row(
                                     modifier = GlanceModifier
                                         .fillMaxWidth()
                                         .padding(vertical = 6.dp),
-                                    horizontalAlignment = Alignment.Horizontal.SpaceBetween,
-                                    verticalAlignment = Alignment.Vertical.CenterVertically
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Row(
-                                        verticalAlignment = Alignment.Vertical.CenterVertically,
+                                        verticalAlignment = Alignment.CenterVertically,
                                         modifier = GlanceModifier.weight(1f)
                                     ) {
                                         Text(
                                             text = expense.categoryEmoji,
                                             style = TextStyle(
-                                                fontSize = androidx.compose.ui.unit.sp(18.sp)
+                                                fontSize = 18.sp
                                             ),
                                             modifier = GlanceModifier.padding(end = 8.dp)
                                         )
@@ -98,7 +98,7 @@ class RecentTransactionsWidget : GlanceAppWidget() {
                                                 text = expense.description.ifEmpty { expense.categoryName },
                                                 style = TextStyle(
                                                     color = ColorProvider(Color.White),
-                                                    fontSize = androidx.compose.ui.unit.sp(13.sp),
+                                                    fontSize = 13.sp,
                                                     fontWeight = FontWeight.Medium
                                                 ),
                                                 maxLines = 1
@@ -109,7 +109,7 @@ class RecentTransactionsWidget : GlanceAppWidget() {
                                                 text = dateStr,
                                                 style = TextStyle(
                                                     color = ColorProvider(Color.White.copy(alpha = 0.7f)),
-                                                    fontSize = androidx.compose.ui.unit.sp(11.sp)
+                                                    fontSize = 11.sp
                                                 )
                                             )
                                         }
@@ -118,13 +118,13 @@ class RecentTransactionsWidget : GlanceAppWidget() {
                                         text = "-${CurrencyUtils.formatCurrency(expense.amount)}",
                                         style = TextStyle(
                                             color = ColorProvider(Color.White),
-                                            fontSize = androidx.compose.ui.unit.sp(14.sp),
+                                            fontSize = 14.sp,
                                             fontWeight = FontWeight.Bold
                                         )
                                     )
                                 }
                                 
-                                if (expense != recentExpenses.lastOrNull()) {
+                                if (index < recentExpenses.size - 1) {
                                     Divider(
                                         modifier = GlanceModifier
                                             .fillMaxWidth()
