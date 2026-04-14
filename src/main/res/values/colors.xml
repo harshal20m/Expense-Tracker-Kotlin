@@ -7,4 +7,31 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- Widget colors — all hardcoded dark palette, not theme-adaptive -->
+
+    <!-- Backgrounds -->
+    <color name="widget_bg_dark">#1A1A2E</color>
+    <color name="widget_bg_over_budget">#1C0A0A</color>
+    <color name="widget_bg_balance">#0D1117</color>
+    <color name="widget_bg_transactions">#111827</color>
+    <color name="widget_bg_surface">#28FFFFFF</color><!-- ~16% white overlay -->
+
+    <!-- Text -->
+    <color name="widget_text_primary">#FFFFFFFF</color>
+    <color name="widget_text_secondary">#BBFFFFFF</color>
+    <color name="widget_text_tertiary">#66FFFFFF</color>
+    <color name="widget_text_hint">#44FFFFFF</color>
+
+    <!-- Semantic -->
+    <color name="widget_green">#FF10B981</color>
+    <color name="widget_amber">#FFF59E0B</color>
+    <color name="widget_red">#FFEF4444</color>
+    <color name="widget_red_text">#FFF87171</color>
+
+    <!-- Divider / surface -->
+    <color name="widget_divider">#1AFFFFFF</color><!-- ~10% white -->
+    <color name="widget_icon_bg">#1FFFFFFF</color><!-- ~12% white -->
+    <color name="widget_progress_track">#22FFFFFF</color>
+    <color name="widget_pill_bg">#14FFFFFF</color>
 </resources>

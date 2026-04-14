@@ -1,10 +1,12 @@
 package com.example.paisatracker.widget
 
 import android.content.Context
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
+import androidx.glance.GlanceModifier
+import androidx.glance.GlanceTheme
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.SizeMode
@@ -15,8 +17,8 @@ import androidx.glance.layout.*
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
-import androidx.glance.unit.ColorProvider
-import com.example.paisatracker.data.*
+import com.example.paisatracker.data.PaisaTrackerDatabase
+import com.example.paisatracker.data.PaisaTrackerRepository
 import com.example.paisatracker.util.CurrencyUtils
 import kotlinx.coroutines.flow.first
 import java.text.SimpleDateFormat
@@ -25,117 +27,173 @@ import java.util.*
 class RecentTransactionsWidget : GlanceAppWidget() {
 
     override val sizeMode = SizeMode.Responsive(
-        setOf(DpSize(250.dp, 180.dp), DpSize(250.dp, 250.dp))
+        setOf(DpSize(250.dp, 200.dp), DpSize(250.dp, 280.dp))
     )
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val db = PaisaTrackerDatabase.getDatabase(context)
-        
-        // Create repository instance with all required DAOs
         val repository = PaisaTrackerRepository(
-            projectDao = db.projectDao(),
-            categoryDao = db.categoryDao(),
-            expenseDao = db.expenseDao(),
-            assetDao = db.assetDao(),
-            backupDao = db.backupDao(),
-            budgetDao = db.budgetDao(),
-            flapDao = db.flapDao(),
+            projectDao      = db.projectDao(),
+            categoryDao     = db.categoryDao(),
+            expenseDao      = db.expenseDao(),
+            assetDao        = db.assetDao(),
+            backupDao       = db.backupDao(),
+            budgetDao       = db.budgetDao(),
+            flapDao         = db.flapDao(),
             salaryRecordDao = db.salaryRecordDao()
         )
-        
-        // Get recent expenses (last 5)
-        val recentExpenses = repository.getRecentExpensesWithDetails(5).first()
+
+        val expenses = try {
+            repository.getRecentExpensesWithDetails(5).first()
+        } catch (e: Exception) {
+            emptyList()
+        }
+
+        val today     = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0);      set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+        val yesterday = today - 86_400_000L
+
+        fun smartDate(millis: Long): String = when {
+            millis >= today     -> "Today \u00b7 ${SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date(millis))}"
+            millis >= yesterday -> "Yesterday \u00b7 ${SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date(millis))}"
+            else                -> SimpleDateFormat("MMM d", Locale.getDefault()).format(Date(millis))
+        }
 
         provideContent {
-            Box(
-                modifier = GlanceModifier
-                    .fillMaxSize()
-                    .appWidgetBackground()
-                    .background(ColorProvider(Color(0xFF03DAC6)))
-                    .clickable { },
-                contentAlignment = Alignment.TopStart
-            ) {
-                Column(
-                    modifier = GlanceModifier.padding(16.dp),
-                    verticalAlignment = Alignment.Top
+            GlanceTheme(colors = WidgetColorScheme.colors) {
+                Box(
+                    modifier = GlanceModifier
+                        .fillMaxSize()
+                        .appWidgetBackground()
+                        .background(GlanceTheme.colors.surface)
+                        .clickable { },
+                    contentAlignment = Alignment.TopStart
                 ) {
-                    Text(
-                        text = "Recent Transactions",
-                        style = TextStyle(
-                            color = ColorProvider(Color.White),
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold
-                        ),
-                        modifier = GlanceModifier.padding(bottom = 12.dp)
-                    )
-                    
-                    if (recentExpenses.isEmpty()) {
-                        Text(
-                            text = "No recent transactions",
-                            style = TextStyle(
-                                color = ColorProvider(Color.White.copy(alpha = 0.7f)),
-                                fontSize = 14.sp
-                            ),
-                            modifier = GlanceModifier.padding(vertical = 8.dp)
-                        )
-                    } else {
-                        recentExpenses.take(5).forEachIndexed { index, expense ->
-                            Row(
-                                modifier = GlanceModifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 6.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = GlanceModifier.weight(1f)
-                                ) {
-                                    Text(
-                                        text = expense.categoryEmoji,
-                                        style = TextStyle(
-                                            fontSize = 18.sp
-                                        ),
-                                        modifier = GlanceModifier.padding(end = 8.dp)
-                                    )
-                                    Column {
-                                        Text(
-                                            text = expense.description.ifEmpty { expense.categoryName },
-                                            style = TextStyle(
-                                                color = ColorProvider(Color.White),
-                                                fontSize = 13.sp,
-                                                fontWeight = FontWeight.Medium
-                                            ),
-                                            maxLines = 1
-                                        )
-                                        val dateFormat = SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault())
-                                        val dateStr = dateFormat.format(Date(expense.date))
-                                        Text(
-                                            text = dateStr,
-                                            style = TextStyle(
-                                                color = ColorProvider(Color.White.copy(alpha = 0.7f)),
-                                                fontSize = 11.sp
-                                            )
-                                        )
-                                    }
-                                }
+                    Column(
+                        modifier = GlanceModifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp, vertical = 14.dp)
+                    ) {
+                        // ── header ────────────────────────────────────────
+                        Row(
+                            modifier          = GlanceModifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "Recent transactions",
+                                style    = TextStyle(
+                                    color      = GlanceTheme.colors.onBackground,
+                                    fontSize   = 13.sp,
+                                    fontWeight = FontWeight.Bold
+                                ),
+                                modifier = GlanceModifier.defaultWeight()
+                            )
+                            if (expenses.isNotEmpty()) {
                                 Text(
-                                    text = "-${CurrencyUtils.formatCurrency(expense.amount)}",
+                                    "${expenses.size} recent",
                                     style = TextStyle(
-                                        color = ColorProvider(Color.White),
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Bold
+                                        color    = GlanceTheme.colors.onSurface,
+                                        fontSize = 10.sp
                                     )
                                 )
                             }
-                            
-                            if (index < recentExpenses.size - 1) {
-                                Divider(
-                                    modifier = GlanceModifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 4.dp),
-                                    color = ColorProvider(Color.White.copy(alpha = 0.3f))
+                        }
+
+                        Spacer(modifier = GlanceModifier.height(10.dp))
+
+                        if (expenses.isEmpty()) {
+                            // ── empty state ───────────────────────────────
+                            Column(
+                                modifier            = GlanceModifier
+                                    .fillMaxWidth()
+                                    .defaultWeight(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalAlignment   = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    "No transactions yet",
+                                    style = TextStyle(
+                                        color      = GlanceTheme.colors.onBackground,
+                                        fontSize   = 13.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
                                 )
+                                Spacer(modifier = GlanceModifier.height(4.dp))
+                                Text(
+                                    "Add your first expense in PaisaTracker",
+                                    style = TextStyle(
+                                        color    = GlanceTheme.colors.onSurface,
+                                        fontSize = 11.sp
+                                    )
+                                )
+                            }
+                        } else {
+                            // ── transaction rows ──────────────────────────
+                            expenses.forEachIndexed { index, expense ->
+                                Row(
+                                    modifier          = GlanceModifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 5.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    // Emoji icon box
+                                    Box(
+                                        modifier         = GlanceModifier
+                                            .size(30.dp)
+                                            .background(GlanceTheme.colors.background),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            // Emoji renders as text in Glance
+                                            text  = expense.categoryEmoji.take(2),
+                                            style = TextStyle(fontSize = 13.sp)
+                                        )
+                                    }
+
+                                    Spacer(modifier = GlanceModifier.width(10.dp))
+
+                                    Column(modifier = GlanceModifier.defaultWeight()) {
+                                        Text(
+                                            expense.description
+                                                .ifEmpty { expense.categoryName }
+                                                .take(22),
+                                            style = TextStyle(
+                                                color      = GlanceTheme.colors.onBackground,
+                                                fontSize   = 12.sp,
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                        )
+                                        Spacer(modifier = GlanceModifier.height(1.dp))
+                                        Text(
+                                            smartDate(expense.date),
+                                            style = TextStyle(
+                                                color    = GlanceTheme.colors.onSurface,
+                                                fontSize = 10.sp
+                                            )
+                                        )
+                                    }
+
+                                    Text(
+                                        "-${CurrencyUtils.formatCurrency(expense.amount, context)}",
+                                        style = TextStyle(
+                                            color      = GlanceTheme.colors.error,
+                                            fontSize   = 12.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    )
+                                }
+
+                                // Divider
+                                if (index < expenses.size - 1) {
+                                    Box(
+                                        modifier = GlanceModifier
+                                            .fillMaxWidth()
+                                            .height(1.dp)
+                                            .background(GlanceTheme.colors.background)
+                                    ) { /* divider */ }
+                                }
                             }
                         }
                     }
