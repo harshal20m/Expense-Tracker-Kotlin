@@ -378,9 +378,10 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
                 }
                 SheetType.DELETE -> projectToDelete?.let { pwt ->
                     DeleteProjectSheetContent(
-                        projectName = pwt.project.name,
-                        onCancel    = { showSheet = false; currentSheetType = null; projectToDelete = null },
-                        onConfirm   = {
+                        projectName  = pwt.project.name,
+                        projectEmoji = pwt.project.emoji,
+                        onCancel     = { showSheet = false; currentSheetType = null; projectToDelete = null },
+                        onConfirm    = {
                             viewModel.deleteProject(pwt.project)
                             scope.launch { sheetState.hide() }.invokeOnCompletion {
                                 showSheet = false; currentSheetType = null; projectToDelete = null
