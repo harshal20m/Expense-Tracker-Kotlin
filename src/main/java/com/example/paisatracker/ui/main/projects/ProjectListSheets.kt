@@ -58,7 +58,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import com.example.paisatracker.ui.components.emoji.EmojiPickerSheet
+import com.example.paisatracker.ui.components.emoji.EmojiSuggestionEngine
+import com.example.paisatracker.ui.components.emoji.EmojiChip
 
 // ── Add project sheet ─────────────────────────────────────────────────────────
 
@@ -78,6 +83,12 @@ fun AddProjectSheetContent(
     var selectedEmoji by remember { mutableStateOf("📁") }
     var showEmojiPicker by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
+
+    val suggestions by remember(projectName) {
+        derivedStateOf {
+            EmojiSuggestionEngine.suggest(projectName, maxResults = 8)
+        }
+    }
 
     val emojiScale by animateFloatAsState(
         targetValue = if (showEmojiPicker) 1.1f else 1f,
@@ -115,6 +126,49 @@ fun AddProjectSheetContent(
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Text(selectedEmoji, fontSize = 42.sp)
+                }
+            }
+
+            // Smart suggestions moved below emoji icon
+            AnimatedVisibility(
+                visible = suggestions.isNotEmpty() && projectName.isNotBlank(),
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text("✨", fontSize = 12.sp)
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            "Suggested Icons",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        contentPadding = PaddingValues(horizontal = 4.dp)
+                    ) {
+                        items(suggestions) { emoji ->
+                            EmojiChip(
+                                emoji = emoji,
+                                isSelected = emoji == selectedEmoji,
+                                onClick = { 
+                                    EmojiSuggestionEngine.recordUsage(emoji)
+                                    selectedEmoji = emoji 
+                                },
+                                size = 42
+                            )
+                        }
+                    }
                 }
             }
 
@@ -243,6 +297,12 @@ fun EditProjectSheetContent(
 
     val hasChanges = editedName.isNotBlank() && (editedName != currentName || selectedEmoji != currentEmoji)
 
+    val suggestions by remember(editedName) {
+        derivedStateOf {
+            EmojiSuggestionEngine.suggest(editedName, maxResults = 8)
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -279,6 +339,45 @@ fun EditProjectSheetContent(
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text("Edit Project", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                     Text("Tap icon to change emoji", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+
+            // Smart suggestions moved below emoji icon row
+            AnimatedVisibility(
+                visible = suggestions.isNotEmpty() && editedName.isNotBlank(),
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text("✨", fontSize = 12.sp)
+                        Text(
+                            "Suggested Icons",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        contentPadding = PaddingValues(horizontal = 4.dp)
+                    ) {
+                        items(suggestions) { emoji ->
+                            EmojiChip(
+                                emoji = emoji,
+                                isSelected = emoji == selectedEmoji,
+                                onClick = { 
+                                    EmojiSuggestionEngine.recordUsage(emoji)
+                                    selectedEmoji = emoji 
+                                },
+                                size = 42
+                            )
+                        }
+                    }
                 }
             }
 

@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -39,6 +41,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,6 +52,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.paisatracker.ui.components.emoji.EmojiPickerSheet
+import com.example.paisatracker.ui.components.emoji.EmojiSuggestionEngine
+import com.example.paisatracker.ui.components.emoji.EmojiChip
 
 // ── Add Category sheet ─────────────────────────────────────────────────────────
 
@@ -102,6 +107,51 @@ fun AddCategorySheetContent(
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text("New Category", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                     Text("Tap icon to pick an emoji", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+
+            val suggestions by remember(categoryName) {
+                derivedStateOf {
+                    EmojiSuggestionEngine.suggest(categoryName, maxResults = 8)
+                }
+            }
+
+            // Smart suggestions moved below emoji icon row
+            AnimatedVisibility(
+                visible = suggestions.isNotEmpty() && categoryName.isNotBlank(),
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text("✨", fontSize = 12.sp)
+                        Text(
+                            "Suggested Icons",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        contentPadding = PaddingValues(horizontal = 4.dp)
+                    ) {
+                        items(suggestions) { emoji ->
+                            EmojiChip(
+                                emoji = emoji,
+                                isSelected = emoji == selectedEmoji,
+                                onClick = { 
+                                    EmojiSuggestionEngine.recordUsage(emoji)
+                                    selectedEmoji = emoji 
+                                },
+                                size = 42
+                            )
+                        }
+                    }
                 }
             }
 
@@ -223,6 +273,51 @@ fun EditCategorySheetContent(
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text("Edit Category", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                     Text("Tap icon to change emoji", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+
+            val suggestions by remember(editedName) {
+                derivedStateOf {
+                    EmojiSuggestionEngine.suggest(editedName, maxResults = 8)
+                }
+            }
+
+            // Smart suggestions moved below emoji icon row
+            AnimatedVisibility(
+                visible = suggestions.isNotEmpty() && editedName.isNotBlank(),
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text("✨", fontSize = 12.sp)
+                        Text(
+                            "Suggested Icons",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        contentPadding = PaddingValues(horizontal = 4.dp)
+                    ) {
+                        items(suggestions) { emoji ->
+                            EmojiChip(
+                                emoji = emoji,
+                                isSelected = emoji == selectedEmoji,
+                                onClick = { 
+                                    EmojiSuggestionEngine.recordUsage(emoji)
+                                    selectedEmoji = emoji 
+                                },
+                                size = 42
+                            )
+                        }
+                    }
                 }
             }
 

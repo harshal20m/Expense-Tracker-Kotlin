@@ -274,12 +274,26 @@ object EmojiSuggestionEngine {
         )
     }
 
+    private val mostUsedEmojis = mutableListOf<String>()
+
+    fun recordUsage(emoji: String) {
+        mostUsedEmojis.remove(emoji)
+        mostUsedEmojis.add(0, emoji)
+        if (mostUsedEmojis.size > 15) {
+            mostUsedEmojis.removeAt(mostUsedEmojis.size - 1)
+        }
+    }
+
+    fun getPopularEmojis(): List<String> {
+        return (mostUsedEmojis + listOf("💰", "🛒", "🏠", "🍕", "🚗", "💼", "💊", "🎓", "🎬", "🎁")).distinct().take(10)
+    }
+
     /**
      * Returns ranked emoji suggestions for the given query.
-     * Falls back to "General" category emojis if no match is found.
+     * Falls back to popular emojis if no query is provided.
      */
     fun suggest(query: String, maxResults: Int = 20): List<String> {
-        if (query.isBlank()) return allEmojiCategories.first().emojis.take(maxResults)
+        if (query.isBlank()) return getPopularEmojis()
 
         val normalizedQuery = query.lowercase().trim()
 

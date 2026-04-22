@@ -205,7 +205,10 @@ fun EmojiPickerSheet(
                                 EmojiChip(
                                     emoji = emoji,
                                     isSelected = emoji == selectedEmoji,
-                                    onClick = { onEmojiSelected(emoji) }
+                                    onClick = { 
+                                        EmojiSuggestionEngine.recordUsage(emoji)
+                                        onEmojiSelected(emoji) 
+                                    }
                                 )
                             }
                         }
@@ -213,16 +216,16 @@ fun EmojiPickerSheet(
                 }
             } else {
                 Column {
-                    // Smart suggestions (shown only when context hint is available)
-                    if (suggestions.isNotEmpty() && contextHint.isNotBlank()) {
+                    // Smart suggestions or Popular emojis
+                    if (suggestions.isNotEmpty()) {
                         Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                Text("✨", fontSize = 14.sp)
+                                Text(if (contextHint.isBlank()) "🔥" else "✨", fontSize = 14.sp)
                                 Text(
-                                    "Smart suggestions",
+                                    if (contextHint.isBlank()) "Popular emojis" else "Smart suggestions",
                                     style = MaterialTheme.typography.labelMedium,
                                     fontWeight = FontWeight.SemiBold,
                                     color = MaterialTheme.colorScheme.primary
@@ -237,7 +240,10 @@ fun EmojiPickerSheet(
                                     EmojiChip(
                                         emoji = emoji,
                                         isSelected = emoji == selectedEmoji,
-                                        onClick = { onEmojiSelected(emoji) },
+                                        onClick = { 
+                                            EmojiSuggestionEngine.recordUsage(emoji)
+                                            onEmojiSelected(emoji) 
+                                        },
                                         size = 48
                                     )
                                 }
@@ -307,7 +313,10 @@ fun EmojiPickerSheet(
                                     EmojiChip(
                                         emoji = emoji,
                                         isSelected = emoji == selectedEmoji,
-                                        onClick = { onEmojiSelected(emoji) }
+                                        onClick = { 
+                                            EmojiSuggestionEngine.recordUsage(emoji)
+                                            onEmojiSelected(emoji) 
+                                        }
                                     )
                                 }
                             }
@@ -365,9 +374,10 @@ fun EmojiPickerSheet(
                             }
                         )
                     }
-                    Surface(
+                        Surface(
                         onClick = {
                             if (manualInput.isNotBlank()) {
+                                EmojiSuggestionEngine.recordUsage(manualInput.trim())
                                 onEmojiSelected(manualInput.trim())
                                 manualInput = ""
                                 showManualField = false
