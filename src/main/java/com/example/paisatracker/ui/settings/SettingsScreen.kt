@@ -1,6 +1,7 @@
 package com.example.paisatracker.ui.settings
 
 import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -71,6 +72,8 @@ fun SettingsScreen(
     val isBiometricEnabled  by appLockPrefs.isBiometricEnabled.collectAsState(initial = false)
     var showPinSetupDialog  by remember { mutableStateOf(false) }
     var showAppLockDialog   by remember { mutableStateOf(false) }
+
+    val updateAvailable by viewModel.updateAvailable.collectAsState()
 
 
 
@@ -208,6 +211,27 @@ fun SettingsScreen(
                     title    = "About",
                     subtitle = "Version & developer info",
                     onClick  = { showAboutDialog = true }
+                )
+            }
+
+            item(span = StaggeredGridItemSpan.FullLine) { MasonryLabel("Updates") }
+
+            item(span = StaggeredGridItemSpan.FullLine) {
+                MasonryCardWide(
+                    icon = Icons.Default.SystemUpdate,
+                    title = if (updateAvailable != null) "Update Available" else "Check for Updates",
+                    subtitle = if (updateAvailable != null) "New version ${updateAvailable?.tag_name} is available" else "Make sure you are on latest version",
+                    badgeText = if (updateAvailable != null) "NEW" else null,
+                    badgeGreen = true,
+                    onClick = {
+                        if (updateAvailable != null) {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(updateAvailable?.html_url))
+                            context.startActivity(intent)
+                        } else {
+                            viewModel.checkForUpdates(isManual = true)
+                            Toast.makeText(context, "Checking for updates...", Toast.LENGTH_SHORT).show()
+                        }
+                    }
                 )
             }
 

@@ -1,5 +1,8 @@
 package com.example.paisatracker.ui.main.projects
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -35,6 +38,7 @@ import com.example.paisatracker.ui.common.WeeklyDashboardCalendar
 import com.example.paisatracker.ui.quickadd.QuickAddSheet
 import com.example.paisatracker.ui.search.SearchViewModel
 import com.example.paisatracker.ui.search.SearchViewModelFactory
+import com.example.paisatracker.ui.settings.UpdateRow
 import com.example.paisatracker.util.CurrentCurrency
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
@@ -121,6 +125,7 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
     val totalCategories = orderedProjects.sumOf { it.categoryCount }
     val totalExpenses   = orderedProjects.sumOf { it.expenseCount }
     val recentExpenses  by viewModel.recentExpenses.collectAsState(initial = emptyList())
+    val updateAvailable by viewModel.updateAvailable.collectAsState()
 
     if (showAssetsSheet) {
         AssetsBottomSheet(viewModel = viewModel, onDismiss = { showAssetsSheet = false })
@@ -149,6 +154,26 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
             contentPadding      = PaddingValues(top = 8.dp, bottom = 110.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // ── Update Notification ───────────────────────────────────────────
+            item {
+                AnimatedVisibility(
+                    visible = updateAvailable != null,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
+                ) {
+                    updateAvailable?.let { release ->
+                        UpdateRow(
+                            tagName = release.tag_name,
+                            onClick = {
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(release.html_url))
+                                context.startActivity(intent)
+                            },
+                            onDismiss = { viewModel.dismissUpdate() }
+                        )
+                    }
+                }
+            }
+
             // ── Weekly calendar ───────────────────────────────────────────────
             item {
                 WeeklyDashboardCalendar(

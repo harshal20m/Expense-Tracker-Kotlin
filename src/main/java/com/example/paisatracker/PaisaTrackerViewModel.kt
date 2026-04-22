@@ -25,8 +25,9 @@ import com.example.paisatracker.data.PaisaTrackerRepository
 import com.example.paisatracker.data.Project
 import com.example.paisatracker.data.ProjectWithTotal
 import com.example.paisatracker.data.RecentExpense
-
- import com.example.paisatracker.data.serializeHistory
+import com.example.paisatracker.util.GithubRelease
+import com.example.paisatracker.util.UpdateManager
+import com.example.paisatracker.data.serializeHistory
 import com.example.paisatracker.data.serializeNotes
 import com.example.paisatracker.util.ImageUtils
 import com.opencsv.CSVReader
@@ -55,8 +56,22 @@ import java.util.UUID
 
 class PaisaTrackerViewModel(
     private val repository: PaisaTrackerRepository,
-    currencyPreferencesRepository: CurrencyPreferencesRepository
+    currencyPreferencesRepository: CurrencyPreferencesRepository,
+    private val updateManager: UpdateManager? = null
 ) : ViewModel() {
+
+    val updateAvailable: StateFlow<GithubRelease?> = updateManager?.updateAvailable
+        ?: MutableStateFlow(null)
+
+    fun checkForUpdates(isManual: Boolean = false) {
+        viewModelScope.launch {
+            updateManager?.checkForUpdates(isManual)
+        }
+    }
+
+    fun dismissUpdate() {
+        updateManager?.dismissUpdate()
+    }
 
     //budget
     val budgetsWithSpending: StateFlow<List<BudgetWithSpending>> = combine(
@@ -616,12 +631,13 @@ class PaisaTrackerViewModel(
 
 class PaisaTrackerViewModelFactory(
     private val repository: PaisaTrackerRepository,
-    private val currencyPreferencesRepository: CurrencyPreferencesRepository
+    private val currencyPreferencesRepository: CurrencyPreferencesRepository,
+    private val updateManager: UpdateManager? = null
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(PaisaTrackerViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return PaisaTrackerViewModel(repository, currencyPreferencesRepository) as T
+            return PaisaTrackerViewModel(repository, currencyPreferencesRepository, updateManager) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

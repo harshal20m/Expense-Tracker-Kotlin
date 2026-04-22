@@ -29,14 +29,18 @@ import com.example.paisatracker.ui.main.MainApp
 import com.example.paisatracker.ui.setup.FirstTimeSetupDialog
 import com.example.paisatracker.ui.theme.PaisaTrackerTheme
 import com.example.paisatracker.util.CurrentCurrency
+import com.example.paisatracker.util.UpdateManager
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class MainActivity : FragmentActivity() {
+    private val updateManager by lazy { UpdateManager(this) }
+
     private val viewModel: PaisaTrackerViewModel by viewModels {
         PaisaTrackerViewModelFactory(
             (application as PaisaTrackerApplication).repository,
-            (application as PaisaTrackerApplication).currencyPreferencesRepository
+            (application as PaisaTrackerApplication).currencyPreferencesRepository,
+            updateManager
         )
     }
 
@@ -72,6 +76,7 @@ class MainActivity : FragmentActivity() {
         }
 
         requestNotificationPermission()
+        viewModel.checkForUpdates(isManual = false)
 
         setContent {
             val currentTheme by themePreferencesRepository.appTheme.collectAsState(initial = AppTheme.SYSTEM_DEFAULT)

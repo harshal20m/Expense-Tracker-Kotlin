@@ -44,8 +44,8 @@ android {
         applicationId = "com.example.paisatracker"
         minSdk = 28
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "v1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -84,6 +84,10 @@ dependencies {
     implementation(libs.room.ktx)
     implementation(libs.androidx.foundation.layout)
     ksp(libs.room.compiler)
+
+    // Networking
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.converter.gson)
 
     // UI & Charts
     implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
