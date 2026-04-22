@@ -1,10 +1,9 @@
 package com.example.paisatracker.ui.settings
 
-import android.R.attr.track
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.widget.Toast
+import androidx.core.net.toUri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -15,6 +14,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -72,7 +72,7 @@ private val versionSecrets = listOf(
     "there's nothing more here. go touch grass.",
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun AboutBottomSheet(onDismiss: () -> Unit) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -81,10 +81,10 @@ fun AboutBottomSheet(onDismiss: () -> Unit) {
 
     var avatarToastText by remember { mutableStateOf("") }
     var showAvatarToast by remember { mutableStateOf(false) }
-    var versionTapCount by remember { mutableStateOf(0) }
+    var versionTapCount by remember { mutableIntStateOf(0) }
     var showVersionSecret by remember { mutableStateOf(false) }
     var versionSecretText by remember { mutableStateOf("") }
-    var footerIndex by remember { mutableStateOf(0) }
+    var footerIndex by remember { mutableIntStateOf(0) }
     var showHiddenSocialToast by remember { mutableStateOf(false) }
 
     val shakeAnim = remember { Animatable(0f) }
@@ -221,7 +221,7 @@ fun AboutBottomSheet(onDismiss: () -> Unit) {
                         }
                     }
 
-                    // App identity row with tappable version (easter egg 2)
+                    // App identity row with tappable version (Easter egg 2)
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -285,7 +285,7 @@ fun AboutBottomSheet(onDismiss: () -> Unit) {
                 }
             }
 
-            // ── Social links card — one row, 5 icons + ? easter egg ───────────
+            // ── Social links card — one row, 5 icons + ? Easter egg ───────────
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(20.dp),
@@ -674,19 +674,19 @@ private fun FeatureRow(text: String) {
 
 private fun openUrl(context: Context, url: String) {
     try {
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+        val intent = Intent(Intent.ACTION_VIEW, url.toUri())
         context.startActivity(intent)
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         Toast.makeText(context, "Unable to open link", Toast.LENGTH_SHORT).show()
     }
 }
 
 private fun openInstagram(context: Context, username: String) {
     try {
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("http://instagram.com/_u/$username"))
+        val intent = Intent(Intent.ACTION_VIEW, "http://instagram.com/_u/$username".toUri())
         intent.setPackage("com.instagram.android")
         context.startActivity(intent)
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         openUrl(context, "https://instagram.com/$username")
     }
 }
@@ -694,20 +694,20 @@ private fun openInstagram(context: Context, username: String) {
 private fun openEmail(context: Context, email: String) {
     try {
         val intent = Intent(Intent.ACTION_SENDTO).apply {
-            data = Uri.parse("mailto:$email")
+            data = "mailto:$email".toUri()
             putExtra(Intent.EXTRA_SUBJECT, "Hello from PaisaTracker")
         }
         context.startActivity(Intent.createChooser(intent, "Send Email"))
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         Toast.makeText(context, "No email app found", Toast.LENGTH_SHORT).show()
     }
 }
 
 private fun openTelegram(context: Context, username: String) {
     try {
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("tg://resolve?domain=$username"))
+        val intent = Intent(Intent.ACTION_VIEW, "tg://resolve?domain=$username".toUri())
         context.startActivity(intent)
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         openUrl(context, "https://t.me/$username")
     }
 }

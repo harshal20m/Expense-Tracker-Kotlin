@@ -31,6 +31,7 @@ import com.example.paisatracker.data.serializeNotes
 import com.example.paisatracker.util.ImageUtils
 import com.opencsv.CSVReader
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -249,7 +250,7 @@ class PaisaTrackerViewModel(
         )
 
     private val _recentExpensesLimit = MutableStateFlow(10)
-    @kotlinx.coroutines.ExperimentalCoroutinesApi
+    @OptIn(ExperimentalCoroutinesApi::class)
     val recentExpenses: Flow<List<RecentExpense>> = _recentExpensesLimit.flatMapLatest { limit ->
         repository.getRecentExpensesWithDetails(limit)
     }

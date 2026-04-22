@@ -44,6 +44,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -339,7 +340,7 @@ private fun CleanProjectSelector(projects: List<ProjectWithTotal>, selectedProje
         }
     } else {
         ExposedDropdownMenuBox(expanded = isExpanded, onExpandedChange = onExpandChange) {
-            TextField(value = selectedProject?.project?.name ?: "Select Project", onValueChange = {}, readOnly = true, leadingIcon = { selectedProject?.let { Text(it.project.emoji) } }, trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isExpanded) }, colors = TextFieldDefaults.colors(focusedContainerColor = MaterialTheme.colorScheme.surface, unfocusedContainerColor = MaterialTheme.colorScheme.surface), modifier = Modifier.menuAnchor().fillMaxWidth(), shape = RoundedCornerShape(8.dp), textStyle = MaterialTheme.typography.bodyMedium)
+            TextField(value = selectedProject?.project?.name ?: "Select Project", onValueChange = {}, readOnly = true, leadingIcon = { selectedProject?.let { Text(it.project.emoji) } }, trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isExpanded) }, colors = TextFieldDefaults.colors(focusedContainerColor = MaterialTheme.colorScheme.surface, unfocusedContainerColor = MaterialTheme.colorScheme.surface), modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true).fillMaxWidth(), shape = RoundedCornerShape(8.dp), textStyle = MaterialTheme.typography.bodyMedium)
             ExposedDropdownMenu(expanded = isExpanded, onDismissRequest = { onExpandChange(false) }) {
                 projects.forEach { project -> DropdownMenuItem(text = { Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { Text(project.project.emoji); Text(project.project.name, style = MaterialTheme.typography.bodyMedium) } }, onClick = { onProjectSelected(project); onExpandChange(false) }) }
             }

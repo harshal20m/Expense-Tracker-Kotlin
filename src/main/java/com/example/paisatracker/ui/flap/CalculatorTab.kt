@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material3.*
@@ -205,7 +206,7 @@ private fun CalculatorHistoryScreen(viewModel: PaisaTrackerViewModel) {
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Icon(
-                    Icons.Default.ArrowBack,
+                    Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Back",
                     modifier = Modifier.size(16.dp),
                     tint = MaterialTheme.colorScheme.primary
@@ -450,4 +451,4 @@ private fun evalExpression(expr: String): Double? = try {
 private fun formatResult(v: Double): String =
     if (v == kotlin.math.floor(v) && !v.isInfinite() && kotlin.math.abs(v) < 1e12)
         v.toLong().toString()
-    else "%.8f".format(v).trimEnd('0').trimEnd('.')
+    else String.format(java.util.Locale.ROOT, "%.8f", v).trimEnd('0').trimEnd('.')

@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.PieChart
@@ -66,7 +67,7 @@ fun ProjectInsightsScreen(
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(
-                            Icons.Default.ArrowBack,
+                            Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
                             modifier = Modifier.size(22.dp)
                         )
@@ -449,7 +450,7 @@ private fun MasonryCategoryCard(name: String, amount: Double, percent: Double, m
                 }
             }
             LinearProgressIndicator(
-                progress = animatedPercent / 100f,
+                progress = { animatedPercent / 100f },
                 modifier = Modifier.fillMaxWidth().height(5.dp).clip(RoundedCornerShape(3.dp)),
                 color = MaterialTheme.colorScheme.primary,
                 trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)

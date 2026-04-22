@@ -199,7 +199,7 @@ fun AppLockSettingsDialog(
                     }
                 }
 
-                Divider()
+                HorizontalDivider()
 
                 Text(
                     "💡 Tip: App lock will activate when you open the app",

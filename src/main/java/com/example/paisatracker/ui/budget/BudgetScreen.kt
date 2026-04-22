@@ -30,9 +30,9 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -125,7 +125,7 @@ fun BudgetScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
@@ -631,9 +631,9 @@ private fun BudgetCard(
                 // Remaining / over
                 Column(horizontalAlignment = Alignment.End) {
                     val remText = if (bws.isOverBudget)
-                        "−$currencySymbol${formatAmount(-bws.remaining)}"
-                    else
-                        "$currencySymbol${formatAmount(bws.remaining)}"
+        "−$currencySymbol${formatAmount(-bws.remaining)}"
+    else
+        "$currencySymbol${formatAmount(bws.remaining)}"
                     Text(
                         text = remText,
                         style = MaterialTheme.typography.titleMedium,
@@ -688,7 +688,7 @@ private fun BudgetCard(
                     )
                     FooterStat(
                         label = "Since",
-                        value = SimpleDateFormat("MMM d", Locale.getDefault()).format(Date(budget.createdAt)),
+                        value = SimpleDateFormat("MMM d", Locale.ROOT).format(Date(budget.createdAt)),
                         align = TextAlign.End,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f) // Added color parameter
                     )
@@ -781,7 +781,7 @@ fun BudgetEmptyState(modifier: Modifier = Modifier, onCreateClick: () -> Unit) {
 
 // ─── Shared format helper ─────────────────────────────────────────────────────
 fun formatAmount(amount: Double): String = if (amount >= 1_000) {
-    NumberFormat.getNumberInstance(Locale("en", "IN")).apply {
+    NumberFormat.getNumberInstance(Locale.ROOT).apply {
         maximumFractionDigits = if (amount % 1 == 0.0) 0 else 2
     }.format(amount)
-} else String.format("%.2f", amount)
+} else String.format(Locale.ROOT, "%.2f", amount)

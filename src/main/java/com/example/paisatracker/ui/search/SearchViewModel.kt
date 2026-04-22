@@ -5,14 +5,12 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.paisatracker.data.PaisaTrackerRepository
 import com.example.paisatracker.data.RecentExpense
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class SearchViewModel(private val repository: PaisaTrackerRepository) : ViewModel() {
 
     private val _searchQuery = MutableStateFlow("")

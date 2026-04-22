@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.NotificationsOff
@@ -335,7 +336,7 @@ fun NotificationSettingsBottomSheet(
                         contentPadding = PaddingValues(vertical = 16.dp)
                     ) {
                         Icon(
-                            Icons.Default.Send,
+                            Icons.AutoMirrored.Filled.Send,
                             contentDescription = null,
                             modifier = Modifier.size(20.dp)
                         )

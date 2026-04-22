@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -260,7 +261,7 @@ private fun EditExpenseSheetContent(
                 readOnly    = true,
                 label       = { Text("Payment method") },
                 trailingIcon= { ExposedDropdownMenuDefaults.TrailingIcon(expanded = dropdownExpanded) },
-                modifier    = Modifier.menuAnchor().fillMaxWidth(),
+                modifier    = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true).fillMaxWidth(),
                 shape       = RoundedCornerShape(14.dp)
             )
             ExposedDropdownMenu(expanded = dropdownExpanded, onDismissRequest = { dropdownExpanded = false }) {

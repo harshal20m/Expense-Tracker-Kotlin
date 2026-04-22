@@ -50,7 +50,7 @@ abstract class PaisaTrackerDatabase : RoomDatabase() {
                     "paisa_tracker_database_v1_2"
                 )
                     .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_4_5, MIGRATION_6_7 )
-                    .fallbackToDestructiveMigration()
+                    .fallbackToDestructiveMigration(false)
                     .build()
                 INSTANCE = instance
                 instance
