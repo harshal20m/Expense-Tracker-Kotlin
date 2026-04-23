@@ -1,7 +1,6 @@
 package com.example.paisatracker.ui.expense
 
 import android.net.Uri
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -45,6 +44,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.paisatracker.PaisaTrackerViewModel
+import com.example.paisatracker.ui.common.ToastType
 import com.example.paisatracker.R
 import com.example.paisatracker.data.Asset
 import com.example.paisatracker.data.Expense
@@ -150,12 +150,12 @@ fun ExpenseDetailScreen(
             dragHandle       = { BottomSheetDefaults.DragHandle() }
         ) {
             EditExpenseSheetContent(
+                viewModel = viewModel,
                 expense  = expense!!,
                 onDismiss= { showEditSheet = false },
                 onConfirm= { updated ->
                     viewModel.updateExpense(updated)
                     showEditSheet = false
-                    Toast.makeText(context, "Expense updated", Toast.LENGTH_SHORT).show()
                 }
             )
         }
@@ -196,6 +196,7 @@ fun ExpenseDetailScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun EditExpenseSheetContent(
+    viewModel: PaisaTrackerViewModel,
     expense: Expense,
     onDismiss: () -> Unit,
     onConfirm: (Expense) -> Unit
@@ -294,7 +295,7 @@ private fun EditExpenseSheetContent(
                         )
                     )
                 } else {
-                    Toast.makeText(context, "Please enter a valid description and amount", Toast.LENGTH_SHORT).show()
+                    viewModel.showToast("Please enter a valid description and amount", ToastType.ERROR)
                 }
             },
             modifier = Modifier.fillMaxWidth().height(52.dp),

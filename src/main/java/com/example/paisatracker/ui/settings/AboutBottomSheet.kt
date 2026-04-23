@@ -2,7 +2,6 @@ package com.example.paisatracker.ui.settings
 
 import android.content.Context
 import android.content.Intent
-import android.widget.Toast
 import androidx.core.net.toUri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically

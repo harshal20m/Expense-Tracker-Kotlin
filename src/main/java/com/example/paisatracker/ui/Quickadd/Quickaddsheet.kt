@@ -1,6 +1,5 @@
 package com.example.paisatracker.ui.quickadd
 
-import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn

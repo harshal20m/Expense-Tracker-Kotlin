@@ -2,7 +2,6 @@ package com.example.paisatracker.ui.assets
 
 import android.Manifest
 import android.net.Uri
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -73,6 +72,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import coil.compose.AsyncImage
 import com.example.paisatracker.PaisaTrackerViewModel
+import com.example.paisatracker.ui.common.ToastType
 import com.example.paisatracker.data.Asset
 import com.example.paisatracker.ui.common.ZoomableImageDialog
 import java.io.File
@@ -140,7 +140,7 @@ fun AssetsBottomSheet(
                 cameraLauncher.launch(uri)
             } catch (e: Exception) {
                 e.printStackTrace()
-                Toast.makeText(context, "Camera error", Toast.LENGTH_SHORT).show()
+                viewModel.showToast("Camera error", ToastType.ERROR)
             }
         }
     }
@@ -219,7 +219,7 @@ fun AssetsBottomSheet(
                 onConfirm = { title, description ->
                     selectedUri?.let { uri ->
                         viewModel.addIndependentAsset(context, uri, title, description)
-                        Toast.makeText(context, "✅ Saved to Gallery", Toast.LENGTH_SHORT).show()
+                        viewModel.showToast("✅ Saved to Gallery", ToastType.SUCCESS)
                     }
                     dialogType = null
                     selectedUri = null
@@ -233,7 +233,7 @@ fun AssetsBottomSheet(
                     onDismiss = { dialogType = null; activeAsset = null },
                     onConfirm = {
                         viewModel.deleteAsset(asset)
-                        Toast.makeText(context, "🗑️ Image removed", Toast.LENGTH_SHORT).show()
+                        viewModel.showToast("🗑️ Image removed", ToastType.INFO)
                         dialogType = null
                         activeAsset = null
                     }

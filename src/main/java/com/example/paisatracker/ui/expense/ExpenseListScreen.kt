@@ -23,7 +23,6 @@ import android.content.Context
 import android.net.Uri
 import android.util.Log
 import android.widget.DatePicker
-import android.widget.Toast
 import androidx.annotation.DrawableRes
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -92,6 +91,7 @@ import androidx.navigation.NavController
 import androidx.core.content.FileProvider
 import coil.compose.AsyncImage
 import com.example.paisatracker.PaisaTrackerViewModel
+import com.example.paisatracker.ui.common.ToastType
 import com.example.paisatracker.R
 import com.example.paisatracker.data.Expense
 import com.example.paisatracker.ui.common.SortDropdown
@@ -220,10 +220,10 @@ fun ExpenseListScreen(
                 cameraLauncher.launch(uri)
             } catch (e: Exception) {
                 e.printStackTrace()
-                Toast.makeText(context, "Camera error: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                viewModel.showToast("Camera error: ${e.localizedMessage}", ToastType.ERROR)
             }
         } else {
-            Toast.makeText(context, "Camera permission denied", Toast.LENGTH_SHORT).show()
+            viewModel.showToast("Camera permission denied", ToastType.INFO)
         }
     }
 
@@ -428,7 +428,7 @@ fun ExpenseListScreen(
                                         newExpenseImageUri = null
                                         currentSheet = null
                                     } else {
-                                        Toast.makeText(context, "Enter valid description & amount", Toast.LENGTH_SHORT).show()
+                                        viewModel.showToast("Enter valid description & amount", ToastType.ERROR)
                                     }
                                 },
                                 onDismiss = { currentSheet = null }
@@ -473,7 +473,7 @@ fun ExpenseListScreen(
                                         editedExpenseImageUri = null
                                         currentSheet = null
                                     } else {
-                                        Toast.makeText(context, "Enter valid description & amount", Toast.LENGTH_SHORT).show()
+                                        viewModel.showToast("Enter valid description & amount", ToastType.ERROR)
                                     }
                                 },
                                 onDismiss = { currentSheet = null }
