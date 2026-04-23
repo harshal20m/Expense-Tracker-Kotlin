@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.example.paisatracker.data.CategorySpend
 import com.example.paisatracker.data.PaisaTrackerRepository
 import com.example.paisatracker.data.SalaryRecord
+import com.example.paisatracker.PaisaTrackerViewModel
+import com.example.paisatracker.ui.common.ToastType
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -16,7 +18,10 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.Calendar
 
-class SalaryViewModel(private val repository: PaisaTrackerRepository) : ViewModel() {
+class SalaryViewModel(
+    private val repository: PaisaTrackerRepository,
+    private val globalViewModel: PaisaTrackerViewModel
+) : ViewModel() {
 
     private val calendar get() = Calendar.getInstance()
     private val currentMonth get() = calendar.get(Calendar.MONTH) + 1  // 1-12
@@ -70,23 +75,31 @@ class SalaryViewModel(private val repository: PaisaTrackerRepository) : ViewMode
                     receivedAt = System.currentTimeMillis()
                 )
             )
+            globalViewModel.showToast("Salary added successfully")
         }
     }
 
     fun updateSalary(record: SalaryRecord) {
-        viewModelScope.launch { repository.updateSalaryRecord(record) }
+        viewModelScope.launch {
+            repository.updateSalaryRecord(record)
+            globalViewModel.showToast("Salary updated")
+        }
     }
 
     fun deleteSalary(record: SalaryRecord) {
-        viewModelScope.launch { repository.deleteSalaryRecord(record) }
+        viewModelScope.launch {
+            repository.deleteSalaryRecord(record)
+            globalViewModel.showToast("Salary deleted", ToastType.INFO)
+        }
     }
 }
 
 class SalaryViewModelFactory(
-    private val repository: PaisaTrackerRepository
+    private val repository: PaisaTrackerRepository,
+    private val globalViewModel: PaisaTrackerViewModel
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         @Suppress("UNCHECKED_CAST")
-        return SalaryViewModel(repository) as T
+        return SalaryViewModel(repository, globalViewModel) as T
     }
 }

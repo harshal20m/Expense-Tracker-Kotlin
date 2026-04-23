@@ -199,7 +199,7 @@ fun SettingsScreen(
                             }
                             context.startActivity(Intent.createChooser(intent, "Share PaisaTracker"))
                         } catch (e: Exception) {
-                            Toast.makeText(context, "Unable to share APK", Toast.LENGTH_SHORT).show()
+                            viewModel.showToast("Unable to share APK", com.example.paisatracker.ui.common.ToastType.ERROR)
                         }
                     }
                 )
@@ -229,7 +229,7 @@ fun SettingsScreen(
                             context.startActivity(intent)
                         } else {
                             viewModel.checkForUpdates(isManual = true)
-                            Toast.makeText(context, "Checking for updates...", Toast.LENGTH_SHORT).show()
+                            viewModel.showToast("Checking for updates...", com.example.paisatracker.ui.common.ToastType.INFO)
                         }
                     }
                 )
@@ -266,6 +266,7 @@ fun SettingsScreen(
 
     if (showAppLockDialog) {
         AppLockSettingsDialog(
+            viewModel          = viewModel,
             appLockPrefs       = appLockPrefs,
             isAppLockEnabled   = isAppLockEnabled,
             isBiometricEnabled = isBiometricEnabled,
@@ -292,7 +293,7 @@ fun SettingsScreen(
                                 .seedInitialDataIfUserAccepts(context, true)
                             isResetting = false
                             showResetDialog = false
-                            Toast.makeText(context, "Default data added!", Toast.LENGTH_SHORT).show()
+                            viewModel.showToast("Default data added!", com.example.paisatracker.ui.common.ToastType.SUCCESS)
                         }
                     },
                     enabled = !isResetting
@@ -312,19 +313,27 @@ fun SettingsScreen(
 
     if (showNotificationDialog) NotificationSettingsBottomSheet(viewModel = viewModel, onDismiss = { showNotificationDialog = false })
     if (showBatteryDialog)      BatteryOptimizationBottomSheet(onDismiss = { showBatteryDialog = false })
-    if (showAboutDialog)        AboutBottomSheet(onDismiss = { showAboutDialog = false })
+    if (showAboutDialog)        AboutBottomSheet(viewModel = viewModel, onDismiss = { showAboutDialog = false })
     if (showThemeDialog) {
         ThemeSelectionBottomSheet(
             currentTheme     = currentTheme,
             onDismiss        = { showThemeDialog = false },
-            onThemeSelected  = { settingsViewModel.saveTheme(it); showThemeDialog = false }
+            onThemeSelected  = { 
+                settingsViewModel.saveTheme(it)
+                viewModel.showToast("Theme updated to ${it.themeName}")
+                showThemeDialog = false 
+            }
         )
     }
     if (showCurrencyDialog) {
         CurrencySelectionBottomSheet(
             currentCurrency  = selectedCurrency,
             onDismiss        = { showCurrencyDialog = false },
-            onCurrencySelected = { settingsViewModel.saveCurrency(it.code); showCurrencyDialog = false }
+            onCurrencySelected = { 
+                settingsViewModel.saveCurrency(it.code)
+                viewModel.showToast("Currency updated to ${it.code}")
+                showCurrencyDialog = false 
+            }
         )
     }
 }

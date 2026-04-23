@@ -69,6 +69,7 @@ import com.example.paisatracker.PaisaTrackerViewModel
 import com.example.paisatracker.data.BackupMetadata
 import com.example.paisatracker.data.ProjectWithTotal
 import com.example.paisatracker.ui.assets.CompactHeader
+import com.example.paisatracker.ui.common.ToastType
 import com.example.paisatracker.util.BackupManager
 import com.example.paisatracker.util.formatCurrency
 import kotlinx.coroutines.launch
@@ -109,8 +110,8 @@ fun ExportScreen(
             result.data?.data?.also { uri ->
                 scope.launch {
                     isBackingUp = true
-                    if (backupManager.createFullBackup(uri) != null) Toast.makeText(context, "✅ Backup Created!", Toast.LENGTH_SHORT).show()
-                    else Toast.makeText(context, "❌ Backup Failed!", Toast.LENGTH_SHORT).show()
+                    if (backupManager.createFullBackup(uri) != null) viewModel.showToast("Backup Created!", ToastType.SUCCESS)
+                    else viewModel.showToast("Backup Failed!", ToastType.ERROR)
                     isBackingUp = false
                 }
             }
@@ -132,7 +133,7 @@ fun ExportScreen(
                             os.write(csvData.toByteArray(Charsets.UTF_8))
                         }
                         lastExportedUri = uri
-                        Toast.makeText(context, "📊 CSV Exported!", Toast.LENGTH_SHORT).show()
+                        viewModel.showToast("CSV Exported!", ToastType.SUCCESS)
                     }
                 }
             }
@@ -144,8 +145,8 @@ fun ExportScreen(
             selectedProject?.let { project ->
                 scope.launch {
                     isImportingCsv = true
-                    if (viewModel.importFromCsv(context, it, project.project.id)) Toast.makeText(context, "📥 CSV Imported!", Toast.LENGTH_SHORT).show()
-                    else Toast.makeText(context, "⚠️ Import Failed!", Toast.LENGTH_SHORT).show()
+                    if (viewModel.importFromCsv(context, it, project.project.id)) viewModel.showToast("CSV Imported!", ToastType.SUCCESS)
+                    else viewModel.showToast("Import Failed!", ToastType.ERROR)
                     isImportingCsv = false
                 }
             }
@@ -171,8 +172,8 @@ fun ExportScreen(
                     pendingRestoreUri?.let { uri ->
                         scope.launch {
                             isRestoring = true
-                            if (backupManager.restoreFromBackup(uri)) Toast.makeText(context, "✅ Restore Successful!", Toast.LENGTH_LONG).show()
-                            else Toast.makeText(context, "❌ Restore Failed!", Toast.LENGTH_SHORT).show()
+                            if (backupManager.restoreFromBackup(uri)) viewModel.showToast("Restore Successful!", ToastType.SUCCESS)
+                            else viewModel.showToast("Restore Failed!", ToastType.ERROR)
                             isRestoring = false
                         }
                     }
@@ -184,7 +185,7 @@ fun ExportScreen(
         if (showDeleteBackupDialog && backupToDelete != null) {
             DeleteBackupDialog(backupToDelete!!, { showDeleteBackupDialog = false }, {
                 scope.launch {
-                    if (backupManager.deleteBackupFile(backupToDelete!!)) Toast.makeText(context, "🗑️ Deleted!", Toast.LENGTH_SHORT).show()
+                    if (backupManager.deleteBackupFile(backupToDelete!!)) viewModel.showToast("Backup deleted", ToastType.INFO)
                 }
                 showDeleteBackupDialog = false
             })
@@ -227,7 +228,7 @@ fun ExportScreen(
                                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                 }
                                 context.startActivity(Intent.createChooser(intent, "Share Backup"))
-                            } catch (e: Exception) { Toast.makeText(context, "❌ Share Failed", Toast.LENGTH_SHORT).show() }
+                            } catch (e: Exception) { viewModel.showToast("Share Failed", ToastType.ERROR) }
                         }
                     )
                 }

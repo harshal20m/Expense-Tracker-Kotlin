@@ -23,6 +23,7 @@ import androidx.lifecycle.lifecycleScope
 import com.example.paisatracker.data.AppLockPreferences
 import com.example.paisatracker.data.AppTheme
 import com.example.paisatracker.data.DataSeeder
+import com.example.paisatracker.data.EmojiPreferencesRepository
 import com.example.paisatracker.data.ThemePreferencesRepository
 import com.example.paisatracker.ui.applock.AppLockScreen
 import com.example.paisatracker.ui.main.MainApp
@@ -40,6 +41,7 @@ class MainActivity : FragmentActivity() {
         PaisaTrackerViewModelFactory(
             (application as PaisaTrackerApplication).repository,
             (application as PaisaTrackerApplication).currencyPreferencesRepository,
+            EmojiPreferencesRepository.getInstance(this),
             updateManager
         )
     }

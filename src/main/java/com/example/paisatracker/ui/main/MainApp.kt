@@ -8,6 +8,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
@@ -15,12 +17,14 @@ import com.example.paisatracker.PaisaTrackerViewModel
 import com.example.paisatracker.navigation.AppNavigation
 import com.example.paisatracker.ui.common.BottomNavigationBar
 import com.example.paisatracker.ui.common.BreadcrumbNavigation
+import com.example.paisatracker.ui.common.PaisaToast
 import com.example.paisatracker.ui.flap.QuickAccessFlap
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainApp(viewModel: PaisaTrackerViewModel) {
     val navController = rememberNavController()
+    val toastMessage by viewModel.toastMessage.collectAsState()
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -56,6 +60,12 @@ fun MainApp(viewModel: PaisaTrackerViewModel) {
             // bottomNavHeight = BottomNavItem height (72dp) + vertical padding (8dp top + 24dp bottom) = 104dp
             QuickAccessFlap(
                 viewModel = viewModel,
+            )
+
+            // ── Layer 4: Global Toasts ─────────────────────────────────────
+            PaisaToast(
+                toast = toastMessage,
+                onDismiss = { viewModel.dismissToast() }
             )
         }
     }

@@ -28,7 +28,14 @@ class SearchViewModel(private val repository: PaisaTrackerRepository) : ViewMode
     private val _isSearchActive = MutableStateFlow(false)
     val isSearchActive: StateFlow<Boolean> = _isSearchActive
 
+    private val _projectId = MutableStateFlow<Long?>(null)
+    val projectId: StateFlow<Long?> = _projectId
+
     private var searchJob: Job? = null
+
+    fun setProjectId(id: Long?) {
+        _projectId.value = id
+    }
 
     fun onSearchQueryChanged(query: String) {
         _searchQuery.value = query
@@ -49,6 +56,7 @@ class SearchViewModel(private val repository: PaisaTrackerRepository) : ViewMode
             val query = _searchQuery.value.trim()
             val min = _minAmount.value.toDoubleOrNull()
             val max = _maxAmount.value.toDoubleOrNull()
+            val currentProjectId = _projectId.value
 
             if (query.isBlank() && min == null && max == null) {
                 _searchResults.value = emptyList()
@@ -56,9 +64,9 @@ class SearchViewModel(private val repository: PaisaTrackerRepository) : ViewMode
             }
 
             val resultsFlow = if (query.isNotBlank()) {
-                repository.searchExpensesByDescription(query, null)
+                repository.searchExpensesByDescription(query, currentProjectId)
             } else {
-                repository.searchExpensesByAmount(min, max, null)
+                repository.searchExpensesByAmount(min, max, currentProjectId)
             }
 
             _searchResults.value = resultsFlow.first()
@@ -71,6 +79,7 @@ class SearchViewModel(private val repository: PaisaTrackerRepository) : ViewMode
         _maxAmount.value = ""
         _searchResults.value = emptyList()
         _isSearchActive.value = false
+        _projectId.value = null
         searchJob?.cancel()
     }
 }

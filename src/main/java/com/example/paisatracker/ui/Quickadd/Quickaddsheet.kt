@@ -71,8 +71,11 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.paisatracker.PaisaTrackerApplication
 import com.example.paisatracker.R
+import com.example.paisatracker.PaisaTrackerViewModel
 import com.example.paisatracker.data.Category
 import com.example.paisatracker.data.Project
+import com.example.paisatracker.ui.common.EmojiPickerSheet
+import com.example.paisatracker.ui.common.ToastType
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -85,6 +88,7 @@ import java.util.Locale
 @Composable
 fun QuickAddSheet(
     onDismiss: () -> Unit,
+    viewModel: PaisaTrackerViewModel,
     currencySymbol: String = "₹"
 ) {
     val context     = LocalContext.current
@@ -117,11 +121,11 @@ fun QuickAddSheet(
     // Handle submit result side effects
     LaunchedEffect(submitResult) {
         if (submitResult is QuickAddResult.Success) {
-            Toast.makeText(context, "Expense saved!", Toast.LENGTH_SHORT).show()
+            viewModel.showToast("Expense saved!")
             vm.reset()
             onDismiss()
         } else if (submitResult is QuickAddResult.Error) {
-            Toast.makeText(context, (submitResult as QuickAddResult.Error).message, Toast.LENGTH_SHORT).show()
+            viewModel.showToast((submitResult as QuickAddResult.Error).message, ToastType.ERROR)
         }
     }
 
@@ -207,6 +211,7 @@ fun QuickAddSheet(
             isCreatingNew = isCreatingCat,
             newCategoryName = vm.newCategoryName.collectAsState().value,
             newCategoryEmoji = vm.newCategoryEmoji.collectAsState().value,
+            viewModel = viewModel,
             onCategorySelected = { vm.onCategorySelected(it) },
             onStartCreate = { vm.startCreatingCategory() },
             onCancelCreate = { vm.cancelCreatingCategory() },
@@ -508,6 +513,7 @@ private fun CategorySelector(
     isCreatingNew: Boolean,
     newCategoryName: String,
     newCategoryEmoji: String,
+    viewModel: PaisaTrackerViewModel,
     onCategorySelected: (Category) -> Unit,
     onStartCreate: () -> Unit,
     onCancelCreate: () -> Unit,
@@ -529,6 +535,7 @@ private fun CategorySelector(
             NewCategoryInlineCard(
                 name = newCategoryName,
                 emoji = newCategoryEmoji,
+                viewModel = viewModel,
                 onNameChange = onNewNameChange,
                 onEmojiChange = onNewEmojiChange,
                 onConfirm = onConfirmCreate,
@@ -641,12 +648,12 @@ private fun CategorySelector(
 private fun NewCategoryInlineCard(
     name: String,
     emoji: String,
+    viewModel: PaisaTrackerViewModel,
     onNameChange: (String) -> Unit,
     onEmojiChange: (String) -> Unit,
     onConfirm: () -> Unit,
     onCancel: () -> Unit
 ) {
-    val commonEmojis = listOf("📂","🛒","🍔","🚗","💊","📚","🎮","☕","✈️","👗","🏋️","💡","🎬","🔧","🎵","📱")
     var showEmojiPicker by remember { mutableStateOf(false) }
 
     Column(
@@ -734,27 +741,24 @@ private fun NewCategoryInlineCard(
             }
         }
 
-        // Emoji quick-pick row
-        AnimatedVisibility(visible = showEmojiPicker) {
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                contentPadding = PaddingValues(vertical = 2.dp)
-            ) {
-                items(commonEmojis) { e ->
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(
-                                if (emoji == e) MaterialTheme.colorScheme.primaryContainer
-                                else MaterialTheme.colorScheme.surface
-                            )
-                            .clickable { onEmojiChange(e); showEmojiPicker = false },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(e, fontSize = 18.sp)
+        // Emoji picker
+        AnimatedVisibility(
+            visible = showEmojiPicker,
+            enter = expandVertically() + fadeIn(),
+            exit = shrinkVertically() + fadeOut()
+        ) {
+            Column {
+                Spacer(Modifier.height(8.dp))
+                EmojiPickerSheet(
+                    contextHint = name,
+                    selectedEmoji = emoji,
+                    viewModel = viewModel,
+                    onEmojiSelected = {
+                        viewModel.recordEmojiUsage(it)
+                        onEmojiChange(it)
+                        showEmojiPicker = false
                     }
-                }
+                )
             }
         }
     }

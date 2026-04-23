@@ -1,4 +1,4 @@
-package com.example.paisatracker.ui.components.emoji
+package com.example.paisatracker.data
 
 /**
  * Comprehensive emoji dataset organized by semantic category.

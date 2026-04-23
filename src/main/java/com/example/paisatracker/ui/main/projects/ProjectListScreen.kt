@@ -291,7 +291,7 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
                                 }
                             },
                             onProjectClick   = {
-                                viewModel.updateProject(pwt.project.copy(lastModified = System.currentTimeMillis()))
+                                viewModel.updateProject(pwt.project.copy(lastModified = System.currentTimeMillis()), notify = false)
                                 val newMap = mutableMapOf<Long, Int>()
                                 newMap[pwt.project.id] = 0
                                 orderedProjects.forEachIndexed { i, p ->
@@ -335,6 +335,7 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
                 onDismiss      = {
                     scope.launch { quickAddState.hide() }.invokeOnCompletion { showQuickAdd = false }
                 },
+                viewModel      = viewModel,
                 currencySymbol = currency.symbol
             )
         }
@@ -353,6 +354,7 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
         ) {
             when (currentSheetType) {
                 SheetType.ADD -> AddProjectSheetContent(
+                    viewModel = viewModel,
                     onCancel  = { showSheet = false; currentSheetType = null },
                     onConfirm = { name, emoji ->
                         if (name.isNotBlank()) {
@@ -367,6 +369,7 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
                     EditProjectSheetContent(
                         currentName  = pwt.project.name,
                         currentEmoji = pwt.project.emoji,
+                        viewModel    = viewModel,
                         onCancel     = { showSheet = false; currentSheetType = null; projectToEdit = null },
                         onConfirm    = { name, emoji ->
                             viewModel.updateProject(pwt.project.copy(name = name, emoji = emoji))

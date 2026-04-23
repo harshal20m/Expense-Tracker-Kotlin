@@ -94,7 +94,6 @@ fun BudgetScreen(
     onNavigateBack: () -> Unit,
     currencySymbol: String = "₹"
 ) {
-    val context = LocalContext.current
     val allBudgets by viewModel.budgetsWithSpending.collectAsState()
     val activeBudgets = allBudgets.filter { it.budget.isActive }
     val inactiveBudgets = allBudgets.filter { !it.budget.isActive }
@@ -161,7 +160,7 @@ fun BudgetScreen(
         ) {
             // ── Salary Tracker Section (Full width, always visible) ──────────
             item(span = { GridItemSpan(maxLineSpan) }) {
-                SalaryTrackerSection()
+                SalaryTrackerSection(viewModel)
             }
 
             // ── Add Normal Budget Heading ──────────────────────────────────
@@ -200,7 +199,6 @@ fun BudgetScreen(
                         onDelete = { budgetToDelete = bws.budget },
                         onToggle = {
                             viewModel.toggleBudgetActive(bws.budget.id, !bws.budget.isActive)
-                            android.widget.Toast.makeText(context, "Budget paused", android.widget.Toast.LENGTH_SHORT).show()
                         }
                     )
                 }
@@ -228,7 +226,6 @@ fun BudgetScreen(
                         onDelete = { budgetToDelete = bws.budget },
                         onToggle = {
                             viewModel.toggleBudgetActive(bws.budget.id, !bws.budget.isActive)
-                            android.widget.Toast.makeText(context, "Budget activated", android.widget.Toast.LENGTH_SHORT).show()
                         }
                     )
                 }

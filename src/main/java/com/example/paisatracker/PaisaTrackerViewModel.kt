@@ -18,6 +18,7 @@ import com.example.paisatracker.data.CategoryWithTotal
 import com.example.paisatracker.data.Currency
 import com.example.paisatracker.data.CurrencyList
 import com.example.paisatracker.data.CurrencyPreferencesRepository
+import com.example.paisatracker.data.EmojiPreferencesRepository
 import com.example.paisatracker.data.Expense
 import com.example.paisatracker.data.FlapData
 import com.example.paisatracker.data.FlapNote
@@ -30,6 +31,8 @@ import com.example.paisatracker.util.UpdateManager
 import com.example.paisatracker.data.serializeHistory
 import com.example.paisatracker.data.serializeNotes
 import com.example.paisatracker.util.ImageUtils
+import com.example.paisatracker.ui.common.ToastMessage
+import com.example.paisatracker.ui.common.ToastType
 import com.opencsv.CSVReader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -57,6 +60,7 @@ import java.util.UUID
 class PaisaTrackerViewModel(
     private val repository: PaisaTrackerRepository,
     currencyPreferencesRepository: CurrencyPreferencesRepository,
+    private val emojiPreferencesRepository: EmojiPreferencesRepository? = null,
     private val updateManager: UpdateManager? = null
 ) : ViewModel() {
 
@@ -71,6 +75,29 @@ class PaisaTrackerViewModel(
 
     fun dismissUpdate() {
         updateManager?.dismissUpdate()
+    }
+
+    // ── Toast System ─────────────────────────────────────────────────────────
+    private val _toastMessage = MutableStateFlow<ToastMessage?>(null)
+    val toastMessage = _toastMessage.asStateFlow()
+
+    fun showToast(message: String, type: ToastType = ToastType.SUCCESS) {
+        _toastMessage.value = ToastMessage(message, type)
+    }
+
+    fun dismissToast() {
+        _toastMessage.value = null
+    }
+
+    // ── Emoji System ────────────────────────────────────────────────────────
+    val mostUsedEmojis: StateFlow<List<String>> = emojiPreferencesRepository?.mostUsedEmojis
+        ?.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        ?: MutableStateFlow(emptyList())
+
+    fun recordEmojiUsage(emoji: String) {
+        viewModelScope.launch {
+            emojiPreferencesRepository?.recordEmojiUsage(emoji)
+        }
     }
 
     //budget
@@ -125,18 +152,21 @@ class PaisaTrackerViewModel(
     fun addBudget(budget: Budget) {
         viewModelScope.launch {
             repository.insertBudget(budget)
+            showToast("Budget created successfully")
         }
     }
 
     fun deleteBudget(budget: Budget) {
         viewModelScope.launch {
             repository.deleteBudget(budget)
+            showToast("Budget deleted", ToastType.INFO)
         }
     }
 
     fun updateBudget(budget: Budget) {
         viewModelScope.launch {
             repository.updateBudget(budget)
+            showToast("Budget updated")
         }
     }
 
@@ -144,6 +174,7 @@ class PaisaTrackerViewModel(
     fun toggleBudgetActive(budgetId: Long, isActive: Boolean) {
         viewModelScope.launch {
             repository.toggleBudgetActive(budgetId, isActive)
+            showToast(if (isActive) "Budget activated" else "Budget paused", ToastType.INFO)
         }
     }
 
@@ -220,15 +251,18 @@ class PaisaTrackerViewModel(
         if (text.isBlank()) return
         val note = FlapNote(id = UUID.randomUUID().toString(), text = text.trim())
         flapNotes.value = listOf(note) + flapNotes.value   // newest first
+        showToast("Note added")
     }
 
     fun editFlapNote(id: String, newText: String) {
         if (newText.isBlank()) { deleteFlapNote(id); return }
         flapNotes.value = flapNotes.value.map { if (it.id == id) it.copy(text = newText.trim()) else it }
+        showToast("Note updated")
     }
 
     fun deleteFlapNote(id: String) {
         flapNotes.value = flapNotes.value.filter { it.id != id }
+        showToast("Note deleted", ToastType.INFO)
     }
 
     // ── Debounced persistence ─────────────────────────────────────────────────
@@ -293,6 +327,7 @@ class PaisaTrackerViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             ImageUtils.deleteImage(asset.imagePath)
             repository.deleteAsset(asset)
+            showToast("Attachment deleted", ToastType.INFO)
         }
     }
 
@@ -378,27 +413,45 @@ class PaisaTrackerViewModel(
 
 
     fun insertProject(project: Project) {
-        viewModelScope.launch { repository.insertProject(project) }
+        viewModelScope.launch { 
+            repository.insertProject(project)
+            showToast("Project '${project.name}' created")
+        }
     }
 
-    fun updateProject(project: Project) {
-        viewModelScope.launch { repository.updateProject(project) }
+    fun updateProject(project: Project, notify: Boolean = true) {
+        viewModelScope.launch { 
+            repository.updateProject(project)
+            if (notify) showToast("Project updated")
+        }
     }
 
     fun deleteProject(project: Project) {
-        viewModelScope.launch { repository.deleteProject(project) }
+        viewModelScope.launch { 
+            repository.deleteProject(project)
+            showToast("Project deleted", ToastType.INFO)
+        }
     }
 
     fun insertCategory(category: Category) {
-        viewModelScope.launch { repository.insertCategory(category) }
+        viewModelScope.launch { 
+            repository.insertCategory(category)
+            showToast("Category '${category.name}' added")
+        }
     }
 
     fun updateCategory(category: Category) {
-        viewModelScope.launch { repository.updateCategory(category) }
+        viewModelScope.launch { 
+            repository.updateCategory(category)
+            showToast("Category updated")
+        }
     }
 
     fun deleteCategory(category: Category) {
-        viewModelScope.launch { repository.deleteCategory(category) }
+        viewModelScope.launch { 
+            repository.deleteCategory(category)
+            showToast("Category deleted", ToastType.INFO)
+        }
     }
 
     fun getExpensesForCategory(categoryId: Long): Flow<List<Expense>> =
@@ -410,15 +463,22 @@ class PaisaTrackerViewModel(
         viewModelScope.launch {
             val newId = repository.insertExpense(expense)
             onInserted(newId)
+            showToast("Expense added")
         }
     }
 
     fun updateExpense(expense: Expense) {
-        viewModelScope.launch { repository.updateExpense(expense) }
+        viewModelScope.launch { 
+            repository.updateExpense(expense)
+            showToast("Expense updated")
+        }
     }
 
     fun deleteExpense(expense: Expense) {
-        viewModelScope.launch { repository.deleteExpense(expense) }
+        viewModelScope.launch { 
+            repository.deleteExpense(expense)
+            showToast("Expense removed", ToastType.INFO)
+        }
     }
 
 
@@ -619,11 +679,13 @@ class PaisaTrackerViewModel(
 
                         repository.insertExpense(expense)
                     }
+                    showToast("Imported successfully")
                 }
             }
             true
         } catch (e: Exception) {
             e.printStackTrace()
+            showToast("Import failed", ToastType.ERROR)
             false
         }
     }
@@ -632,12 +694,13 @@ class PaisaTrackerViewModel(
 class PaisaTrackerViewModelFactory(
     private val repository: PaisaTrackerRepository,
     private val currencyPreferencesRepository: CurrencyPreferencesRepository,
+    private val emojiPreferencesRepository: EmojiPreferencesRepository,
     private val updateManager: UpdateManager? = null
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(PaisaTrackerViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return PaisaTrackerViewModel(repository, currencyPreferencesRepository, updateManager) as T
+            return PaisaTrackerViewModel(repository, currencyPreferencesRepository, emojiPreferencesRepository, updateManager) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

@@ -15,11 +15,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.paisatracker.data.AppLockPreferences
+import com.example.paisatracker.PaisaTrackerViewModel
+import com.example.paisatracker.ui.common.ToastType
 import com.example.paisatracker.util.BiometricHelper
 import kotlinx.coroutines.launch
 
 @Composable
 fun AppLockSettingsDialog(
+    viewModel: PaisaTrackerViewModel,
     appLockPrefs: AppLockPreferences,
     isAppLockEnabled: Boolean,
     isBiometricEnabled: Boolean,
@@ -89,6 +92,9 @@ fun AppLockSettingsDialog(
                                         // If app lock disabled, also disable biometric
                                         appLockPrefs.setBiometricEnabled(false)
                                         localBiometricEnabled = false
+                                        viewModel.showToast("App Lock disabled", ToastType.INFO)
+                                    } else {
+                                        viewModel.showToast("App Lock enabled", ToastType.SUCCESS)
                                     }
                                 }
                             }
@@ -140,11 +146,10 @@ fun AppLockSettingsDialog(
                                         localBiometricEnabled = it
                                         scope.launch {
                                             appLockPrefs.setBiometricEnabled(it)
-                                            Toast.makeText(
-                                                context,
+                                            viewModel.showToast(
                                                 if (it) "Biometric enabled" else "Biometric disabled",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
+                                                ToastType.INFO
+                                            )
                                         }
                                     }
                                 )
@@ -222,7 +227,7 @@ fun AppLockSettingsDialog(
             onPinSet = { newPin ->
                 scope.launch {
                     appLockPrefs.setPinCode(newPin)
-                    Toast.makeText(context, "PIN changed successfully", Toast.LENGTH_SHORT).show()
+                    viewModel.showToast("PIN changed successfully", ToastType.SUCCESS)
                     showChangePinDialog = false
                 }
             }

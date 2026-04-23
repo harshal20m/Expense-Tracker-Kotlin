@@ -37,7 +37,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -61,9 +61,10 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import com.example.paisatracker.ui.components.emoji.EmojiPickerSheet
-import com.example.paisatracker.ui.components.emoji.EmojiSuggestionEngine
-import com.example.paisatracker.ui.components.emoji.EmojiChip
+import com.example.paisatracker.PaisaTrackerViewModel
+import com.example.paisatracker.ui.common.EmojiPickerSheet
+import com.example.paisatracker.data.EmojiSuggestionEngine
+import com.example.paisatracker.ui.common.EmojiChip
 
 // ── Add project sheet ─────────────────────────────────────────────────────────
 
@@ -76,6 +77,7 @@ import com.example.paisatracker.ui.components.emoji.EmojiChip
  */
 @Composable
 fun AddProjectSheetContent(
+    viewModel: PaisaTrackerViewModel,
     onCancel: () -> Unit,
     onConfirm: (name: String, emoji: String) -> Unit
 ) {
@@ -162,7 +164,7 @@ fun AddProjectSheetContent(
                                 emoji = emoji,
                                 isSelected = emoji == selectedEmoji,
                                 onClick = { 
-                                    EmojiSuggestionEngine.recordUsage(emoji)
+                                    viewModel.recordEmojiUsage(emoji)
                                     selectedEmoji = emoji 
                                 },
                                 size = 42
@@ -211,7 +213,7 @@ fun AddProjectSheetContent(
             exit = shrinkVertically() + fadeOut()
         ) {
             Column {
-                Divider(
+                HorizontalDivider(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
                 )
@@ -241,7 +243,9 @@ fun AddProjectSheetContent(
                 EmojiPickerSheet(
                     contextHint = projectName,
                     selectedEmoji = selectedEmoji,
+                    viewModel = viewModel,
                     onEmojiSelected = {
+                        viewModel.recordEmojiUsage(it)
                         selectedEmoji = it
                         showEmojiPicker = false
                     }
@@ -287,6 +291,7 @@ fun AddProjectSheetContent(
 fun EditProjectSheetContent(
     currentName: String,
     currentEmoji: String,
+    viewModel: PaisaTrackerViewModel,
     onCancel: () -> Unit,
     onConfirm: (name: String, emoji: String) -> Unit
 ) {
@@ -371,7 +376,7 @@ fun EditProjectSheetContent(
                                 emoji = emoji,
                                 isSelected = emoji == selectedEmoji,
                                 onClick = { 
-                                    EmojiSuggestionEngine.recordUsage(emoji)
+                                    viewModel.recordEmojiUsage(emoji)
                                     selectedEmoji = emoji 
                                 },
                                 size = 42
@@ -401,7 +406,7 @@ fun EditProjectSheetContent(
             exit = shrinkVertically() + fadeOut()
         ) {
             Column {
-                Divider(
+                HorizontalDivider(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
                 )
@@ -417,7 +422,9 @@ fun EditProjectSheetContent(
                 EmojiPickerSheet(
                     contextHint = editedName,
                     selectedEmoji = selectedEmoji,
+                    viewModel = viewModel,
                     onEmojiSelected = {
+                        viewModel.recordEmojiUsage(it)
                         selectedEmoji = it
                         showEmojiPicker = false
                     }

@@ -440,6 +440,7 @@ fun NotificationSettingsBottomSheet(
                     onClick = {
                         saveNotificationSettings(context, selectedHour, isEnabled)
                         rescheduleNotification(context, selectedHour, isEnabled)
+                        viewModel.showToast(if (isEnabled) "Reminders scheduled for ${formatTime(selectedHour)}" else "Reminders disabled")
                         onDismiss()
                     },
                     modifier = Modifier.weight(1f),

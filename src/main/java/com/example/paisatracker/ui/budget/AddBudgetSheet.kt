@@ -1,17 +1,28 @@
 package com.example.paisatracker.ui.budget
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -20,6 +31,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -29,10 +41,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,6 +54,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -47,23 +62,10 @@ import androidx.compose.ui.unit.sp
 import com.example.paisatracker.PaisaTrackerViewModel
 import com.example.paisatracker.data.Budget
 import com.example.paisatracker.data.BudgetPeriod
+import com.example.paisatracker.ui.common.EmojiChip
+import com.example.paisatracker.ui.common.EmojiPickerSheet
+import com.example.paisatracker.data.EmojiSuggestionEngine
 
-private val budgetEmojis = listOf(
-    "📁", "💼", "🏠", "🚗", "✈️", "🎓", "💰", "🏥", "🛒", "🎯",
-    "📱", "💻", "🎨", "🎬", "🎮", "📚", "☕", "🍕", "🎉", "💡",
-    "🔧", "🏃", "🎵", "📷", "🌟", "🔥", "💎", "🎁", "🌈", "⚡",
-    "🧾", "💳", "🏦", "📈", "📉", "💱", "🪙",
-    "🍔", "🥗", "🍱", "🍻", "🧃",
-    "👗", "👟", "💄", "👜", "🎒",
-    "🔌", "🚿", "🧹", "🪑",
-    "🚌", "🚕", "🚆", "⛽", "🛞",
-    "✏️", "📝", "🧠",
-    "🧴", "🧼", "💊", "🩺", "🛌",
-    "🎧", "🏟️", "🎢", "🎤",
-    "🛠️", "🧾", "🧯",
-    "🧳", "📅", "📊",
-    "🧘", "🌿", "🐾", "🎈", "👶", "🎀", "🔑"
-)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -85,6 +87,19 @@ fun AddBudgetSheet(
     var nameError by remember { mutableStateOf(false) }
     var amountError by remember { mutableStateOf(false) }
     var projectError by remember { mutableStateOf(false) }
+    var showEmojiPicker by remember { mutableStateOf(false) }
+
+    val suggestions by remember(name) {
+        derivedStateOf {
+            EmojiSuggestionEngine.suggest(name, maxResults = 8)
+        }
+    }
+
+    val emojiScale by animateFloatAsState(
+        targetValue = if (showEmojiPicker) 1.1f else 1f,
+        animationSpec = spring(dampingRatio = 0.4f, stiffness = 500f),
+        label = "emoji_scale"
+    )
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val isEditMode = budgetToEdit != null
@@ -231,37 +246,97 @@ fun AddBudgetSheet(
                 )
             }
 
-            // Emoji picker
-            Text(
-                text = "Choose Icon",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.padding(bottom = 20.dp)
+            // Emoji Preview and Suggestions
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                items(budgetEmojis) { e ->
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(CircleShape)
-                            .background(
-                                if (emoji == e) MaterialTheme.colorScheme.primaryContainer
-                                else MaterialTheme.colorScheme.surfaceVariant
-                            )
-                            .border(
-                                width = if (emoji == e) 2.dp else 0.dp,
-                                color = if (emoji == e) MaterialTheme.colorScheme.primary
-                                else androidx.compose.ui.graphics.Color.Transparent,
-                                shape = CircleShape
-                            )
-                            .clickable { emoji = e },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(text = e, fontSize = 22.sp)
+                Surface(
+                    onClick = { showEmojiPicker = !showEmojiPicker },
+                    shape = CircleShape,
+                    modifier = Modifier.size(80.dp).scale(emojiScale),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                    border = BorderStroke(
+                        2.dp,
+                        if (showEmojiPicker) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                    )
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(emoji, fontSize = 38.sp)
                     }
+                }
+
+                AnimatedVisibility(
+                    visible = suggestions.isNotEmpty() && name.isNotBlank(),
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text("✨", fontSize = 12.sp)
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                "Suggested Icons",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            contentPadding = PaddingValues(horizontal = 4.dp)
+                        ) {
+                            items(suggestions) { e ->
+                                EmojiChip(
+                                    emoji = e,
+                                    isSelected = e == emoji,
+                                    onClick = {
+                                        viewModel.recordEmojiUsage(e)
+                                        emoji = e
+                                    },
+                                    size = 42
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Emoji picker (collapsible)
+            AnimatedVisibility(
+                visible = showEmojiPicker,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                Column {
+                    HorizontalDivider(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                    )
+                    Spacer(Modifier.height(12.dp))
+
+                    EmojiPickerSheet(
+                        contextHint = name,
+                        selectedEmoji = emoji,
+                        viewModel = viewModel,
+                        onEmojiSelected = {
+                            viewModel.recordEmojiUsage(it)
+                            emoji = it
+                            showEmojiPicker = false
+                        }
+                    )
+                    Spacer(Modifier.height(20.dp))
                 }
             }
 
@@ -352,6 +427,7 @@ fun AddBudgetSheet(
                             viewModel.updateBudget(updatedBudget)
                         } else {
                             // Create new budget
+                            viewModel.recordEmojiUsage(emoji)
                             viewModel.addBudget(
                                 Budget(
                                     name = name.trim(),

@@ -35,6 +35,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.paisatracker.PaisaTrackerViewModel
+import com.example.paisatracker.ui.common.ToastType
 import com.example.paisatracker.R
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -74,7 +76,10 @@ private val versionSecrets = listOf(
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun AboutBottomSheet(onDismiss: () -> Unit) {
+fun AboutBottomSheet(
+    viewModel: PaisaTrackerViewModel,
+    onDismiss: () -> Unit
+) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -316,25 +321,25 @@ fun AboutBottomSheet(onDismiss: () -> Unit) {
                             iconRes = R.drawable.ic_instagram,
                             label = "Instagram",
                             modifier = Modifier.weight(1f)
-                        ) { openInstagram(context, "20harshal") }
+                        ) { openInstagram(context, viewModel, "20harshal") }
 
                         SocialChip(
                             iconRes = R.drawable.ic_linkedin,
                             label = "LinkedIn",
                             modifier = Modifier.weight(1f)
-                        ) { openUrl(context, "https://www.linkedin.com/in/harshal-mali-b40b61244/") }
+                        ) { openUrl(context, viewModel, "https://www.linkedin.com/in/harshal-mali-b40b61244/") }
 
                         SocialChip(
                             iconRes = R.drawable.ic_github,
                             label = "GitHub",
                             modifier = Modifier.weight(1f)
-                        ) { openUrl(context, "https://github.com/harshal20m") }
+                        ) { openUrl(context, viewModel, "https://github.com/harshal20m") }
 
                         SocialChip(
                             iconRes = R.drawable.ic_gmail,
                             label = "Email",
                             modifier = Modifier.weight(1f)
-                        ) { openEmail(context, "20harshalmali@gmail.com") }
+                        ) { openEmail(context, viewModel, "20harshalmali@gmail.com") }
 
                         // Easter egg 3: hidden ? button
                         Box(
@@ -424,14 +429,14 @@ fun AboutBottomSheet(onDismiss: () -> Unit) {
                             label = "Discord",
                             subtitle = "Join server",
                             modifier = Modifier.weight(1f)
-                        ) { openUrl(context, "https://discord.gg/kmaqH8CSFD") }
+                        ) { openUrl(context, viewModel, "https://discord.gg/kmaqH8CSFD") }
 
                         CommunityTile(
                             iconRes = R.drawable.ic_telegram,
                             label = "Telegram",
                             subtitle = "Join channel",
                             modifier = Modifier.weight(1f)
-                        ) { openTelegram(context, "paisatrackercommunity") }
+                        ) { openTelegram(context, viewModel, "paisatrackercommunity") }
                     }
                 }
             }
@@ -672,26 +677,26 @@ private fun FeatureRow(text: String) {
 
 // ── URL helpers ───────────────────────────────────────────────────────────────
 
-private fun openUrl(context: Context, url: String) {
+private fun openUrl(context: Context, viewModel: PaisaTrackerViewModel, url: String) {
     try {
         val intent = Intent(Intent.ACTION_VIEW, url.toUri())
         context.startActivity(intent)
     } catch (_: Exception) {
-        Toast.makeText(context, "Unable to open link", Toast.LENGTH_SHORT).show()
+        viewModel.showToast("Unable to open link", ToastType.ERROR)
     }
 }
 
-private fun openInstagram(context: Context, username: String) {
+private fun openInstagram(context: Context, viewModel: PaisaTrackerViewModel, username: String) {
     try {
         val intent = Intent(Intent.ACTION_VIEW, "http://instagram.com/_u/$username".toUri())
         intent.setPackage("com.instagram.android")
         context.startActivity(intent)
     } catch (_: Exception) {
-        openUrl(context, "https://instagram.com/$username")
+        openUrl(context, viewModel, "https://instagram.com/$username")
     }
 }
 
-private fun openEmail(context: Context, email: String) {
+private fun openEmail(context: Context, viewModel: PaisaTrackerViewModel, email: String) {
     try {
         val intent = Intent(Intent.ACTION_SENDTO).apply {
             data = "mailto:$email".toUri()
@@ -699,15 +704,15 @@ private fun openEmail(context: Context, email: String) {
         }
         context.startActivity(Intent.createChooser(intent, "Send Email"))
     } catch (_: Exception) {
-        Toast.makeText(context, "No email app found", Toast.LENGTH_SHORT).show()
+        viewModel.showToast("No email app found", ToastType.ERROR)
     }
 }
 
-private fun openTelegram(context: Context, username: String) {
+private fun openTelegram(context: Context, viewModel: PaisaTrackerViewModel, username: String) {
     try {
         val intent = Intent(Intent.ACTION_VIEW, "tg://resolve?domain=$username".toUri())
         context.startActivity(intent)
     } catch (_: Exception) {
-        openUrl(context, "https://t.me/$username")
+        openUrl(context, viewModel, "https://t.me/$username")
     }
 }

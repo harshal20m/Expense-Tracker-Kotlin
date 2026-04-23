@@ -30,6 +30,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.paisatracker.PaisaTrackerViewModel
 import com.example.paisatracker.PaisaTrackerApplication
 import com.example.paisatracker.data.SalaryRecord
 import com.example.paisatracker.util.formatCurrency
@@ -46,10 +47,10 @@ import java.util.Locale
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SalaryTrackerSection() {
+fun SalaryTrackerSection(viewModel: PaisaTrackerViewModel) {
     val context = LocalContext.current
     val app     = context.applicationContext as PaisaTrackerApplication
-    val vm: SalaryViewModel = viewModel(factory = SalaryViewModelFactory(app.repository))
+    val vm: SalaryViewModel = viewModel(factory = SalaryViewModelFactory(app.repository, viewModel))
 
     val currentSalary    by vm.currentSalary.collectAsState()
     val totalSpent       by vm.totalSpentThisMonth.collectAsState()
@@ -217,7 +218,11 @@ fun SalaryTrackerSection() {
                 existing = currentSalary,
                 onDismiss= { showAddSheet = false },
                 onSave   = { amount, note ->
-                    vm.addSalary(amount, note)
+                    if (currentSalary != null) {
+                        vm.updateSalary(currentSalary!!.copy(amount = amount, note = note))
+                    } else {
+                        vm.addSalary(amount, note)
+                    }
                     showAddSheet = false
                 }
             )
@@ -285,14 +290,20 @@ private fun AddSalarySheet(
         Surface(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)) {
             Row(modifier = Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Top) {
                 Icon(Icons.Default.Info, null, modifier = Modifier.size(16.dp).padding(top = 2.dp), tint = MaterialTheme.colorScheme.primary)
-                Text("Tracking starts from today. All expenses added after this date will be deducted from this salary. Resets when you add a new salary next month.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer, lineHeight = 18.sp)
+                Text("Tracking starts from today. All expenses added after this date will be deducted from this salary. ${if (existing != null) "Updating will replace this month's salary record." else "Resets when you add a new salary next month."}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer, lineHeight = 18.sp)
             }
         }
 
         Button(
             onClick  = {
                 val a = amountText.toDoubleOrNull()
-                if (a != null && a > 0) onSave(a, note)
+                if (a != null && a > 0) {
+                    if (existing != null) {
+                        onSave(a, note) // In this case onSave will handle the update
+                    } else {
+                        onSave(a, note)
+                    }
+                }
             },
             enabled  = amountText.toDoubleOrNull()?.let { it > 0 } == true,
             modifier = Modifier.fillMaxWidth().height(52.dp),

@@ -1,4 +1,4 @@
-package com.example.paisatracker.ui.components.emoji
+package com.example.paisatracker.ui.common
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -58,7 +58,10 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.delay
+import androidx.compose.runtime.collectAsState
+import com.example.paisatracker.PaisaTrackerViewModel
+import com.example.paisatracker.data.EmojiSuggestionEngine
+import com.example.paisatracker.data.allEmojiCategories
 
 /**
  * Smart, full-featured emoji picker with:
@@ -77,6 +80,7 @@ import kotlinx.coroutines.delay
 fun EmojiPickerSheet(
     contextHint: String,
     selectedEmoji: String,
+    viewModel: PaisaTrackerViewModel,
     onEmojiSelected: (String) -> Unit
 ) {
     var searchQuery by remember { mutableStateOf("") }
@@ -84,9 +88,17 @@ fun EmojiPickerSheet(
     var manualInput by remember { mutableStateOf("") }
     var showManualField by remember { mutableStateOf(false) }
 
-    val suggestions by remember(contextHint) {
+    val mostUsedEmojis by viewModel.mostUsedEmojis.collectAsState()
+
+    val suggestions by remember(contextHint, mostUsedEmojis) {
         derivedStateOf {
-            EmojiSuggestionEngine.suggest(contextHint, maxResults = 20)
+            if (contextHint.isBlank()) {
+                (mostUsedEmojis + listOf("💰", "🛒", "🏠", "🍕", "🚗", "💼", "💊", "🎓", "🎬", "🎁"))
+                    .distinct()
+                    .take(15)
+            } else {
+                EmojiSuggestionEngine.suggest(contextHint, maxResults = 20)
+            }
         }
     }
 
@@ -206,7 +218,7 @@ fun EmojiPickerSheet(
                                     emoji = emoji,
                                     isSelected = emoji == selectedEmoji,
                                     onClick = { 
-                                        EmojiSuggestionEngine.recordUsage(emoji)
+                                        viewModel.recordEmojiUsage(emoji)
                                         onEmojiSelected(emoji) 
                                     }
                                 )
@@ -241,7 +253,7 @@ fun EmojiPickerSheet(
                                         emoji = emoji,
                                         isSelected = emoji == selectedEmoji,
                                         onClick = { 
-                                            EmojiSuggestionEngine.recordUsage(emoji)
+                                            viewModel.recordEmojiUsage(emoji)
                                             onEmojiSelected(emoji) 
                                         },
                                         size = 48
@@ -314,7 +326,7 @@ fun EmojiPickerSheet(
                                         emoji = emoji,
                                         isSelected = emoji == selectedEmoji,
                                         onClick = { 
-                                            EmojiSuggestionEngine.recordUsage(emoji)
+                                            viewModel.recordEmojiUsage(emoji)
                                             onEmojiSelected(emoji) 
                                         }
                                     )
@@ -377,7 +389,7 @@ fun EmojiPickerSheet(
                         Surface(
                         onClick = {
                             if (manualInput.isNotBlank()) {
-                                EmojiSuggestionEngine.recordUsage(manualInput.trim())
+                                viewModel.recordEmojiUsage(manualInput.trim())
                                 onEmojiSelected(manualInput.trim())
                                 manualInput = ""
                                 showManualField = false

@@ -1,49 +1,38 @@
 package com.example.paisatracker.ui.details
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.BottomSheetDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.paisatracker.PaisaTrackerApplication
 import com.example.paisatracker.PaisaTrackerViewModel
 import com.example.paisatracker.data.Category
 import com.example.paisatracker.data.CategoryWithTotal
 import com.example.paisatracker.ui.common.SortDropdown
 import com.example.paisatracker.ui.common.SortOption
-import com.example.paisatracker.ui.details.category.AddCategoryGridItem
-import com.example.paisatracker.ui.details.category.AddCategoryListItem
-import com.example.paisatracker.ui.details.category.AddCategorySheetContent
-import com.example.paisatracker.ui.details.category.CategoryGridItem
-import com.example.paisatracker.ui.details.category.CategoryListItem
-import com.example.paisatracker.ui.details.category.DeleteCategorySheetContent
-import com.example.paisatracker.ui.details.category.EditCategorySheetContent
+import com.example.paisatracker.ui.details.category.*
+import com.example.paisatracker.ui.main.projects.SearchFilterCard
+import com.example.paisatracker.ui.main.projects.SearchResultsCard
+import com.example.paisatracker.ui.search.SearchViewModel
+import com.example.paisatracker.ui.search.SearchViewModelFactory
 import kotlinx.coroutines.launch
-import androidx.compose.material3.Text
 
 /**
  * ProjectDetailsScreen is the host screen responsible for:
@@ -58,10 +47,10 @@ import androidx.compose.material3.Text
  * - Sort is local UI state — not persisted — for simplicity and rotation safety.
  */
 
-private sealed interface CategorySheetMode {
-    data object Add : CategorySheetMode
-    data class Edit(val category: CategoryWithTotal) : CategorySheetMode
-    data class Delete(val category: CategoryWithTotal) : CategorySheetMode
+sealed class CategorySheetMode {
+    object Add : CategorySheetMode()
+    data class Edit(val category: CategoryWithTotal) : CategorySheetMode()
+    data class Delete(val category: CategoryWithTotal) : CategorySheetMode()
 }
 
 enum class ViewType { GRID, LIST }
@@ -73,6 +62,23 @@ fun ProjectDetailsScreen(
     projectId: Long,
     navController: NavController
 ) {
+    val context = LocalContext.current
+    val application = context.applicationContext as PaisaTrackerApplication
+
+    // ── Search ────────────────────────────────────────────────────────────────
+    val searchViewModel: SearchViewModel = viewModel(
+        factory = SearchViewModelFactory(application.repository)
+    )
+    val searchQuery    by searchViewModel.searchQuery.collectAsState()
+    val minAmount      by searchViewModel.minAmount.collectAsState()
+    val maxAmount      by searchViewModel.maxAmount.collectAsState()
+    val searchResults  by searchViewModel.searchResults.collectAsState()
+    val isSearchActive by searchViewModel.isSearchActive.collectAsState()
+
+    LaunchedEffect(projectId) {
+        searchViewModel.setProjectId(projectId)
+    }
+
     val categoriesWithTotal by viewModel
         .getCategoriesWithTotalForProject(projectId)
         .collectAsState(initial = emptyList())
@@ -80,6 +86,7 @@ fun ProjectDetailsScreen(
     var sortOption    by remember { mutableStateOf(SortOption.DATE_NEW_OLD) }
     var viewType      by remember { mutableStateOf(ViewType.GRID) }
     var sheetMode     by remember { mutableStateOf<CategorySheetMode?>(null) }
+    var searchExpanded by remember { mutableStateOf(false) }
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope      = rememberCoroutineScope()
@@ -143,61 +150,95 @@ fun ProjectDetailsScreen(
                         fontWeight = FontWeight.Bold
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = { searchExpanded = !searchExpanded }) {
+                            Icon(
+                                Icons.Outlined.Search,
+                                contentDescription = "Search in project",
+                                tint = if (searchExpanded) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
                         ViewTypeToggle(currentViewType = viewType, onViewTypeChange = { viewType = it })
                         SortDropdown(current = sortOption, onChange = { sortOption = it })
                     }
                 }
             }
 
-            // Category grid / list
-            when (viewType) {
-                ViewType.GRID -> {
-                    items(
-                        items = listItems.chunked(2),
-                        key = { row -> row.firstOrNull()?.category?.id ?: -1L }
-                    ) { rowItems ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            rowItems.forEach { item ->
-                                if (item == null) {
-                                    AddCategoryGridItem(
-                                        onClick = { openSheet(CategorySheetMode.Add) },
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                } else {
-                                    CategoryGridItem(
-                                        categoryWithTotal = item,
-                                        totalAmountAllCategories = totalSpent,
-                                        onCategoryClick = { navController.navigate("expense_list/${item.category.id}") },
-                                        onEditClick = { openSheet(CategorySheetMode.Edit(item)) },
-                                        onDeleteClick = { openSheet(CategorySheetMode.Delete(item)) },
-                                        modifier = Modifier.weight(1f)
-                                    )
+            // Search panel
+            item {
+                AnimatedVisibility(
+                    visible = searchExpanded,
+                    enter   = expandVertically(spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMediumLow)) + fadeIn(tween(300)),
+                    exit    = shrinkVertically(spring(Spring.DampingRatioNoBouncy, Spring.StiffnessMedium)) + fadeOut(tween(200))
+                ) {
+                    SearchFilterCard(
+                        searchQuery         = searchQuery,
+                        onSearchQueryChange = { searchViewModel.onSearchQueryChanged(it) },
+                        minAmount           = minAmount,
+                        onMinAmountChange   = { searchViewModel.onMinAmountChanged(it) },
+                        maxAmount           = maxAmount,
+                        onMaxAmountChange   = { searchViewModel.onMaxAmountChanged(it) },
+                        onSearch            = { searchViewModel.executeSearch() },
+                        onClear             = { searchViewModel.clearSearch(); searchExpanded = false },
+                        isSearchActive      = isSearchActive
+                    )
+                }
+            }
+
+            if (isSearchActive) {
+                item {
+                    SearchResultsCard(results = searchResults, isActive = isSearchActive)
+                }
+            } else {
+                // Category grid / list
+                when (viewType) {
+                    ViewType.GRID -> {
+                        items(
+                            items = listItems.chunked(2),
+                            key = { row -> row.firstOrNull()?.category?.id ?: -1L }
+                        ) { rowItems ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                rowItems.forEach { item ->
+                                    if (item == null) {
+                                        AddCategoryGridItem(
+                                            onClick = { openSheet(CategorySheetMode.Add) },
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                    } else {
+                                        CategoryGridItem(
+                                            categoryWithTotal = item,
+                                            totalAmountAllCategories = totalSpent,
+                                            onCategoryClick = { navController.navigate("expense_list/${item.category.id}") },
+                                            onEditClick = { openSheet(CategorySheetMode.Edit(item)) },
+                                            onDeleteClick = { openSheet(CategorySheetMode.Delete(item)) },
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                    }
                                 }
+                                if (rowItems.size == 1) Spacer(Modifier.weight(1f))
                             }
-                            if (rowItems.size == 1) Spacer(Modifier.weight(1f))
                         }
                     }
-                }
 
-                ViewType.LIST -> {
-                    items(listItems, key = { it?.category?.id ?: -1L }) { item ->
-                        if (item == null) {
-                            AddCategoryListItem(
-                                onClick = { openSheet(CategorySheetMode.Add) },
-                                modifier = Modifier.padding(horizontal = 16.dp)
-                            )
-                        } else {
-                            CategoryListItem(
-                                categoryWithTotal = item,
-                                totalAmountAllCategories = totalSpent,
-                                onCategoryClick = { navController.navigate("expense_list/${item.category.id}") },
-                                onEditClick = { openSheet(CategorySheetMode.Edit(item)) },
-                                onDeleteClick = { openSheet(CategorySheetMode.Delete(item)) },
-                                modifier = Modifier.padding(horizontal = 16.dp)
-                            )
+                    ViewType.LIST -> {
+                        items(listItems, key = { it?.category?.id ?: -1L }) { item ->
+                            if (item == null) {
+                                AddCategoryListItem(
+                                    onClick = { openSheet(CategorySheetMode.Add) },
+                                    modifier = Modifier.padding(horizontal = 16.dp)
+                                )
+                            } else {
+                                CategoryListItem(
+                                    categoryWithTotal = item,
+                                    totalAmountAllCategories = totalSpent,
+                                    onCategoryClick = { navController.navigate("expense_list/${item.category.id}") },
+                                    onEditClick = { openSheet(CategorySheetMode.Edit(item)) },
+                                    onDeleteClick = { openSheet(CategorySheetMode.Delete(item)) },
+                                    modifier = Modifier.padding(horizontal = 16.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -217,6 +258,7 @@ fun ProjectDetailsScreen(
             when (mode) {
                 is CategorySheetMode.Add -> {
                     AddCategorySheetContent(
+                        viewModel = viewModel,
                         onCancel = ::closeSheet,
                         onConfirm = { name, emoji ->
                             viewModel.insertCategory(
@@ -231,6 +273,7 @@ fun ProjectDetailsScreen(
                     EditCategorySheetContent(
                         currentName = mode.category.category.name,
                         currentEmoji = mode.category.category.emoji,
+                        viewModel = viewModel,
                         onCancel = ::closeSheet,
                         onConfirm = { name, emoji ->
                             viewModel.updateCategory(mode.category.category.copy(name = name, emoji = emoji))
