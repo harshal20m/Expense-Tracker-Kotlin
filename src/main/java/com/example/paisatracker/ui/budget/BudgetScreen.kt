@@ -1,12 +1,8 @@
 package com.example.paisatracker.ui.budget
-
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -69,40 +65,36 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.paisatracker.PaisaTrackerViewModel
+import com.example.paisatracker.data.Budget
 import com.example.paisatracker.data.BudgetWithSpending
 import com.example.paisatracker.ui.salary.SalaryTrackerSection
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-
 private val Orange = Color(0xFFFF9800)
-
-// ... existing imports ...
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BudgetScreen(
     viewModel: PaisaTrackerViewModel,
     onNavigateBack: () -> Unit,
+    onOpenProject: (Long) -> Unit = {},
+    onOpenCategory: (Long) -> Unit = {},
     currencySymbol: String = "₹"
 ) {
     val allBudgets by viewModel.budgetsWithSpending.collectAsState()
     val activeBudgets = allBudgets.filter { it.budget.isActive }
     val inactiveBudgets = allBudgets.filter { !it.budget.isActive }
-
     var showAddSheet by remember { mutableStateOf(false) }
-    var budgetToEdit by remember { mutableStateOf<com.example.paisatracker.data.Budget?>(null) }
-    var budgetToDelete by remember { mutableStateOf<com.example.paisatracker.data.Budget?>(null) }
+    var budgetToEdit by remember { mutableStateOf<Budget?>(null) }
+    var budgetToDelete by remember { mutableStateOf<Budget?>(null) }
     var showPaused by remember { mutableStateOf(false) }
-
     Scaffold(
         topBar = {
             TopAppBar(
@@ -134,7 +126,7 @@ fun BudgetScreen(
                         colors = IconButtonDefaults.filledIconButtonColors(
                             containerColor = MaterialTheme.colorScheme.primary
                         ),
-                        shape = RoundedCornerShape(12.dp) // adjust dp for curvature
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Add,
@@ -142,7 +134,6 @@ fun BudgetScreen(
                             tint = MaterialTheme.colorScheme.onPrimary
                         )
                     }
-
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface
@@ -150,32 +141,30 @@ fun BudgetScreen(
             )
         }
     ) { padding ->
-
         LazyVerticalGrid(
             columns = GridCells.Adaptive(minSize = 160.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
-            modifier = Modifier.fillMaxSize().padding(padding),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
         ) {
-            // ── Salary Tracker Section (Full width, always visible) ──────────
             item(span = { GridItemSpan(maxLineSpan) }) {
-                SalaryTrackerSection(viewModel)
+                SalaryTrackerSection(
+                    viewModel = viewModel,
+                    onProjectClick = onOpenProject,
+                    onCategoryClick = onOpenCategory
+                )
             }
-
-            // ── Add Normal Budget Heading ──────────────────────────────────
             item(span = { GridItemSpan(maxLineSpan) }) {
                 NormalBudgetHeading()
             }
-
-            // ── Overview card (Full width, only if active budgets exist) ─────
             if (activeBudgets.isNotEmpty()) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     OverviewCard(budgets = activeBudgets, currencySymbol = currencySymbol)
                 }
             }
-
-            // ── Active budgets section header (Full width) ───────────────────
             if (activeBudgets.isNotEmpty()) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     SectionLabel(
@@ -185,8 +174,6 @@ fun BudgetScreen(
                     )
                 }
             }
-
-            // ── Active budget cards (Grid items - masonry style) ─────────────
             items(activeBudgets, key = { it.budget.id }) { bws ->
                 AnimatedVisibility(
                     visible = true,
@@ -203,8 +190,6 @@ fun BudgetScreen(
                     )
                 }
             }
-
-            // ── Paused budgets header (Full width, collapsible) ──────────────
             if (inactiveBudgets.isNotEmpty()) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     PausedSectionHeader(
@@ -214,8 +199,6 @@ fun BudgetScreen(
                     )
                 }
             }
-
-            // ── Paused budget cards (Grid items, shown when expanded) ────────
             if (inactiveBudgets.isNotEmpty() && showPaused) {
                 items(inactiveBudgets, key = { it.budget.id }) { bws ->
                     BudgetCard(
@@ -230,8 +213,6 @@ fun BudgetScreen(
                     )
                 }
             }
-
-            // ── Empty state for budgets only (Full width) ────────────────────
             if (allBudgets.isEmpty()) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     BudgetEmptyState(
@@ -240,16 +221,17 @@ fun BudgetScreen(
                     )
                 }
             }
-
-            // Bottom spacer
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Spacer(Modifier.height(100.dp))
             }
         }
     }
-
     if (showAddSheet) {
-        AddBudgetSheet(viewModel = viewModel, onDismiss = { showAddSheet = false }, currencySymbol = currencySymbol)
+        AddBudgetSheet(
+            viewModel = viewModel,
+            onDismiss = { showAddSheet = false },
+            currencySymbol = currencySymbol
+        )
     }
     budgetToEdit?.let { budget ->
         AddBudgetSheet(
@@ -266,18 +248,23 @@ fun BudgetScreen(
             text = { Text("This budget and its history will be permanently removed.") },
             confirmButton = {
                 TextButton(
-                    onClick = { viewModel.deleteBudget(budget); budgetToDelete = null },
+                    onClick = {
+                        viewModel.deleteBudget(budget)
+                        budgetToDelete = null
+                    },
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) { Text("Delete") }
+                ) {
+                    Text("Delete")
+                }
             },
             dismissButton = {
-                TextButton(onClick = { budgetToDelete = null }) { Text("Cancel") }
+                TextButton(onClick = { budgetToDelete = null }) {
+                    Text("Cancel")
+                }
             }
         )
     }
 }
-
-// ─── Normal Budget Heading ────────────────────────────────────────────────────
 @Composable
 private fun NormalBudgetHeading() {
     Column(
@@ -285,14 +272,11 @@ private fun NormalBudgetHeading() {
             .fillMaxWidth()
             .padding(vertical = 8.dp)
     ) {
-        // Horizontal divider
         HorizontalDivider(
             thickness = 0.5.dp,
             color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
             modifier = Modifier.padding(bottom = 8.dp)
         )
-
-        // Section header
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -316,10 +300,6 @@ private fun NormalBudgetHeading() {
         }
     }
 }
-
-
-
-// ─── Overview Card ────────────────────────────────────────────────────────────
 @Composable
 private fun OverviewCard(budgets: List<BudgetWithSpending>, currencySymbol: String) {
     val totalLimit = budgets.sumOf { it.budget.limitAmount }
@@ -357,8 +337,6 @@ private fun OverviewCard(budgets: List<BudgetWithSpending>, currencySymbol: Stri
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.65f)
                     )
                 }
-
-                // Big % circle
                 Box(
                     modifier = Modifier
                         .size(64.dp)
@@ -374,10 +352,7 @@ private fun OverviewCard(budgets: List<BudgetWithSpending>, currencySymbol: Stri
                     )
                 }
             }
-
             Spacer(modifier = Modifier.height(16.dp))
-
-            // Segmented progress bar
             val animProgress by animateFloatAsState(progress, tween(900), label = "overview_progress")
             Box(
                 modifier = Modifier
@@ -394,25 +369,26 @@ private fun OverviewCard(budgets: List<BudgetWithSpending>, currencySymbol: Stri
                         .background(progressColor)
                 )
             }
-
-            // Status badges
             if (overCount > 0 || nearCount > 0) {
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (overCount > 0) StatusBadge(
-                        label = "$overCount over limit",
-                        color = MaterialTheme.colorScheme.error
-                    )
-                    if (nearCount > 0) StatusBadge(
-                        label = "$nearCount near limit",
-                        color = Orange
-                    )
+                    if (overCount > 0) {
+                        StatusBadge(
+                            label = "$overCount over limit",
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                    if (nearCount > 0) {
+                        StatusBadge(
+                            label = "$nearCount near limit",
+                            color = Orange
+                        )
+                    }
                 }
             }
         }
     }
 }
-
 @Composable
 private fun StatusBadge(label: String, color: Color) {
     Surface(
@@ -428,8 +404,6 @@ private fun StatusBadge(label: String, color: Color) {
         )
     }
 }
-
-// ─── Section label ────────────────────────────────────────────────────────────
 @Composable
 private fun SectionLabel(text: String, count: Int, dotColor: Color) {
     Row(
@@ -456,8 +430,6 @@ private fun SectionLabel(text: String, count: Int, dotColor: Color) {
         )
     }
 }
-
-// ─── Paused section header ────────────────────────────────────────────────────
 @Composable
 private fun PausedSectionHeader(count: Int, expanded: Boolean, onClick: () -> Unit) {
     Row(
@@ -499,8 +471,6 @@ private fun PausedSectionHeader(count: Int, expanded: Boolean, onClick: () -> Un
         )
     }
 }
-
-// ─── Budget Card ─────────────────────────────────────────────────────────────
 @Composable
 private fun BudgetCard(
     bws: BudgetWithSpending,
@@ -513,15 +483,14 @@ private fun BudgetCard(
     val budget = bws.budget
     val progressColor = when {
         bws.isOverBudget -> MaterialTheme.colorScheme.error
-        bws.isNearLimit  -> Orange
-        else             -> MaterialTheme.colorScheme.tertiary // Changed to tertiary
+        bws.isNearLimit -> Orange
+        else -> MaterialTheme.colorScheme.tertiary
     }
     val progress by animateFloatAsState(
         targetValue = bws.percentUsed,
         animationSpec = tween(800),
         label = "card_progress"
     )
-
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -531,18 +500,15 @@ private fun BudgetCard(
             containerColor = if (isPaused)
                 MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
             else
-                MaterialTheme.colorScheme.surface // Changed from surfaceVariant to surface
+                MaterialTheme.colorScheme.surface
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = if (isPaused) 0.dp else 1.dp)
     ) {
         Column(modifier = Modifier.padding(18.dp)) {
-
-            // ── Row 1: Emoji + Name + Badge + Actions ─────────────────────
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Emoji
                 Box(
                     modifier = Modifier
                         .size(42.dp)
@@ -551,10 +517,7 @@ private fun BudgetCard(
                 ) {
                     Text(budget.emoji, fontSize = 20.sp)
                 }
-
                 Spacer(modifier = Modifier.width(12.dp))
-
-                // Name + metadata
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = budget.name,
@@ -577,40 +540,41 @@ private fun BudgetCard(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-
                 Spacer(modifier = Modifier.width(8.dp))
-
-                // Action icons
                 Row {
                     SmallIconBtn(onClick = onEdit) {
-                        Icon(Icons.Default.Edit, null, modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.tertiary.copy(alpha = if (isPaused) 0.45f else 0.85f)) // Changed to tertiary
+                        Icon(
+                            Icons.Default.Edit,
+                            null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.tertiary.copy(alpha = if (isPaused) 0.45f else 0.85f)
+                        )
                     }
                     SmallIconBtn(onClick = onToggle) {
                         Icon(
                             if (isPaused) Icons.Default.PlayArrow else Icons.Default.Pause,
                             null,
                             modifier = Modifier.size(16.dp),
-                            tint = if (isPaused) MaterialTheme.colorScheme.tertiary // Changed to tertiary
+                            tint = if (isPaused) MaterialTheme.colorScheme.tertiary
                             else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
                         )
                     }
                     SmallIconBtn(onClick = onDelete) {
-                        Icon(Icons.Default.Delete, null, modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.error.copy(alpha = 0.45f))
+                        Icon(
+                            Icons.Default.Delete,
+                            null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.error.copy(alpha = 0.45f)
+                        )
                     }
                 }
             }
-
             Spacer(modifier = Modifier.height(14.dp))
-
-            // ── Row 2: Amounts ────────────────────────────────────────────
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Bottom
             ) {
-                // Spent
                 Column {
                     Text(
                         text = "$currencySymbol${formatAmount(bws.spent)}",
@@ -624,13 +588,11 @@ private fun BudgetCard(
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
                     )
                 }
-
-                // Remaining / over
                 Column(horizontalAlignment = Alignment.End) {
                     val remText = if (bws.isOverBudget)
-        "−$currencySymbol${formatAmount(-bws.remaining)}"
-    else
-        "$currencySymbol${formatAmount(bws.remaining)}"
+                        "−$currencySymbol${formatAmount(-bws.remaining)}"
+                    else
+                        "$currencySymbol${formatAmount(bws.remaining)}"
                     Text(
                         text = remText,
                         style = MaterialTheme.typography.titleMedium,
@@ -645,16 +607,13 @@ private fun BudgetCard(
                     )
                 }
             }
-
             Spacer(modifier = Modifier.height(12.dp))
-
-            // ── Row 3: Progress bar ───────────────────────────────────────
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(6.dp)
                     .clip(RoundedCornerShape(50))
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)) // Changed background color
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f))
             ) {
                 Box(
                     modifier = Modifier
@@ -664,8 +623,6 @@ private fun BudgetCard(
                         .background(progressColor)
                 )
             }
-
-            // ── Row 4: Footer stats (only when active) ────────────────────
             if (!isPaused) {
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(
@@ -675,33 +632,39 @@ private fun BudgetCard(
                     FooterStat(
                         label = "Daily avg",
                         value = "$currencySymbol${formatAmount(bws.spent / 30)}",
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f) // Added color parameter
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
                     )
                     FooterStat(
                         label = "Period",
                         value = budget.period.displayName,
                         align = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f) // Added color parameter
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
                     )
                     FooterStat(
                         label = "Since",
                         value = SimpleDateFormat("MMM d", Locale.ROOT).format(Date(budget.createdAt)),
                         align = TextAlign.End,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f) // Added color parameter
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
                     )
                 }
             }
         }
     }
 }
-
 @Composable
-private fun FooterStat(label: String, value: String, align: TextAlign = TextAlign.Start, color: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)) {
-    Column(horizontalAlignment = when (align) {
-        TextAlign.Center -> Alignment.CenterHorizontally
-        TextAlign.End -> Alignment.End
-        else -> Alignment.Start
-    }) {
+private fun FooterStat(
+    label: String,
+    value: String,
+    align: TextAlign = TextAlign.Start,
+    color: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
+) {
+    Column(
+        horizontalAlignment = when (align) {
+            TextAlign.Center -> Alignment.CenterHorizontally
+            TextAlign.End -> Alignment.End
+            else -> Alignment.Start
+        }
+    ) {
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
@@ -715,7 +678,6 @@ private fun FooterStat(label: String, value: String, align: TextAlign = TextAlig
         )
     }
 }
-
 @Composable
 private fun SmallIconBtn(onClick: () -> Unit, content: @Composable () -> Unit) {
     Box(
@@ -726,8 +688,6 @@ private fun SmallIconBtn(onClick: () -> Unit, content: @Composable () -> Unit) {
         contentAlignment = Alignment.Center
     ) { content() }
 }
-
-// ─── Empty state ──────────────────────────────────────────────────────────────
 @Composable
 fun BudgetEmptyState(modifier: Modifier = Modifier, onCreateClick: () -> Unit) {
     Column(
@@ -775,10 +735,10 @@ fun BudgetEmptyState(modifier: Modifier = Modifier, onCreateClick: () -> Unit) {
         }
     }
 }
-
-// ─── Shared format helper ─────────────────────────────────────────────────────
 fun formatAmount(amount: Double): String = if (amount >= 1_000) {
     NumberFormat.getNumberInstance(Locale.ROOT).apply {
         maximumFractionDigits = if (amount % 1 == 0.0) 0 else 2
     }.format(amount)
-} else String.format(Locale.ROOT, "%.2f", amount)
+} else {
+    String.format(Locale.ROOT, "%.2f", amount)
+}

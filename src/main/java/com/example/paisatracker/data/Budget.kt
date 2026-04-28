@@ -1,8 +1,6 @@
 package com.example.paisatracker.data
-
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-
 @Entity(tableName = "budgets")
 data class Budget(
     @PrimaryKey(autoGenerate = true)
@@ -14,9 +12,9 @@ data class Budget(
     val categoryId: Long? = null,      // null = applies to all categories (global budget)
     val projectId: Long? = null,       // null = applies to all projects
     val createdAt: Long = System.currentTimeMillis(),
+    val trackingStartAt: Long = createdAt,
     val isActive: Boolean = true
 )
-
 enum class BudgetPeriod(val displayName: String) {
     DAILY("Daily"),
     WEEKLY("Weekly"),

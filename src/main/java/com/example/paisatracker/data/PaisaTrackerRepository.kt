@@ -67,7 +67,9 @@ class PaisaTrackerRepository(
         return expenseDao.getAllExpensesWithDetails()
     }
 
-    fun getAllProjects(): Flow<List<Project>> = projectDao.getAllProjects()
+    fun getAllProjects(): Flow<List<Project>> = projectDao.getActiveProjects()
+
+    fun getCompletedProjects(): Flow<List<Project>> = projectDao.getCompletedProjects()
 
     // Add this method for seeding
     suspend fun getAllProjectsList(): List<Project> {
@@ -81,7 +83,9 @@ class PaisaTrackerRepository(
      suspend fun getCategoriesForProjectList(projectId: Long): List<Category> {
          return categoryDao.getCategoriesForProjectList(projectId)
      }
-    fun getAllProjectsWithTotal(): Flow<List<ProjectWithTotal>> = projectDao.getAllProjectsWithTotal()
+    fun getAllProjectsWithTotal(): Flow<List<ProjectWithTotal>> = projectDao.getActiveProjectsWithTotal()
+
+    fun getCompletedProjectsWithTotal(): Flow<List<ProjectWithTotal>> = projectDao.getCompletedProjectsWithTotal()
 
     fun getCategoryExpenses(projectId: Long): Flow<List<CategoryExpense>> = projectDao.getCategoryExpenses(projectId)
 
@@ -103,6 +107,10 @@ class PaisaTrackerRepository(
 
     suspend fun updateProject(project: Project) {
         projectDao.updateProject(project)
+    }
+
+    suspend fun updateProjectStatus(projectId: Long, isCompleted: Boolean) {
+        projectDao.updateProjectStatus(projectId, isCompleted)
     }
 
     suspend fun deleteProject(project: Project) {

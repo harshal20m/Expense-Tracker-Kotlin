@@ -21,17 +21,14 @@ interface ProjectDao {
     @Delete
     suspend fun deleteProject(project: Project)
 
-    @Query("SELECT * FROM projects ORDER BY name ASC")
-    fun getAllProjects(): Flow<List<Project>>
+    @Query("SELECT * FROM projects WHERE isCompleted = 0 ORDER BY name ASC")
+    fun getActiveProjects(): Flow<List<Project>>
 
-    @Query("SELECT * FROM projects ORDER BY name ASC")
-    suspend fun getAllProjectsList(): List<Project>
+    @Query("SELECT * FROM projects WHERE isCompleted = 1 ORDER BY name ASC")
+    fun getCompletedProjects(): Flow<List<Project>>
 
-    @Query("SELECT * FROM projects WHERE id = :projectId")
-    fun getProjectById(projectId: Long): Flow<Project>
-
-    @Query("SELECT * FROM projects WHERE name = :name LIMIT 1")
-    suspend fun getProjectByName(name: String): Project?
+    @Query("UPDATE projects SET isCompleted = :isCompleted WHERE id = :projectId")
+    suspend fun updateProjectStatus(projectId: Long, isCompleted: Boolean)
 
     @Query("""
     SELECT p.*, 
@@ -41,10 +38,25 @@ interface ProjectDao {
     FROM projects p
     LEFT JOIN categories c ON c.projectId = p.id
     LEFT JOIN expenses e ON e.categoryId = c.id
+    WHERE p.isCompleted = 0
     GROUP BY p.id
     ORDER BY p.lastModified DESC
 """)
-    fun getAllProjectsWithTotal(): Flow<List<ProjectWithTotal>>
+    fun getActiveProjectsWithTotal(): Flow<List<ProjectWithTotal>>
+
+    @Query("""
+    SELECT p.*, 
+           COALESCE(SUM(e.amount), 0) as totalAmount,
+           COUNT(DISTINCT c.id) as categoryCount,
+           COUNT(DISTINCT e.id) as expenseCount
+    FROM projects p
+    LEFT JOIN categories c ON c.projectId = p.id
+    LEFT JOIN expenses e ON e.categoryId = c.id
+    WHERE p.isCompleted = 1
+    GROUP BY p.id
+    ORDER BY p.lastModified DESC
+""")
+    fun getCompletedProjectsWithTotal(): Flow<List<ProjectWithTotal>>
 
 
     @Query("""
@@ -57,7 +69,15 @@ interface ProjectDao {
     """)
     fun getCategoryExpenses(projectId: Long): Flow<List<CategoryExpense>>
 
+    @Query("SELECT * FROM projects WHERE id = :projectId")
+    fun getProjectById(projectId: Long): Flow<Project>
+
+    @Query("SELECT * FROM projects WHERE name = :name LIMIT 1")
+    suspend fun getProjectByName(name: String): Project?
+
+    @Query("SELECT * FROM projects ORDER BY name ASC")
+    suspend fun getAllProjectsList(): List<Project>
+
     @Query("SELECT COUNT(*) FROM projects")
     suspend fun getProjectCount(): Int
-
 }

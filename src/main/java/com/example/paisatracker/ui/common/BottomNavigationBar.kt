@@ -1,5 +1,4 @@
 package com.example.paisatracker.ui.common
-
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
@@ -57,15 +56,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-
 data class NavItem(
     val route: String,
     val label: String,
     val selectedIcon: ImageVector,
     val unselectedIcon: ImageVector
 )
-
 @Composable
 fun BottomNavigationBar(navController: NavController) {
     val items = listOf(
@@ -100,10 +99,8 @@ fun BottomNavigationBar(navController: NavController) {
             unselectedIcon = Icons.Outlined.Settings
         )
     )
-
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
-
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -134,21 +131,13 @@ fun BottomNavigationBar(navController: NavController) {
                     item = item,
                     isSelected = isSelected,
                     onClick = {
-                        if (item.route == "projects") {
-                            navController.navigate(item.route) {
-                                popUpTo("projects") {
-                                    inclusive = true
-                                }
-                                launchSingleTop = true
+                        navController.navigate(item.route) {
+                            popUpTo(navController.graph.startDestinationId) {
+                                inclusive = false
+                                saveState = false
                             }
-                        } else {
-                            navController.navigate(item.route) {
-                                popUpTo("projects") {
-                                    saveState = true
-                                }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
+                            launchSingleTop = true
+                            restoreState = false
                         }
                     }
                 )
@@ -156,7 +145,6 @@ fun BottomNavigationBar(navController: NavController) {
         }
     }
 }
-
 @Composable
 private fun BottomNavItem(
     item: NavItem,
@@ -165,11 +153,7 @@ private fun BottomNavItem(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
-
-    // Pop animation state for click feedback
     var isAnimating by remember { mutableStateOf(false) }
-
-    // Width animation for selected/unselected state
     val animatedWidth by animateDpAsState(
         targetValue = if (isSelected) 115.dp else 50.dp,
         animationSpec = spring(
@@ -178,8 +162,6 @@ private fun BottomNavItem(
         ),
         label = "width"
     )
-
-    // Pop effect scale animation
     val popScale by animateFloatAsState(
         targetValue = when {
             isAnimating -> 0.9f
@@ -192,8 +174,6 @@ private fun BottomNavItem(
         ),
         label = "popScale"
     )
-
-    // Container color animation
     val containerColor by animateColorAsState(
         targetValue = if (isSelected)
             MaterialTheme.colorScheme.primaryContainer
@@ -202,8 +182,6 @@ private fun BottomNavItem(
         animationSpec = tween(400),
         label = "containerColor"
     )
-
-    // Content color animation
     val contentColor by animateColorAsState(
         targetValue = if (isSelected)
             MaterialTheme.colorScheme.onPrimaryContainer
@@ -212,7 +190,6 @@ private fun BottomNavItem(
         animationSpec = tween(400),
         label = "contentColor"
     )
-
     Box(
         modifier = Modifier
             .width(animatedWidth)
@@ -221,12 +198,10 @@ private fun BottomNavItem(
             .background(containerColor)
             .clickable(
                 onClick = {
-                    // Trigger pop animation
                     isAnimating = true
                     onClick()
-                    // Reset animation after a short delay
-                    kotlinx.coroutines.MainScope().launch {
-                        kotlinx.coroutines.delay(150)
+                    MainScope().launch {
+                        delay(150)
                         isAnimating = false
                     }
                 },
@@ -252,13 +227,22 @@ private fun BottomNavItem(
                     .size(24.dp)
                     .scale(popScale)
             )
-
             AnimatedVisibility(
                 visible = isSelected,
                 enter = fadeIn(animationSpec = tween(400)) +
-                        expandHorizontally(animationSpec = spring(dampingRatio = 0.7f, stiffness = 300f)),
+                        expandHorizontally(
+                            animationSpec = spring(
+                                dampingRatio = 0.7f,
+                                stiffness = 300f
+                            )
+                        ),
                 exit = fadeOut(animationSpec = tween(200)) +
-                        shrinkHorizontally(animationSpec = spring(dampingRatio = 0.7f, stiffness = 300f))
+                        shrinkHorizontally(
+                            animationSpec = spring(
+                                dampingRatio = 0.7f,
+                                stiffness = 300f
+                            )
+                        )
             ) {
                 Row {
                     Spacer(modifier = Modifier.width(6.dp))

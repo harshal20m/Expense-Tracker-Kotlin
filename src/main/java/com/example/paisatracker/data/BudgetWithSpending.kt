@@ -1,5 +1,4 @@
 package com.example.paisatracker.data
-
 data class BudgetWithSpending(
     val budget: Budget,
     val spent: Double,
@@ -11,3 +10,9 @@ data class BudgetWithSpending(
     val isOverBudget: Boolean get() = spent > budget.limitAmount
     val isNearLimit: Boolean get() = percentUsed >= 0.8f && !isOverBudget
 }
+data class ProjectBudgetSpend(
+    val projectId: Long,
+    val projectName: String,
+    val projectEmoji: String,
+    val totalSpent: Double
+)

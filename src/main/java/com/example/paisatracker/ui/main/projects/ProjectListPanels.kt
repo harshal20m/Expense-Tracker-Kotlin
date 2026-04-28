@@ -46,10 +46,10 @@ fun SummaryExpandedCard(
     totalExpenses: Int
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-        shape    = RoundedCornerShape(20.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp),
+        shape    = RoundedCornerShape(16.dp),
         colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-        elevation= CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation= CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Box(
             modifier = Modifier
@@ -59,21 +59,21 @@ fun SummaryExpandedCard(
                     MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f)
                 )))
         ) {
-            Column(modifier = Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Column(modifier = Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f), modifier = Modifier.size(36.dp)) {
-                        Box(contentAlignment = Alignment.Center) { Text("📊", fontSize = 18.sp) }
+                    Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f), modifier = Modifier.size(32.dp)) {
+                        Box(contentAlignment = Alignment.Center) { Text("📊", fontSize = 16.sp) }
                     }
-                    Text("Overview", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                    Text("Overview", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.15f))
-                Surface(shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f), modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("Total Spending", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
-                        Text(formatCurrency(totalSpent), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary, fontSize = 28.sp)
+                Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f), modifier = Modifier.fillMaxWidth()) {
+                    Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text("Total Spending", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
+                        Text(formatCurrency(totalSpent), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary, fontSize = 24.sp)
                     }
                 }
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     SummaryStatTile("📁", "Projects",   totalProjects.toString(),   Modifier.weight(1f))
                     SummaryStatTile("🏷️", "Categories", totalCategories.toString(), Modifier.weight(1f))
                     SummaryStatTile("🧾", "Expenses",   totalExpenses.toString(),   Modifier.weight(1f))
@@ -85,10 +85,10 @@ fun SummaryExpandedCard(
 
 @Composable
 private fun SummaryStatTile(emoji: String, label: String, value: String, modifier: Modifier = Modifier) {
-    Surface(modifier = modifier, shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surface.copy(alpha = 0.65f)) {
-        Column(modifier = Modifier.padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(emoji, fontSize = 20.sp)
-            Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface, fontSize = 20.sp)
+    Surface(modifier = modifier, shape = RoundedCornerShape(10.dp), color = MaterialTheme.colorScheme.surface.copy(alpha = 0.65f)) {
+        Column(modifier = Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(emoji, fontSize = 16.sp)
+            Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.onSurface, fontSize = 16.sp)
             Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), fontSize = 10.sp)
         }
     }
@@ -100,7 +100,7 @@ private fun SummaryStatTile(emoji: String, label: String, value: String, modifie
 fun RecentTransactionsPanel(expenses: List<RecentExpense>, onExpenseClick: (RecentExpense) -> Unit) {
     val display = expenses.take(10)
     Card(
-        modifier  = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        modifier  = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp),
         shape     = RoundedCornerShape(20.dp),
         colors    = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -292,23 +292,23 @@ fun ActionToggleCard(
     )
 
     Card(
-        modifier  = modifier.height(60.dp).clickable { onClick() },
-        shape     = RoundedCornerShape(20.dp),
+        modifier  = modifier.height(52.dp).clickable { onClick() },
+        shape     = RoundedCornerShape(14.dp),
         colors    = CardDefaults.cardColors(containerColor = if (isExpanded) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (isExpanded) 4.dp else 0.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isExpanded) 2.dp else 0.dp)
     ) {
-        Row(modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Start) {
-            Surface(shape = CircleShape, color = if (isExpanded) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface.copy(alpha = 0.5f), modifier = Modifier.size(34.dp)) {
+        Row(modifier = Modifier.fillMaxSize().padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Start) {
+            Surface(shape = CircleShape, color = if (isExpanded) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surface.copy(alpha = 0.5f), modifier = Modifier.size(30.dp)) {
                 Box(contentAlignment = Alignment.Center) {
-                    if (emojiLabel != null) Text(emojiLabel, fontSize = 16.sp)
-                    else Icon(icon, title, modifier = Modifier.size(16.dp), tint = if (isExpanded) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary)
+                    if (emojiLabel != null) Text(emojiLabel, fontSize = 14.sp)
+                    else Icon(icon, title, modifier = Modifier.size(14.dp), tint = if (isExpanded) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary)
                 }
             }
-            Spacer(Modifier.width(8.dp))
-            Text(title, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = if (isExpanded) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-            Box(modifier = Modifier.size(24.dp), contentAlignment = Alignment.Center) {
-                if (isNavigation) Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Navigate", modifier = Modifier.size(20.dp), tint = if (isExpanded) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f))
-                else Icon(Icons.Default.KeyboardArrowDown, "Toggle", modifier = Modifier.size(20.dp).rotate(rotation), tint = if (isExpanded) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f))
+            Spacer(Modifier.width(6.dp))
+            Text(title, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = if (isExpanded) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            Box(modifier = Modifier.size(20.dp), contentAlignment = Alignment.Center) {
+                if (isNavigation) Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Navigate", modifier = Modifier.size(16.dp), tint = if (isExpanded) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f))
+                else Icon(Icons.Default.KeyboardArrowDown, "Toggle", modifier = Modifier.size(16.dp).rotate(rotation), tint = if (isExpanded) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f))
             }
         }
     }

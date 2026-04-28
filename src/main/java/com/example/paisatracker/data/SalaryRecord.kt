@@ -17,7 +17,6 @@ import androidx.room.PrimaryKey
 data class SalaryRecord(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
-
     val amount: Double,                         // e.g. 75000.0
     val receivedAt: Long = System.currentTimeMillis(), // epoch ms — start of tracking
     val month: Int,                             // 1-12 (Calendar.MONTH + 1)

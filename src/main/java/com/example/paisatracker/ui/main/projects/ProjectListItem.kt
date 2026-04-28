@@ -22,6 +22,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -66,7 +68,8 @@ fun ProjectListItemWithReorder(
     onReorder: (fromIndex: Int, toIndex: Int) -> Unit,
     onProjectClick: () -> Unit,
     onEditClick: () -> Unit,
-    onDeleteClick: () -> Unit
+    onDeleteClick: () -> Unit,
+    onCompleteToggleClick: () -> Unit
 ) {
     var menuExpanded    by remember { mutableStateOf(false) }
     var isAmountVisible by remember { mutableStateOf(false) }
@@ -104,7 +107,7 @@ fun ProjectListItemWithReorder(
                     Row(
                         modifier              = Modifier.weight(1f),
                         verticalAlignment     = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Box(
                             modifier = Modifier
@@ -136,7 +139,7 @@ fun ProjectListItemWithReorder(
                     }
 
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalAlignment     = Alignment.CenterVertically
                     ) {
                         Button(
@@ -162,9 +165,9 @@ fun ProjectListItemWithReorder(
 
                 // ── Expanded menu ─────────────────────────────────────────────
                 AnimatedVisibility(visible = menuExpanded, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
-                    Column(modifier = Modifier.fillMaxWidth().padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(modifier = Modifier.fillMaxWidth().padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             MenuActionButton(
                                 icon   = Icons.Default.Edit,
                                 label  = "Edit",
@@ -189,28 +192,40 @@ fun ProjectListItemWithReorder(
                                 containerColor = MaterialTheme.colorScheme.secondaryContainer
                             )
                         }
-                        MenuActionButton(
-                            icon           = Icons.Default.Delete,
-                            label          = "Delete Project",
-                            onClick        = { onDeleteClick(); menuExpanded = false },
-                            modifier       = Modifier.fillMaxWidth(),
-                            containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
-                            contentColor   = MaterialTheme.colorScheme.error
-                        )
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            MenuActionButton(
+                                icon = if (projectWithTotal.project.isCompleted) Icons.Default.History else Icons.Default.CheckCircle,
+                                label = if (projectWithTotal.project.isCompleted) "Reopen" else "Mark Done",
+                                onClick = { onCompleteToggleClick(); menuExpanded = false },
+                                modifier = Modifier.weight(1f),
+                                containerColor = if (projectWithTotal.project.isCompleted)
+                                    MaterialTheme.colorScheme.tertiaryContainer
+                                else
+                                    MaterialTheme.colorScheme.primaryContainer
+                            )
+                            MenuActionButton(
+                                icon = Icons.Default.Delete,
+                                label = "Delete",
+                                onClick = { onDeleteClick(); menuExpanded = false },
+                                modifier = Modifier.weight(1f),
+                                containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
+                                contentColor = MaterialTheme.colorScheme.error
+                            )
+                        }
                     }
                 }
 
                 // ── Stats row (shown when menu is closed) ─────────────────────
                 AnimatedVisibility(visible = !menuExpanded, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
-                    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                        Spacer(modifier = Modifier.height(0.dp))
+                    Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Spacer(modifier = Modifier.height(2.dp))
                         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f), thickness = 0.5.dp)
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             CompactStatBox("Categories", "${projectWithTotal.categoryCount}", Modifier.weight(1f))
                             CompactStatBox("Expenses",   "${projectWithTotal.expenseCount}",  Modifier.weight(1f))
                         }
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                 DateChip("Created", formatDateCompact(projectWithTotal.project.createdAt))
                                 DateChip("Updated", formatDateCompact(projectWithTotal.project.lastModified))
                             }

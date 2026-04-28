@@ -171,7 +171,7 @@ fun ExportScreen(
                     pendingRestoreUri?.let { uri ->
                         scope.launch {
                             isRestoring = true
-                            if (backupManager.restoreFromBackup(uri)) viewModel.showToast("Restore Successful!", ToastType.SUCCESS)
+                            if (backupManager.restoreFromBackup(uri)) viewModel.showToast("Restore Successful! Please Restart the app", ToastType.SUCCESS)
                             else viewModel.showToast("Restore Failed!", ToastType.ERROR)
                             isRestoring = false
                         }

@@ -67,7 +67,7 @@ fun ProjectListHeader(
             // ── Logo + title ──────────────────────────────────────────────────
             Row(
                 verticalAlignment     = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier              = Modifier.weight(1f)
             ) {
                 Surface(
@@ -89,7 +89,7 @@ fun ProjectListHeader(
                         )
                     }
                 }
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
                     Text(
                         text          = "PaisaTracker",
                         style         = MaterialTheme.typography.headlineMedium,
@@ -110,7 +110,7 @@ fun ProjectListHeader(
 
             // ── Action buttons ────────────────────────────────────────────────
             Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment     = Alignment.Bottom
             ) {
                 // New Project

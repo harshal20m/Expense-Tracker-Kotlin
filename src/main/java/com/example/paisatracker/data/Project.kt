@@ -10,6 +10,7 @@ data class Project(
     val emoji: String = "📁",
 
     val createdAt: Long = System.currentTimeMillis(),
-    val lastModified: Long = System.currentTimeMillis()
+    val lastModified: Long = System.currentTimeMillis(),
+    val isCompleted: Boolean = false
 )
 

@@ -76,12 +76,12 @@ fun WeeklyDashboardCalendar(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 4.dp),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
+        Column(modifier = Modifier.padding(10.dp)) {
             // --- HEADER ---
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -89,30 +89,31 @@ fun WeeklyDashboardCalendar(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text("This Week", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                    Text("This Week", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     Text(
                         "${formatDateToDayMonth(startOfWeek)} - ${formatDateToDayMonth(weekDates.last())}",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 10.sp
                     )
                 }
 
                 Surface(
-                    shape = RoundedCornerShape(10.dp),
+                    shape = RoundedCornerShape(8.dp),
                     color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        Text("Spent", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-                        Text(formatCurrency(weeklyTotal), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Text("Spent", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, fontSize = 10.sp)
+                        Text(formatCurrency(weeklyTotal), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             // --- WEEK DAYS ---
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -137,21 +138,21 @@ fun WeeklyDashboardCalendar(
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
+                            .clip(RoundedCornerShape(8.dp))
                             .background(bgColor)
                             .clickable { selectedDate = date }
-                            .padding(vertical = 6.dp)
+                            .padding(vertical = 4.dp)
                             .weight(1f)
                     ) {
-                        Text(dayLabels[index], style = MaterialTheme.typography.labelSmall, fontSize = 10.sp, color = if (isSelected) contentColor.copy(0.8f) else MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(date.get(Calendar.DAY_OF_MONTH).toString(), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = contentColor)
-                        Box(modifier = Modifier.size(3.dp).clip(CircleShape).background(if (expensesByDate.containsKey(dateKey)) contentColor else Color.Transparent))
+                        Text(dayLabels[index], style = MaterialTheme.typography.labelSmall, fontSize = 9.sp, color = if (isSelected) contentColor.copy(0.8f) else MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(date.get(Calendar.DAY_OF_MONTH).toString(), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = contentColor, fontSize = 13.sp)
+                        Box(modifier = Modifier.size(2.dp).clip(CircleShape).background(if (expensesByDate.containsKey(dateKey)) contentColor else Color.Transparent))
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, thickness = 1.dp)
+            Spacer(modifier = Modifier.height(8.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant, thickness = 0.5.dp)
 
             // --- TRANSACTIONS GRID (2 in a row) ---
             AnimatedContent(
@@ -160,10 +161,10 @@ fun WeeklyDashboardCalendar(
                 label = "grid"
             ) { expensesForDay ->
                 if (expensesForDay.isNotEmpty()) {
-                    Box(modifier = Modifier.heightIn(max = 180.dp).padding(top = 8.dp)) {
-                        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Box(modifier = Modifier.heightIn(max = 150.dp).padding(top = 6.dp)) {
+                        LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             items(expensesForDay.chunked(2)) { rowItems ->
-                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                     rowItems.forEach { expense ->
                                         GridTransactionItem(expense = expense, onClick = { onTransactionClick(expense.id) }, modifier = Modifier.weight(1f))
                                     }
@@ -173,7 +174,7 @@ fun WeeklyDashboardCalendar(
                         }
                     }
                 } else {
-                    Text("No transactions", modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("No transactions", modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }

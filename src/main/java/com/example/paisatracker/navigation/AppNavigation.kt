@@ -1,5 +1,4 @@
 package com.example.paisatracker.navigation
-
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -16,9 +15,7 @@ import com.example.paisatracker.ui.expense.ExpenseListScreen
 import com.example.paisatracker.ui.export.ExportScreen
 import com.example.paisatracker.ui.budget.BudgetScreen
 import com.example.paisatracker.ui.main.projects.ProjectListScreen
-
 import com.example.paisatracker.ui.settings.SettingsScreen
-
 @Composable
 fun AppNavigation(
     navController: NavHostController,
@@ -34,12 +31,10 @@ fun AppNavigation(
             CalendarTransactionView(
                 expenses = expenses,
                 onTransactionClick = { expenseId ->
-                    // Use your navController to jump to the details screen!
                     navController.navigate("expense_details/$expenseId")
                 }
             )
         }
-
         composable("export") {
             ExportScreen(viewModel = viewModel, navController = navController)
         }
@@ -64,16 +59,18 @@ fun AppNavigation(
                 ProjectInsightsScreen(viewModel = viewModel, projectId = projectId, navController = navController)
             }
         }
-
-        //budget
         composable("budget") {
             BudgetScreen(
                 viewModel = viewModel,
                 onNavigateBack = { navController.popBackStack() },
-                currencySymbol = "₹"   // or read from your settings/DataStore
+                onOpenProject = { projectId ->
+                    navController.navigate("project_details/$projectId")
+                },
+                onOpenCategory = { categoryId ->
+                    navController.navigate("expense_list/$categoryId")
+                },
+                currencySymbol = "₹"
             )
         }
-
-
     }
 }

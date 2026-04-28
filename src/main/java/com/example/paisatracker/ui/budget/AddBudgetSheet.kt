@@ -1,5 +1,4 @@
 package com.example.paisatracker.ui.budget
-
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -26,11 +25,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -62,11 +63,9 @@ import androidx.compose.ui.unit.sp
 import com.example.paisatracker.PaisaTrackerViewModel
 import com.example.paisatracker.data.Budget
 import com.example.paisatracker.data.BudgetPeriod
+import com.example.paisatracker.data.EmojiSuggestionEngine
 import com.example.paisatracker.ui.common.EmojiChip
 import com.example.paisatracker.ui.common.EmojiPickerSheet
-import com.example.paisatracker.data.EmojiSuggestionEngine
-
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddBudgetSheet(
@@ -77,7 +76,6 @@ fun AddBudgetSheet(
 ) {
     val projects by viewModel.getAllProjects().collectAsState(initial = emptyList())
     val categories by viewModel.getAllCategories().collectAsState(initial = emptyList())
-
     var selectedProjectId by remember { mutableStateOf(budgetToEdit?.projectId) }
     var selectedCategoryId by remember { mutableStateOf(budgetToEdit?.categoryId) }
     var name by remember { mutableStateOf(budgetToEdit?.name ?: "") }
@@ -88,29 +86,26 @@ fun AddBudgetSheet(
     var amountError by remember { mutableStateOf(false) }
     var projectError by remember { mutableStateOf(false) }
     var showEmojiPicker by remember { mutableStateOf(false) }
-
+    var resetTrackingFromNow by remember { mutableStateOf(false) }
     val suggestions by remember(name) {
         derivedStateOf {
             EmojiSuggestionEngine.suggest(name, maxResults = 8)
         }
     }
-
     val emojiScale by animateFloatAsState(
         targetValue = if (showEmojiPicker) 1.1f else 1f,
         animationSpec = spring(dampingRatio = 0.4f, stiffness = 500f),
         label = "emoji_scale"
     )
-
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val isEditMode = budgetToEdit != null
     val title = if (isEditMode) "Edit Budget" else "New Budget"
     val buttonText = if (isEditMode) "Update Budget" else "Create Budget"
-
-    // Filter categories based on selected project
-    val filteredCategories = if (selectedProjectId != null)
+    val filteredCategories = if (selectedProjectId != null) {
         categories.filter { it.projectId == selectedProjectId }
-    else emptyList()
-
+    } else {
+        emptyList()
+    }
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
@@ -131,8 +126,6 @@ fun AddBudgetSheet(
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 20.dp)
             )
-
-            // Project selection (Mandatory)
             if (projects.isNotEmpty()) {
                 Text(
                     text = "Select Project *",
@@ -142,7 +135,6 @@ fun AddBudgetSheet(
                 )
                 var projectExpanded by remember { mutableStateOf(false) }
                 val selectedProject = projects.find { it.id == selectedProjectId }
-
                 ExposedDropdownMenuBox(
                     expanded = projectExpanded,
                     onExpandedChange = { projectExpanded = it },
@@ -175,7 +167,7 @@ fun AddBudgetSheet(
                                 text = { Text("${project.emoji} ${project.name}") },
                                 onClick = {
                                     selectedProjectId = project.id
-                                    selectedCategoryId = null // Reset category when project changes
+                                    selectedCategoryId = null
                                     projectError = false
                                     projectExpanded = false
                                 }
@@ -184,8 +176,6 @@ fun AddBudgetSheet(
                     }
                 }
             }
-
-            // Category selection (Optional, but shown after project)
             if (selectedProjectId != null && filteredCategories.isNotEmpty()) {
                 Text(
                     text = "Select Category (Optional)",
@@ -195,7 +185,6 @@ fun AddBudgetSheet(
                 )
                 var categoryExpanded by remember { mutableStateOf(false) }
                 val selectedCategory = filteredCategories.find { it.id == selectedCategoryId }
-
                 ExposedDropdownMenuBox(
                     expanded = categoryExpanded,
                     onExpandedChange = { categoryExpanded = it },
@@ -237,7 +226,6 @@ fun AddBudgetSheet(
                     }
                 }
             } else if (selectedProjectId != null && filteredCategories.isEmpty()) {
-                // Show message when project has no categories
                 Text(
                     text = "No categories available for this project. You can create budgets without specifying a category.",
                     style = MaterialTheme.typography.bodySmall,
@@ -245,8 +233,6 @@ fun AddBudgetSheet(
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
             }
-
-            // Emoji Preview and Suggestions
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -269,7 +255,6 @@ fun AddBudgetSheet(
                         Text(emoji, fontSize = 38.sp)
                     }
                 }
-
                 AnimatedVisibility(
                     visible = suggestions.isNotEmpty() && name.isNotBlank(),
                     enter = expandVertically() + fadeIn(),
@@ -312,8 +297,6 @@ fun AddBudgetSheet(
                     }
                 }
             }
-
-            // Emoji picker (collapsible)
             AnimatedVisibility(
                 visible = showEmojiPicker,
                 enter = expandVertically() + fadeIn(),
@@ -325,7 +308,6 @@ fun AddBudgetSheet(
                         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
                     )
                     Spacer(Modifier.height(12.dp))
-
                     EmojiPickerSheet(
                         contextHint = name,
                         selectedEmoji = emoji,
@@ -339,8 +321,6 @@ fun AddBudgetSheet(
                     Spacer(Modifier.height(20.dp))
                 }
             }
-
-            // Budget Name
             OutlinedTextField(
                 value = name,
                 onValueChange = {
@@ -359,8 +339,6 @@ fun AddBudgetSheet(
                 shape = RoundedCornerShape(14.dp),
                 singleLine = true
             )
-
-            // Limit Amount
             OutlinedTextField(
                 value = amountText,
                 onValueChange = {
@@ -381,8 +359,6 @@ fun AddBudgetSheet(
                 shape = RoundedCornerShape(14.dp),
                 singleLine = true
             )
-
-            // Period selection
             Text(
                 text = "Period",
                 style = MaterialTheme.typography.labelLarge,
@@ -404,18 +380,53 @@ fun AddBudgetSheet(
                     )
                 }
             }
-
-            // Save button
+            if (isEditMode && selectedPeriod == BudgetPeriod.MONTHLY) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 20.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .toggleable(
+                                value = resetTrackingFromNow,
+                                onValueChange = { resetTrackingFromNow = it }
+                            )
+                            .padding(14.dp),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Checkbox(
+                            checked = resetTrackingFromNow,
+                            onCheckedChange = null
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column {
+                            Text(
+                                text = "Reset monthly tracking from now",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Old expenses before this edit will not be counted in this monthly budget anymore.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+                }
+            }
             Button(
                 onClick = {
                     projectError = selectedProjectId == null
                     nameError = name.isBlank()
                     val amount = amountText.toDoubleOrNull()
                     amountError = amount == null || amount <= 0
-
                     if (!projectError && !nameError && !amountError && amount != null) {
                         if (isEditMode && budgetToEdit != null) {
-                            // Update existing budget
                             val updatedBudget = budgetToEdit.copy(
                                 name = name.trim(),
                                 emoji = emoji,
@@ -424,9 +435,11 @@ fun AddBudgetSheet(
                                 projectId = selectedProjectId,
                                 categoryId = selectedCategoryId
                             )
-                            viewModel.updateBudget(updatedBudget)
+                            viewModel.updateBudgetWithReset(
+                                budget = updatedBudget,
+                                resetTrackingFromNow = resetTrackingFromNow
+                            )
                         } else {
-                            // Create new budget
                             viewModel.recordEmojiUsage(emoji)
                             viewModel.addBudget(
                                 Budget(

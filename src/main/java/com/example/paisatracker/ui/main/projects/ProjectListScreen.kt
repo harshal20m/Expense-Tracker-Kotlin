@@ -26,6 +26,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -72,7 +73,11 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
     var summaryExpanded by remember { mutableStateOf(false) }
 
     // ── Projects + custom ordering ────────────────────────────────────────────
-    val projects by viewModel.getAllProjectsWithTotal().collectAsState(initial = emptyList())
+    var showCompleted by remember { mutableStateOf(false) }
+    val activeProjects by viewModel.getAllProjectsWithTotal().collectAsState(initial = emptyList())
+    val completedProjects by viewModel.getCompletedProjectsWithTotal().collectAsState(initial = emptyList())
+    
+    val projects = if (showCompleted) completedProjects else activeProjects
     val sharedPrefs = remember {
         context.getSharedPreferences("project_order", android.content.Context.MODE_PRIVATE)
     }
@@ -151,8 +156,8 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
         LazyColumn(
             state               = listState,
             modifier            = Modifier.fillMaxSize(),
-            contentPadding      = PaddingValues(top = 8.dp, bottom = 110.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            contentPadding      = PaddingValues(top = 0.dp, bottom = 80.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // ── Update Notification ───────────────────────────────────────────
             item {
@@ -174,84 +179,99 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
                 }
             }
 
-            // ── Weekly calendar ───────────────────────────────────────────────
+            // ── Dashboard Components (Calendar, Actions, Panels, Filter) ──────
             item {
-                WeeklyDashboardCalendar(
-                    expenses           = recentExpenses,
-                    onTransactionClick = { navController.navigate("expense_details/$it") }
-                )
-            }
-
-            // ── 2×2 action grid (original layout) ─────────────────────────────
-            item {
-                ProjectActionGrid(
-                    summaryExpanded = summaryExpanded,
-                    searchExpanded  = searchExpanded,
-                    recentExpanded  = recentExpanded,
-                    onSummaryClick  = {
-                        summaryExpanded = !summaryExpanded
-                        if (summaryExpanded) { searchExpanded = false; recentExpanded = false }
-                    },
-                    onSearchClick   = {
-                        searchExpanded = !searchExpanded
-                        if (searchExpanded) { summaryExpanded = false; recentExpanded = false }
-                    },
-                    onRecentClick   = {
-                        recentExpanded = !recentExpanded
-                        if (recentExpanded) { summaryExpanded = false; searchExpanded = false }
-                    },
-                    onAssetsClick   = { showAssetsSheet = true }
-                )
-            }
-
-            // ── Summary panel ─────────────────────────────────────────────────
-            item {
-                AnimatedVisibility(
-                    visible = summaryExpanded && orderedProjects.isNotEmpty(),
-                    enter   = expandVertically(spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMediumLow)) + fadeIn(tween(300)),
-                    exit    = shrinkVertically(spring(Spring.DampingRatioNoBouncy, Spring.StiffnessMedium)) + fadeOut(tween(200))
-                ) {
-                    SummaryExpandedCard(
-                        totalSpent      = totalSpent,
-                        totalProjects   = orderedProjects.size,
-                        totalCategories = totalCategories,
-                        totalExpenses   = totalExpenses
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    WeeklyDashboardCalendar(
+                        expenses           = recentExpenses,
+                        onTransactionClick = { navController.navigate("expense_details/$it") }
                     )
-                }
-            }
 
-            // ── Search panel ──────────────────────────────────────────────────
-            item {
-                AnimatedVisibility(
-                    visible = searchExpanded,
-                    enter   = expandVertically(spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMediumLow)) + fadeIn(tween(300)),
-                    exit    = shrinkVertically(spring(Spring.DampingRatioNoBouncy, Spring.StiffnessMedium)) + fadeOut(tween(200))
-                ) {
-                    SearchFilterCard(
-                        searchQuery         = searchQuery,
-                        onSearchQueryChange = { searchViewModel.onSearchQueryChanged(it) },
-                        minAmount           = minAmount,
-                        onMinAmountChange   = { searchViewModel.onMinAmountChanged(it) },
-                        maxAmount           = maxAmount,
-                        onMaxAmountChange   = { searchViewModel.onMaxAmountChanged(it) },
-                        onSearch            = { searchViewModel.executeSearch() },
-                        onClear             = { searchViewModel.clearSearch(); searchExpanded = false },
-                        isSearchActive      = isSearchActive
+                    ProjectActionGrid(
+                        summaryExpanded = summaryExpanded,
+                        searchExpanded  = searchExpanded,
+                        recentExpanded  = recentExpanded,
+                        onSummaryClick  = {
+                            summaryExpanded = !summaryExpanded
+                            if (summaryExpanded) { searchExpanded = false; recentExpanded = false }
+                        },
+                        onSearchClick   = {
+                            searchExpanded = !searchExpanded
+                            if (searchExpanded) { summaryExpanded = false; recentExpanded = false }
+                        },
+                        onRecentClick   = {
+                            recentExpanded = !recentExpanded
+                            if (recentExpanded) { summaryExpanded = false; searchExpanded = false }
+                        },
+                        onAssetsClick   = { showAssetsSheet = true }
                     )
-                }
-            }
 
-            // ── Recent panel ──────────────────────────────────────────────────
-            item {
-                AnimatedVisibility(
-                    visible = recentExpanded,
-                    enter   = expandVertically(spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMediumLow)) + fadeIn(tween(300)),
-                    exit    = shrinkVertically(spring(Spring.DampingRatioNoBouncy, Spring.StiffnessMedium)) + fadeOut(tween(200))
-                ) {
-                    RecentTransactionsPanel(
-                        expenses       = recentExpenses,
-                        onExpenseClick = { navController.navigate("expense_details/${it.id}") }
-                    )
+                    // ── Summary panel ─────────────────────────────────────────────────
+                    AnimatedVisibility(
+                        visible = summaryExpanded && orderedProjects.isNotEmpty(),
+                        enter   = expandVertically(spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMediumLow)) + fadeIn(tween(300)),
+                        exit    = shrinkVertically(spring(Spring.DampingRatioNoBouncy, Spring.StiffnessMedium)) + fadeOut(tween(200))
+                    ) {
+                        SummaryExpandedCard(
+                            totalSpent      = totalSpent,
+                            totalProjects   = orderedProjects.size,
+                            totalCategories = totalCategories,
+                            totalExpenses   = totalExpenses
+                        )
+                    }
+
+                    // ── Search panel ──────────────────────────────────────────────────
+                    AnimatedVisibility(
+                        visible = searchExpanded,
+                        enter   = expandVertically(spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMediumLow)) + fadeIn(tween(300)),
+                        exit    = shrinkVertically(spring(Spring.DampingRatioNoBouncy, Spring.StiffnessMedium)) + fadeOut(tween(200))
+                    ) {
+                        SearchFilterCard(
+                            searchQuery         = searchQuery,
+                            onSearchQueryChange = { searchViewModel.onSearchQueryChanged(it) },
+                            minAmount           = minAmount,
+                            onMinAmountChange   = { searchViewModel.onMinAmountChanged(it) },
+                            maxAmount           = maxAmount,
+                            onMaxAmountChange   = { searchViewModel.onMaxAmountChanged(it) },
+                            onSearch            = { searchViewModel.executeSearch() },
+                            onClear             = { searchViewModel.clearSearch(); searchExpanded = false },
+                            isSearchActive      = isSearchActive
+                        )
+                    }
+
+                    // ── Recent panel ──────────────────────────────────────────────────
+                    AnimatedVisibility(
+                        visible = recentExpanded,
+                        enter   = expandVertically(spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMediumLow)) + fadeIn(tween(300)),
+                        exit    = shrinkVertically(spring(Spring.DampingRatioNoBouncy, Spring.StiffnessMedium)) + fadeOut(tween(200))
+                    ) {
+                        RecentTransactionsPanel(
+                            expenses       = recentExpenses,
+                            onExpenseClick = { navController.navigate("expense_details/${it.id}") }
+                        )
+                    }
+
+                    if (activeProjects.isNotEmpty() || completedProjects.isNotEmpty()) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 16.dp, end = 8.dp, top = 2.dp, bottom = 0.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = if (showCompleted) "Completed Projects (${completedProjects.size})" else "Active Projects (${activeProjects.size})",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                            )
+                            if (completedProjects.isNotEmpty() || showCompleted) {
+                                TextButton(onClick = { showCompleted = !showCompleted }) {
+                                    Text(if (showCompleted) "Show Active" else "Show Completed")
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -315,6 +335,13 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
                                 currentSheetType = SheetType.DELETE
                                 showSheet        = true
                                 scope.launch { sheetState.show() }
+                            },
+                            onCompleteToggleClick = {
+                                viewModel.updateProjectStatus(
+                                    pwt.project.id,
+                                    !pwt.project.isCompleted,
+                                    pwt.project.name
+                                )
                             }
                         )
                     }
@@ -419,11 +446,11 @@ private fun ProjectActionGrid(
                 .widthIn(max = 500.dp)
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Row(
                 modifier              = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 ActionToggleCard(
                     title      = "Summary",
@@ -443,7 +470,7 @@ private fun ProjectActionGrid(
             }
             Row(
                 modifier              = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 ActionToggleCard(
                     title      = "Recent",
