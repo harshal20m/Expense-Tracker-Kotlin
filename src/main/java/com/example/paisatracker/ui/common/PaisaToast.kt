@@ -25,6 +25,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
@@ -37,14 +38,15 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 
 enum class ToastType {
-    SUCCESS, ERROR, INFO, WARNING
+    SUCCESS, ERROR, INFO, WARNING, UNDO
 }
 
 data class ToastMessage(
     val message: String,
     val type: ToastType = ToastType.SUCCESS,
-    val duration: Long = 3000L,
-    val id: Long = System.currentTimeMillis()
+    val duration: Long = 5000L,
+    val id: Long = System.currentTimeMillis(),
+    val onUndo: (() -> Unit)? = null
 )
 
 @Composable
@@ -79,13 +81,18 @@ fun PaisaToast(
                         Icons.Default.Error
                     )
                     ToastType.WARNING -> Triple(
-                        Color(0xFFFFF4E5), // Soft Warning Amber
-                        Color(0xFF663C00),
+                        MaterialTheme.colorScheme.tertiaryContainer,
+                        MaterialTheme.colorScheme.onTertiaryContainer,
                         Icons.Default.Warning
                     )
                     ToastType.INFO -> Triple(
                         MaterialTheme.colorScheme.secondaryContainer,
                         MaterialTheme.colorScheme.onSecondaryContainer,
+                        Icons.Default.Info
+                    )
+                    ToastType.UNDO -> Triple(
+                        MaterialTheme.colorScheme.inverseSurface,
+                        MaterialTheme.colorScheme.inverseOnSurface,
                         Icons.Default.Info
                     )
                 }
@@ -101,7 +108,7 @@ fun PaisaToast(
                 ) {
                     Row(
                         modifier = Modifier
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
@@ -117,8 +124,24 @@ fun PaisaToast(
                             style = MaterialTheme.typography.bodyMedium,
                             color = contentColor,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp
+                            fontSize = 14.sp,
+                            modifier = Modifier.weight(1f, fill = false)
                         )
+                        if (toast.type == ToastType.UNDO && toast.onUndo != null) {
+                            Spacer(Modifier.width(8.dp))
+                            TextButton(
+                                onClick = {
+                                    toast.onUndo.invoke()
+                                    onDismiss()
+                                }
+                            ) {
+                                Text(
+                                    "UNDO",
+                                    color = MaterialTheme.colorScheme.inversePrimary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
                     }
                 }
             }

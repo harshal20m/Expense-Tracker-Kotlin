@@ -41,7 +41,8 @@ class QuickBalanceWidget : GlanceAppWidget() {
             backupDao       = db.backupDao(),
             budgetDao       = db.budgetDao(),
             flapDao         = db.flapDao(),
-            salaryRecordDao = db.salaryRecordDao()
+            salaryRecordDao = db.salaryRecordDao(),
+            actionHistoryDao = db.actionHistoryDao()
         )
 
         var todayTotal:  Double

@@ -16,6 +16,7 @@ import com.example.paisatracker.ui.export.ExportScreen
 import com.example.paisatracker.ui.budget.BudgetScreen
 import com.example.paisatracker.ui.main.projects.ProjectListScreen
 import com.example.paisatracker.ui.settings.SettingsScreen
+import com.example.paisatracker.ui.bin.BinScreen
 @Composable
 fun AppNavigation(
     navController: NavHostController,
@@ -71,6 +72,9 @@ fun AppNavigation(
                 },
                 currencySymbol = "₹"
             )
+        }
+        composable("bin") {
+            BinScreen(viewModel = viewModel, navController = navController)
         }
     }
 }

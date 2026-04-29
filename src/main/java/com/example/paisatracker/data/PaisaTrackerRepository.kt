@@ -10,9 +10,16 @@ class PaisaTrackerRepository(
     private val backupDao: BackupDao,
     private val budgetDao: BudgetDao,
     private val flapDao: FlapDao,
-    private val salaryRecordDao: SalaryRecordDao
-
+    private val salaryRecordDao: SalaryRecordDao,
+    private val actionHistoryDao: ActionHistoryDao
 ) {
+    // Action History
+    fun getActionHistory() = actionHistoryDao.getAllHistory()
+    suspend fun insertAction(action: ActionHistory) = actionHistoryDao.insertAction(action)
+    suspend fun getLatestAction() = actionHistoryDao.getLatestAction()
+    suspend fun deleteAction(action: ActionHistory) = actionHistoryDao.deleteAction(action)
+    suspend fun deleteActionById(id: Long) = actionHistoryDao.deleteById(id)
+    suspend fun clearActionHistory() = actionHistoryDao.clearHistory()
 
 
 
@@ -132,6 +139,7 @@ class PaisaTrackerRepository(
     }
 
     fun getExpensesForCategory(categoryId: Long): Flow<List<Expense>> = expenseDao.getExpensesForCategory(categoryId)
+    suspend fun getExpensesForCategoryList(categoryId: Long): List<Expense> = expenseDao.getExpensesForCategoryList(categoryId)
 
     fun getExpenseById(id: Long): Flow<Expense?> = expenseDao.getExpenseById(id)
 

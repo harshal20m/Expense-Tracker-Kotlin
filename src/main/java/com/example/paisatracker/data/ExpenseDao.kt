@@ -52,6 +52,9 @@ interface ExpenseDao {
     @Query("SELECT * FROM expenses WHERE categoryId = :categoryId ORDER BY date DESC")
     fun getExpensesForCategory(categoryId: Long): Flow<List<Expense>>
 
+    @Query("SELECT * FROM expenses WHERE categoryId = :categoryId")
+    suspend fun getExpensesForCategoryList(categoryId: Long): List<Expense>
+
     @Query("""
     SELECT
         p.name AS projectName,

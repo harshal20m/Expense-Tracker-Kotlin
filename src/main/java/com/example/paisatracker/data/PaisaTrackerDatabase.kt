@@ -16,8 +16,9 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         Budget::class,
         FlapData::class,
         SalaryRecord::class,
+        ActionHistory::class,
     ],
-    version = 9,
+    version = 10,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -30,6 +31,7 @@ abstract class PaisaTrackerDatabase : RoomDatabase() {
     abstract fun budgetDao(): BudgetDao
     abstract fun flapDao(): FlapDao
     abstract fun salaryRecordDao(): SalaryRecordDao
+    abstract fun actionHistoryDao(): ActionHistoryDao
     companion object {
         @Volatile
         private var INSTANCE: PaisaTrackerDatabase? = null
@@ -46,12 +48,28 @@ abstract class PaisaTrackerDatabase : RoomDatabase() {
                         MIGRATION_4_5,
                         MIGRATION_6_7,
                         MIGRATION_7_8,
-                        MIGRATION_8_9
+                        MIGRATION_8_9,
+                        MIGRATION_9_10
                     )
                     .fallbackToDestructiveMigration(false)
                     .build()
                 INSTANCE = instance
                 instance
+            }
+        }
+        private val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `action_history` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `actionType` TEXT NOT NULL,
+                        `entityType` TEXT NOT NULL,
+                        `entityData` TEXT NOT NULL,
+                        `timestamp` INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
             }
         }
         private val MIGRATION_1_2 = object : Migration(1, 2) {

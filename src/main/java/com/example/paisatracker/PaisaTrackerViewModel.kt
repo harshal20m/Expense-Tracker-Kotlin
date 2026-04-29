@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.paisatracker.data.ActionHistory
 import com.example.paisatracker.data.Asset
 import com.example.paisatracker.data.BackupMetadata
 import com.example.paisatracker.data.Budget
@@ -25,6 +26,7 @@ import com.example.paisatracker.data.Project
 import com.example.paisatracker.data.ProjectBudgetSpend
 import com.example.paisatracker.data.ProjectWithTotal
 import com.example.paisatracker.data.RecentExpense
+import com.example.paisatracker.data.SalaryRecord
 import com.example.paisatracker.util.GithubRelease
 import com.example.paisatracker.util.ImageUtils
 import com.example.paisatracker.util.UpdateManager
@@ -32,6 +34,7 @@ import com.example.paisatracker.data.serializeHistory
 import com.example.paisatracker.data.serializeNotes
 import com.example.paisatracker.ui.common.ToastMessage
 import com.example.paisatracker.ui.common.ToastType
+import com.google.gson.Gson
 import com.opencsv.CSVReader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -45,6 +48,8 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.first
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
@@ -61,6 +66,132 @@ class PaisaTrackerViewModel(
     private val emojiPreferencesRepository: EmojiPreferencesRepository? = null,
     private val updateManager: UpdateManager? = null
 ) : ViewModel() {
+    private val gson = Gson()
+    val actionHistory: StateFlow<List<ActionHistory>> = repository.getActionHistory()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun recordDeletion(entityType: String, data: Any) {
+        viewModelScope.launch {
+            val finalData = when (entityType) {
+                "PROJECT" -> {
+                    val project = data as Project
+                    val categories = repository.getCategoriesForProjectList(project.id)
+                    val categoriesWithExpenses = categories.map { cat ->
+                        mapOf(
+                            "category" to cat,
+                            "expenses" to repository.getExpensesForCategoryList(cat.id)
+                        )
+                    }
+                    mapOf(
+                        "project" to project,
+                        "children" to categoriesWithExpenses
+                    )
+                }
+                "CATEGORY" -> {
+                    val category = data as Category
+                    val expenses = repository.getExpensesForCategoryList(category.id)
+                    mapOf(
+                        "category" to category,
+                        "expenses" to expenses
+                    )
+                }
+                else -> data
+            }
+
+            val history = ActionHistory(
+                actionType = "DELETE",
+                entityType = entityType,
+                entityData = gson.toJson(finalData)
+            )
+            repository.insertAction(history)
+        }
+    }
+
+    fun undoLastAction() {
+        viewModelScope.launch {
+            val lastAction = repository.getLatestAction() ?: return@launch
+            restoreAction(lastAction)
+        }
+    }
+
+    fun restoreAction(action: ActionHistory) {
+        viewModelScope.launch {
+            try {
+                when (action.entityType) {
+                    "EXPENSE" -> {
+                        val expense = gson.fromJson(action.entityData, Expense::class.java)
+                        repository.insertExpense(expense)
+                    }
+                    "BUDGET" -> {
+                        val budget = gson.fromJson(action.entityData, Budget::class.java)
+                        repository.insertBudget(budget)
+                    }
+                    "PROJECT" -> {
+                        val type = object : com.google.gson.reflect.TypeToken<Map<String, Any>>() {}.type
+                        val root: Map<String, Any> = gson.fromJson(action.entityData, type)
+                        
+                        val projectJson = gson.toJson(root["project"])
+                        val project = gson.fromJson(projectJson, Project::class.java)
+                        val newProjectId = repository.insertProject(project.copy(id = 0))
+                        
+                        val childrenList = root["children"] as List<*>
+                        childrenList.forEach { child ->
+                            val childMap = child as Map<*, *>
+                            val categoryJson = gson.toJson(childMap["category"])
+                            val category = gson.fromJson(categoryJson, Category::class.java)
+                            val newCategoryId = repository.insertCategory(category.copy(id = 0, projectId = newProjectId))
+                            
+                            val expensesList = childMap["expenses"] as List<*>
+                            expensesList.forEach { exp ->
+                                val expenseJson = gson.toJson(exp)
+                                val expense = gson.fromJson(expenseJson, Expense::class.java)
+                                repository.insertExpense(expense.copy(id = 0, categoryId = newCategoryId))
+                            }
+                        }
+                    }
+                    "CATEGORY" -> {
+                        val type = object : com.google.gson.reflect.TypeToken<Map<String, Any>>() {}.type
+                        val root: Map<String, Any> = gson.fromJson(action.entityData, type)
+                        
+                        val categoryJson = gson.toJson(root["category"])
+                        val category = gson.fromJson(categoryJson, Category::class.java)
+                        val newCategoryId = repository.insertCategory(category.copy(id = 0))
+                        
+                        val expensesList = root["expenses"] as List<*>
+                        expensesList.forEach { exp ->
+                            val expenseJson = gson.toJson(exp)
+                            val expense = gson.fromJson(expenseJson, Expense::class.java)
+                            repository.insertExpense(expense.copy(id = 0, categoryId = newCategoryId))
+                        }
+                    }
+                    "SALARY_RECORD" -> {
+                        val record = gson.fromJson(action.entityData, SalaryRecord::class.java)
+                        repository.insertSalaryRecord(record)
+                    }
+                }
+                repository.deleteAction(action)
+                showToast("Action undone")
+            } catch (e: Exception) {
+                e.printStackTrace()
+                showToast("Undo failed: ${e.message}", ToastType.ERROR)
+            }
+        }
+    }
+
+    fun deleteAction(action: ActionHistory) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.deleteAction(action)
+            showToast("Permanently deleted", ToastType.INFO)
+        }
+    }
+
+    fun clearBin() {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.clearActionHistory()
+            showToast("Bin cleared", ToastType.SUCCESS)
+        }
+    }
+
     val updateAvailable: StateFlow<GithubRelease?> = updateManager?.updateAvailable
         ?: MutableStateFlow(null)
     fun checkForUpdates(isManual: Boolean = false) {
@@ -73,8 +204,12 @@ class PaisaTrackerViewModel(
     }
     private val _toastMessage = MutableStateFlow<ToastMessage?>(null)
     val toastMessage = _toastMessage.asStateFlow()
-    fun showToast(message: String, type: ToastType = ToastType.SUCCESS) {
-        _toastMessage.value = ToastMessage(message, type)
+    fun showToast(
+        message: String,
+        type: ToastType = ToastType.SUCCESS,
+        onUndo: (() -> Unit)? = null
+    ) {
+        _toastMessage.value = ToastMessage(message, type, onUndo = onUndo)
     }
     fun dismissToast() {
         _toastMessage.value = null
@@ -152,8 +287,9 @@ class PaisaTrackerViewModel(
     }
     fun deleteBudget(budget: Budget) {
         viewModelScope.launch {
+            recordDeletion("BUDGET", budget)
             repository.deleteBudget(budget)
-            showToast("Budget deleted", ToastType.INFO)
+            showToast("Budget deleted", ToastType.UNDO, onUndo = { undoLastAction() })
         }
     }
     fun updateBudget(budget: Budget) {
@@ -238,6 +374,18 @@ class PaisaTrackerViewModel(
                 flapNotes.value = saved.notesList()
             }
             startFlapPersistence()
+            cleanupOldActions()
+        }
+    }
+
+    private fun cleanupOldActions() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val thirtyDaysAgo = System.currentTimeMillis() - TimeUnit.DAYS.toMillis(30)
+            repository.getActionHistory().first().forEach { action ->
+                if (action.timestamp < thirtyDaysAgo) {
+                    repository.deleteAction(action)
+                }
+            }
         }
     }
     fun addFlapNote(text: String) {
@@ -383,8 +531,9 @@ class PaisaTrackerViewModel(
     }
     fun deleteProject(project: Project) {
         viewModelScope.launch {
+            recordDeletion("PROJECT", project)
             repository.deleteProject(project)
-            showToast("Project deleted", ToastType.INFO)
+            showToast("Project deleted", ToastType.UNDO, onUndo = { undoLastAction() })
         }
     }
     fun insertCategory(category: Category) {
@@ -401,8 +550,9 @@ class PaisaTrackerViewModel(
     }
     fun deleteCategory(category: Category) {
         viewModelScope.launch {
+            recordDeletion("CATEGORY", category)
             repository.deleteCategory(category)
-            showToast("Category deleted", ToastType.INFO)
+            showToast("Category deleted", ToastType.UNDO, onUndo = { undoLastAction() })
         }
     }
     fun getExpensesForCategory(categoryId: Long): Flow<List<Expense>> =
@@ -422,8 +572,9 @@ class PaisaTrackerViewModel(
     }
     fun deleteExpense(expense: Expense) {
         viewModelScope.launch {
+            recordDeletion("EXPENSE", expense)
             repository.deleteExpense(expense)
-            showToast("Expense removed", ToastType.INFO)
+            showToast("Expense removed", ToastType.UNDO, onUndo = { undoLastAction() })
         }
     }
     suspend fun getExpensesForExport(projectId: Long): String {

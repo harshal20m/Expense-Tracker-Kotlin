@@ -88,8 +88,9 @@ class SalaryViewModel(
 
     fun deleteSalary(record: SalaryRecord) {
         viewModelScope.launch {
+            globalViewModel.recordDeletion("SALARY_RECORD", record)
             repository.deleteSalaryRecord(record)
-            globalViewModel.showToast("Salary deleted", ToastType.INFO)
+            globalViewModel.showToast("Salary deleted", ToastType.UNDO, onUndo = { globalViewModel.undoLastAction() })
         }
     }
 }

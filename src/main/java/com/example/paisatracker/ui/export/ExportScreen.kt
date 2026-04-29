@@ -171,8 +171,13 @@ fun ExportScreen(
                     pendingRestoreUri?.let { uri ->
                         scope.launch {
                             isRestoring = true
-                            if (backupManager.restoreFromBackup(uri)) viewModel.showToast("Restore Successful! Please Restart the app", ToastType.SUCCESS)
-                            else viewModel.showToast("Restore Failed!", ToastType.ERROR)
+                            if (backupManager.restoreFromBackup(uri)) {
+                                viewModel.showToast("Restore Successful! Restarting...", ToastType.SUCCESS)
+                                kotlinx.coroutines.delay(1500)
+                                com.example.paisatracker.util.AppUtils.restartApp(context)
+                            } else {
+                                viewModel.showToast("Restore Failed!", ToastType.ERROR)
+                            }
                             isRestoring = false
                         }
                     }

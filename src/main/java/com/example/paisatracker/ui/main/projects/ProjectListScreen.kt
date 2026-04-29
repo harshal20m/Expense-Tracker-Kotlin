@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Search
@@ -123,7 +124,9 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
     var showSheet        by remember { mutableStateOf(false) }
     var showAssetsSheet  by remember { mutableStateOf(false) }
     var showQuickAdd     by remember { mutableStateOf(false) }
+    var showBin          by remember { mutableStateOf(false) }
     val quickAddState    = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val binSheetState    = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     // ── Totals ────────────────────────────────────────────────────────────────
     val totalSpent      = orderedProjects.sumOf { it.totalAmount }
@@ -187,6 +190,8 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
                         onTransactionClick = { navController.navigate("expense_details/$it") }
                     )
 
+                    Spacer(modifier = Modifier.height(8.dp))
+
                     ProjectActionGrid(
                         summaryExpanded = summaryExpanded,
                         searchExpanded  = searchExpanded,
@@ -203,7 +208,11 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
                             recentExpanded = !recentExpanded
                             if (recentExpanded) { summaryExpanded = false; searchExpanded = false }
                         },
-                        onAssetsClick   = { showAssetsSheet = true }
+                        onAssetsClick   = { showAssetsSheet = true },
+                        onBinClick      = {
+                            showBin = true
+                            scope.launch { binSheetState.show() }
+                        }
                     )
 
                     // ── Summary panel ─────────────────────────────────────────────────
@@ -251,27 +260,33 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
                         )
                     }
 
-                    if (activeProjects.isNotEmpty() || completedProjects.isNotEmpty()) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(start = 16.dp, end = 8.dp, top = 2.dp, bottom = 0.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = if (showCompleted) "Completed Projects (${completedProjects.size})" else "Active Projects (${activeProjects.size})",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                            )
-                            if (completedProjects.isNotEmpty() || showCompleted) {
-                                TextButton(onClick = { showCompleted = !showCompleted }) {
-                                    Text(if (showCompleted) "Show Active" else "Show Completed")
-                                }
-                            }
-                        }
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // ── Tabs (Browser-like) ───────────────────────────────────────────
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        BrowserTab(
+                            text = "Active",
+                            count = activeProjects.size,
+                            isSelected = !showCompleted,
+                            onClick = { showCompleted = false },
+                            modifier = Modifier.weight(1f)
+                        )
+                        BrowserTab(
+                            text = "Completed",
+                            count = completedProjects.size,
+                            isSelected = showCompleted,
+                            onClick = { showCompleted = true },
+                            modifier = Modifier.weight(1f)
+                        )
                     }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
                 }
             }
 
@@ -368,6 +383,24 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
         }
     }
 
+    // ── Bin sheet ─────────────────────────────────────────────────────────────
+    if (showBin) {
+        ModalBottomSheet(
+            onDismissRequest = { showBin = false },
+            sheetState       = binSheetState,
+            shape            = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+            dragHandle       = { BottomSheetDefaults.DragHandle() },
+            modifier         = Modifier.fillMaxHeight()
+        ) {
+            com.example.paisatracker.ui.bin.BinSheetContent(
+                viewModel = viewModel,
+                onDismiss = {
+                    scope.launch { binSheetState.hide() }.invokeOnCompletion { showBin = false }
+                }
+            )
+        }
+    }
+
     // ── Project sheets ────────────────────────────────────────────────────────
     if (showSheet && currentSheetType != null) {
         ModalBottomSheet(
@@ -435,7 +468,8 @@ private fun ProjectActionGrid(
     onSummaryClick:  () -> Unit,
     onSearchClick:   () -> Unit,
     onRecentClick:   () -> Unit,
-    onAssetsClick:   () -> Unit
+    onAssetsClick:   () -> Unit,
+    onBinClick:      () -> Unit
 ) {
     androidx.compose.foundation.layout.Box(
         modifier         = Modifier.fillMaxWidth(),
@@ -446,11 +480,11 @@ private fun ProjectActionGrid(
                 .widthIn(max = 500.dp)
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Row(
                 modifier              = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 ActionToggleCard(
                     title      = "Summary",
@@ -467,23 +501,31 @@ private fun ProjectActionGrid(
                     onClick    = onSearchClick,
                     modifier   = Modifier.weight(1f)
                 )
+                ActionToggleCard(
+                    title        = "Assets",
+                    icon         = Icons.Default.Image,
+                    isExpanded   = false,
+                    onClick      = onAssetsClick,
+                    modifier     = Modifier.weight(1f),
+                    isNavigation = true
+                )
             }
             Row(
                 modifier              = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 ActionToggleCard(
                     title      = "Recent",
                     icon       = Icons.Default.DateRange,
                     isExpanded = recentExpanded,
                     onClick    = onRecentClick,
-                    modifier   = Modifier.weight(1f)
+                    modifier   = Modifier.weight(2f)
                 )
                 ActionToggleCard(
-                    title        = "Assets",
-                    icon         = Icons.Default.Image,
+                    title        = "Bin",
+                    icon         = Icons.Default.DeleteSweep,
                     isExpanded   = false,
-                    onClick      = onAssetsClick,
+                    onClick      = onBinClick,
                     modifier     = Modifier.weight(1f),
                     isNavigation = true
                 )
