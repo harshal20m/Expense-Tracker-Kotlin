@@ -163,37 +163,37 @@ fun ExportScreen(
         if (isRestoring) LoadingOverlay("Restoring data...")
         if (isImportingCsv) LoadingOverlay("Importing CSV...")
 
-        if (showRestoreWarning) {
-            RestoreWarningDialog(
-                onDismiss = { showRestoreWarning = false; pendingRestoreUri = null },
-                onConfirm = {
-                    showRestoreWarning = false
-                    pendingRestoreUri?.let { uri ->
-                        scope.launch {
-                            isRestoring = true
-                            if (backupManager.restoreFromBackup(uri)) {
-                                viewModel.showToast("Restore Successful! Restarting...", ToastType.SUCCESS)
-                                kotlinx.coroutines.delay(1500)
-                                com.example.paisatracker.util.AppUtils.restartApp(context)
-                            } else {
-                                viewModel.showToast("Restore Failed!", ToastType.ERROR)
-                            }
-                            isRestoring = false
+    if (showRestoreWarning) {
+        RestoreWarningSheet(
+            onDismiss = { showRestoreWarning = false; pendingRestoreUri = null },
+            onConfirm = {
+                showRestoreWarning = false
+                pendingRestoreUri?.let { uri ->
+                    scope.launch {
+                        isRestoring = true
+                        if (backupManager.restoreFromBackup(uri)) {
+                            viewModel.showToast("Restore Successful! Restarting...", ToastType.SUCCESS)
+                            kotlinx.coroutines.delay(1500)
+                            com.example.paisatracker.util.AppUtils.restartApp(context)
+                        } else {
+                            viewModel.showToast("Restore Failed!", ToastType.ERROR)
                         }
+                        isRestoring = false
                     }
-                    pendingRestoreUri = null
                 }
-            )
-        }
+                pendingRestoreUri = null
+            }
+        )
+    }
 
-        if (showDeleteBackupDialog && backupToDelete != null) {
-            DeleteBackupDialog(backupToDelete!!, { showDeleteBackupDialog = false }, {
-                scope.launch {
-                    if (backupManager.deleteBackupFile(backupToDelete!!)) viewModel.showToast("Backup deleted", ToastType.INFO)
-                }
-                showDeleteBackupDialog = false
-            })
-        }
+    if (showDeleteBackupDialog && backupToDelete != null) {
+        DeleteBackupSheet(backupToDelete!!, { showDeleteBackupDialog = false }, {
+            scope.launch {
+                if (backupManager.deleteBackupFile(backupToDelete!!)) viewModel.showToast("Backup deleted", ToastType.INFO)
+            }
+            showDeleteBackupDialog = false
+        })
+    }
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),

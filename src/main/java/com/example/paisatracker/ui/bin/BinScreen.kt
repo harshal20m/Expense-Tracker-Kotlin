@@ -18,6 +18,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.paisatracker.ui.common.DeleteConfirmationSheetContent
 import com.example.paisatracker.PaisaTrackerViewModel
 import com.example.paisatracker.data.ActionHistory
 import com.example.paisatracker.data.Expense
@@ -29,6 +30,7 @@ import com.google.gson.Gson
 import com.google.gson.JsonObject
 import java.util.concurrent.TimeUnit
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BinSheetContent(viewModel: PaisaTrackerViewModel, onDismiss: () -> Unit) {
     val history by viewModel.actionHistory.collectAsState()
@@ -113,27 +115,20 @@ fun BinSheetContent(viewModel: PaisaTrackerViewModel, onDismiss: () -> Unit) {
     }
 
     if (showClearConfirm) {
-        AlertDialog(
-            onDismissRequest = { showClearConfirm = false },
-            title = { Text("Clear Bin?") },
-            text = { Text("This will permanently delete all items in the recycle bin. This action cannot be undone.") },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        viewModel.clearBin()
-                        showClearConfirm = false
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text("Clear All")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showClearConfirm = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
+        ModalBottomSheet(
+            onDismissRequest = { showClearConfirm = false }
+        ) {
+            DeleteConfirmationSheetContent(
+                title = "Clear Bin?",
+                message = "This will permanently delete all items in the recycle bin. This action cannot be undone.",
+                onConfirm = {
+                    viewModel.clearBin()
+                    showClearConfirm = false
+                },
+                onDismiss = { showClearConfirm = false },
+                confirmText = "Clear All"
+            )
+        }
     }
 }
 
@@ -158,6 +153,7 @@ fun BinScreen(viewModel: PaisaTrackerViewModel, navController: NavController) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BinItemRow(
     item: ActionHistory,
@@ -310,27 +306,19 @@ fun BinItemRow(
     }
 
     if (showDeleteConfirm) {
-        AlertDialog(
-            onDismissRequest = { showDeleteConfirm = false },
-            title = { Text("Delete Permanently?") },
-            text = { Text("Are you sure you want to delete this $title permanently? This cannot be undone.") },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        onDelete()
-                        showDeleteConfirm = false
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text("Delete")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteConfirm = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
+        ModalBottomSheet(
+            onDismissRequest = { showDeleteConfirm = false }
+        ) {
+            DeleteConfirmationSheetContent(
+                title = "Delete Permanently?",
+                message = "Are you sure you want to delete this $title permanently? This cannot be undone.",
+                onConfirm = {
+                    onDelete()
+                    showDeleteConfirm = false
+                },
+                onDismiss = { showDeleteConfirm = false }
+            )
+        }
     }
 }
 

@@ -37,6 +37,7 @@ import com.example.paisatracker.util.formatCurrency
 import java.text.SimpleDateFormat
 import java.util.*
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CalendarTransactionView(
     expenses: List<RecentExpense>,
@@ -269,9 +270,9 @@ fun CalendarTransactionView(
             }
         }
 
-        // Year Picker Dialog
+        // Year Picker BottomSheet
         if (showYearPicker) {
-            YearPickerDialog(
+            YearPickerSheet(
                 currentYear = currentMonth.get(Calendar.YEAR),
                 onYearSelected = { year ->
                     val newMonth = currentMonth.clone() as Calendar
@@ -285,8 +286,9 @@ fun CalendarTransactionView(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun YearPickerDialog(
+private fun YearPickerSheet(
     currentYear: Int,
     onYearSelected: (Int) -> Unit,
     onDismiss: () -> Unit
@@ -295,13 +297,30 @@ private fun YearPickerDialog(
     val endYear = Calendar.getInstance().get(Calendar.YEAR)
     val years = (startYear..endYear).toList().reversed()
 
-    AlertDialog(
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = { Text("Select Year", style = MaterialTheme.typography.titleLarge) },
-        text = {
+        dragHandle = { BottomSheetDefaults.DragHandle() },
+        containerColor = MaterialTheme.colorScheme.surface,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 32.dp)
+        ) {
+            Text(
+                text = "Select Year",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(16.dp),
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
             LazyColumn(
-                modifier = Modifier.heightIn(max = 400.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 400.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(years.size) { index ->
                     val year = years[index]
@@ -315,28 +334,40 @@ private fun YearPickerDialog(
                         color = if (isSelected)
                             MaterialTheme.colorScheme.primaryContainer
                         else
-                            Color.Transparent
+                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                        border = if (isSelected)
+                            BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
+                        else null
                     ) {
-                        Text(
-                            text = year.toString(),
+                        Row(
                             modifier = Modifier.padding(16.dp),
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                            color = if (isSelected)
-                                MaterialTheme.colorScheme.onPrimaryContainer
-                            else
-                                MaterialTheme.colorScheme.onSurface
-                        )
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = year.toString(),
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                color = if (isSelected)
+                                    MaterialTheme.colorScheme.onPrimaryContainer
+                                else
+                                    MaterialTheme.colorScheme.onSurface
+                            )
+
+                            if (isSelected) {
+                                Icon(
+                                    Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
                     }
                 }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
         }
-    )
+    }
 }
 
 @Composable

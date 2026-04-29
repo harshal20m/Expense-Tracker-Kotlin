@@ -35,7 +35,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Collections
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.outlined.Image
-import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -70,6 +70,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
+import com.example.paisatracker.ui.common.DeleteConfirmationSheetContent
 import coil.compose.AsyncImage
 import com.example.paisatracker.PaisaTrackerViewModel
 import com.example.paisatracker.ui.common.ToastType
@@ -211,10 +212,10 @@ fun AssetsBottomSheet(
         }
     }
 
-    // ── DIALOGS (Instead of nested bottom sheets) ──
+    // ── DIALOGS ──
     when (dialogType) {
         DialogType.ADD -> {
-            AddImageDialog(
+            AddAssetSheet(
                 onDismiss = { dialogType = null; selectedUri = null },
                 onConfirm = { title, description ->
                     selectedUri?.let { uri ->
@@ -228,8 +229,7 @@ fun AssetsBottomSheet(
         }
         DialogType.DELETE -> {
             activeAsset?.let { asset ->
-                DeleteAssetDialog(
-                    asset = asset,
+                DeleteAssetSheet(
                     onDismiss = { dialogType = null; activeAsset = null },
                     onConfirm = {
                         viewModel.deleteAsset(asset)
@@ -369,45 +369,87 @@ private fun ModernAssetCard(asset: Asset, onImageClick: () -> Unit, onDeleteClic
 }
 
 // -----------------------------------------------------------------
-// DIALOGS (Converted from Sheets)
+// SHEETS (Converted from Dialogs)
 // -----------------------------------------------------------------
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AddImageDialog(onDismiss: () -> Unit, onConfirm: (String, String) -> Unit) {
+private fun AddAssetSheet(onDismiss: () -> Unit, onConfirm: (String, String) -> Unit) {
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
 
-    AlertDialog(
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = { Text("Image Details", fontWeight = FontWeight.Bold) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = title, onValueChange = { title = it }, label = { Text("Title") },
-                    modifier = Modifier.fillMaxWidth(), singleLine = true, shape = RoundedCornerShape(10.dp)
-                )
-                OutlinedTextField(
-                    value = description, onValueChange = { description = it }, label = { Text("Description") },
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 80.dp), shape = RoundedCornerShape(10.dp)
-                )
+        dragHandle = { BottomSheetDefaults.DragHandle() }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(
+                "Image Details",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
+
+            OutlinedTextField(
+                value = title,
+                onValueChange = { title = it },
+                label = { Text("Title") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp)
+            )
+
+            OutlinedTextField(
+                value = description,
+                onValueChange = { description = it },
+                label = { Text("Description") },
+                modifier = Modifier.fillMaxWidth().heightIn(min = 100.dp),
+                shape = RoundedCornerShape(12.dp)
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                OutlinedButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.weight(1f),
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Text("Cancel")
+                }
+
+                Button(
+                    onClick = { onConfirm(title, description) },
+                    modifier = Modifier.weight(1f),
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Text("Save")
+                }
             }
-        },
-        confirmButton = { Button(onClick = { onConfirm(title, description) }) { Text("Save") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
-    )
+        }
+    }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DeleteAssetDialog(asset: Asset, onDismiss: () -> Unit, onConfirm: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Delete Image?", fontWeight = FontWeight.Bold) },
-        text = { Text("This image will be permanently removed. You cannot undo this action.") },
-        confirmButton = {
-            Button(onClick = onConfirm, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) {
-                Text("Delete")
-            }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
-    )
+private fun DeleteAssetSheet(onDismiss: () -> Unit, onConfirm: () -> Unit) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss
+    ) {
+        DeleteConfirmationSheetContent(
+            title = "Delete Image?",
+            message = "This image will be permanently removed. You cannot undo this action.",
+            onConfirm = onConfirm,
+            onDismiss = onDismiss
+        )
+    }
 }

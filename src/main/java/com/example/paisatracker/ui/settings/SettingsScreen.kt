@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
@@ -33,8 +34,8 @@ import com.example.paisatracker.PaisaTrackerViewModel
 import com.example.paisatracker.data.AppLockPreferences
 import com.example.paisatracker.data.CurrencyPreferencesRepository
 import com.example.paisatracker.data.DataSeeder
-import com.example.paisatracker.ui.applock.AppLockSettingsDialog
-import com.example.paisatracker.ui.applock.SetupPinDialog
+import com.example.paisatracker.ui.applock.AppLockSettingsSheet
+import com.example.paisatracker.ui.applock.SetupPinSheet
 import com.example.paisatracker.ui.assets.CompactHeader
 import kotlinx.coroutines.launch
 import java.io.File
@@ -251,7 +252,7 @@ fun SettingsScreen(
     // ── Dialogs ───────────────────────────────────────────────────────────────
 
     if (showPinSetupDialog) {
-        SetupPinDialog(
+        SetupPinSheet(
             onDismiss = { showPinSetupDialog = false },
             onPinSet  = { pin ->
                 scope.launch {
@@ -264,7 +265,7 @@ fun SettingsScreen(
     }
 
     if (showAppLockDialog) {
-        AppLockSettingsDialog(
+        AppLockSettingsSheet(
             viewModel          = viewModel,
             appLockPrefs       = appLockPrefs,
             isAppLockEnabled   = isAppLockEnabled,
@@ -274,40 +275,71 @@ fun SettingsScreen(
     }
 
     if (showResetDialog) {
-        AlertDialog(
-            onDismissRequest = { showResetDialog = false },
-            title  = { Text("Add default data?") },
-            text   = {
+        ModalBottomSheet(
+            onDismissRequest = { showResetDialog = false }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 40.dp, top = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    "📊",
+                    fontSize = 48.sp
+                )
+                Text(
+                    "Add default data?",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
+                )
                 Text(
                     "Adds sample projects and categories. Your existing data will not be deleted.",
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
                 )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick  = {
-                        scope.launch {
-                            isResetting = true
-                            DataSeeder.getInstance(application.repository)
-                                .seedInitialDataIfUserAccepts(context, true)
-                            isResetting = false
-                            showResetDialog = false
-                            viewModel.showToast("Default data added!", com.example.paisatracker.ui.common.ToastType.SUCCESS)
-                        }
-                    },
-                    enabled = !isResetting
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    if (isResetting) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                            Text("Adding…")
+                    OutlinedButton(
+                        onClick = { showResetDialog = false },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Cancel")
+                    }
+
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                isResetting = true
+                                DataSeeder.getInstance(application.repository)
+                                    .seedInitialDataIfUserAccepts(context, true)
+                                isResetting = false
+                                showResetDialog = false
+                                viewModel.showToast("Default data added!", com.example.paisatracker.ui.common.ToastType.SUCCESS)
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                        enabled = !isResetting,
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        if (isResetting) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                        } else {
+                            Text("Add defaults")
                         }
-                    } else Text("Add defaults")
+                    }
                 }
-            },
-            dismissButton = { TextButton(onClick = { showResetDialog = false }) { Text("Cancel") } },
-            shape = RoundedCornerShape(16.dp)
-        )
+            }
+        }
     }
 
     if (showNotificationDialog) NotificationSettingsBottomSheet(viewModel = viewModel, onDismiss = { showNotificationDialog = false })

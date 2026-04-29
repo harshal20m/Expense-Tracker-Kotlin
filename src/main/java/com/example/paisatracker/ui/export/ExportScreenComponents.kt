@@ -13,6 +13,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextAlign
+import com.example.paisatracker.ui.common.DeleteConfirmationSheetContent
 import com.example.paisatracker.data.BackupMetadata
 import java.text.SimpleDateFormat
 import java.util.*
@@ -70,104 +72,113 @@ fun LoadingOverlay(message: String) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RestoreWarningDialog(
+fun RestoreWarningSheet(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit
 ) {
-    AlertDialog(
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        icon = {
+        dragHandle = { BottomSheetDefaults.DragHandle() },
+        containerColor = MaterialTheme.colorScheme.surface
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 32.dp, top = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
             Icon(
                 Icons.Default.Warning,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.error,
-                modifier = Modifier.size(48.dp)
+                modifier = Modifier.size(56.dp)
             )
-        },
-        title = {
+
+            Spacer(modifier = Modifier.height(20.dp))
+
             Text(
                 "Restore Backup?",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
             )
-        },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Surface(
+                color = MaterialTheme.colorScheme.errorContainer,
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 Text(
                     "⚠️ This will replace ALL current data with the backup file.",
                     style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.error
-                )
-                Text(
-                    "Current data includes all projects, categories, expenses, and receipts.",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Text(
-                    "This action cannot be undone!",
-                    style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.error
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    modifier = Modifier.padding(12.dp),
+                    textAlign = TextAlign.Center
                 )
             }
-        },
-        confirmButton = {
-            Button(
-                onClick = onConfirm,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error
-                ),
-                shape = RoundedCornerShape(12.dp)
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                "Current data includes all projects, categories, expenses, and receipts. This action cannot be undone!",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text("Restore Anyway", fontWeight = FontWeight.Bold)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                OutlinedButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Cancel")
+                }
+
+                Button(
+                    onClick = onConfirm,
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Restore Anyway", fontWeight = FontWeight.Bold)
+                }
             }
         }
-    )
+    }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DeleteBackupDialog(
+fun DeleteBackupSheet(
     backup: BackupMetadata,
     onDismiss: () -> Unit,
     onConfirm: () -> Unit
 ) {
-    AlertDialog(
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        icon = {
-            Icon(
-                Icons.Default.Delete,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.error
-            )
-        },
-        title = {
-            Text("Delete Backup?")
-        },
-        text = {
-            Text(
-                "Delete backup from ${SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(Date(backup.timestamp))}?\n\nThis will permanently remove the record from your history."
-            )
-        },
-        confirmButton = {
-            Button(
-                onClick = onConfirm,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error
-                )
-            ) {
-                Text("Delete")
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        }
-    )
+        dragHandle = { BottomSheetDefaults.DragHandle() },
+        containerColor = MaterialTheme.colorScheme.surface
+    ) {
+        DeleteConfirmationSheetContent(
+            title = "Delete Backup?",
+            message = "Delete backup from ${SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(Date(backup.timestamp))}?\n\nThis will permanently remove the record from your history.",
+            onConfirm = onConfirm,
+            onDismiss = onDismiss
+        )
+    }
 }

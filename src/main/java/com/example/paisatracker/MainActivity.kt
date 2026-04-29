@@ -27,7 +27,8 @@ import com.example.paisatracker.data.EmojiPreferencesRepository
 import com.example.paisatracker.data.ThemePreferencesRepository
 import com.example.paisatracker.ui.applock.AppLockScreen
 import com.example.paisatracker.ui.main.MainApp
-import com.example.paisatracker.ui.setup.FirstTimeSetupDialog
+import com.example.paisatracker.ui.setup.FirstTimeSetupSheet
+import com.example.paisatracker.ui.tour.AppTourSheet
 import com.example.paisatracker.ui.theme.PaisaTrackerTheme
 import com.example.paisatracker.util.CurrentCurrency
 import com.example.paisatracker.util.UpdateManager
@@ -52,6 +53,7 @@ class MainActivity : FragmentActivity() {
     private val dataSeeder by lazy { DataSeeder.getInstance((application as PaisaTrackerApplication).repository) }
     private var isUnlocked by mutableStateOf(false)
 
+    private var showAppTour by mutableStateOf(false)
     private var showFirstTimeSetup by mutableStateOf(false)
     private var isFinishing = false
 
@@ -73,7 +75,10 @@ class MainActivity : FragmentActivity() {
                 isUnlocked = !isAppLockEnabled
 
                 // Check if first time setup should be shown
-                showFirstTimeSetup = dataSeeder.shouldShowFirstTimeSetup(this@MainActivity)
+                val needsSetup = dataSeeder.shouldShowFirstTimeSetup(this@MainActivity)
+                if (needsSetup) {
+                    showAppTour = true
+                }
             }
         }
 
@@ -92,9 +97,21 @@ class MainActivity : FragmentActivity() {
             }
 
             PaisaTrackerTheme(appTheme = currentTheme) {
-                // Show first-time setup dialog if needed
+                // Main App Content
+                AppContent()
+
+                // Onboarding Sequence: Tour -> First Time Setup
+                if (showAppTour && !isFinishing) {
+                    AppTourSheet(
+                        onComplete = {
+                            showAppTour = false
+                            showFirstTimeSetup = true
+                        }
+                    )
+                }
+
                 if (showFirstTimeSetup && !isFinishing) {
-                    FirstTimeSetupDialog(
+                    FirstTimeSetupSheet(
                         onSetupComplete = { shouldSeed ->
                             lifecycleScope.launch {
                                 dataSeeder.seedInitialDataIfUserAccepts(
@@ -104,8 +121,7 @@ class MainActivity : FragmentActivity() {
                                 showFirstTimeSetup = false
                             }
                         }
-                    )} else {
-                    AppContent()
+                    )
                 }
             }
         }

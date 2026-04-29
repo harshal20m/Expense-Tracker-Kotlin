@@ -18,11 +18,9 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 
 import android.Manifest
-import android.app.DatePickerDialog
 import android.content.Context
 import android.net.Uri
 import android.util.Log
-import android.widget.DatePicker
 import androidx.annotation.DrawableRes
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -91,6 +89,8 @@ import androidx.navigation.NavController
 import androidx.core.content.FileProvider
 import coil.compose.AsyncImage
 import com.example.paisatracker.PaisaTrackerViewModel
+import com.example.paisatracker.ui.common.DatePickerSheet
+import com.example.paisatracker.ui.common.DeleteConfirmationSheetContent
 import com.example.paisatracker.ui.common.ToastType
 import com.example.paisatracker.R
 import com.example.paisatracker.data.Expense
@@ -481,10 +481,15 @@ fun ExpenseListScreen(
                         }
 
                         is SheetState.Delete -> {
-                            DeleteBottomSheetContent(expense = sheet.expense, onCancel = { currentSheet = null }, onConfirm = {
-                                viewModel.deleteExpense(sheet.expense)
-                                currentSheet = null
-                            })
+                            DeleteConfirmationSheetContent(
+                                title = "Delete Expense",
+                                message = "Are you sure you want to delete '${sheet.expense.description}'?",
+                                onConfirm = {
+                                    viewModel.deleteExpense(sheet.expense)
+                                    currentSheet = null
+                                },
+                                onDismiss = { currentSheet = null }
+                            )
                         }
                     }
                 }
@@ -691,18 +696,15 @@ fun ExpenseBottomSheetContent(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    val context = LocalContext.current
-    val calendar = Calendar.getInstance().apply { timeInMillis = date }
-    val datePickerDialog = DatePickerDialog(
-        context,
-        { _: DatePicker, selectedYear: Int, selectedMonth: Int, selectedDay: Int ->
-            val newCalendar = Calendar.getInstance().apply { set(selectedYear, selectedMonth, selectedDay) }
-            onDateChange(newCalendar.timeInMillis)
-        },
-        calendar.get(Calendar.YEAR),
-        calendar.get(Calendar.MONTH),
-        calendar.get(Calendar.DAY_OF_MONTH)
-    )
+    var showDatePicker by remember { mutableStateOf(false) }
+
+    if (showDatePicker) {
+        DatePickerSheet(
+            initialSelectedDateMillis = date,
+            onDateSelected = onDateChange,
+            onDismiss = { showDatePicker = false }
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -785,7 +787,7 @@ fun ExpenseBottomSheetContent(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        OutlinedButton(onClick = { datePickerDialog.show() }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) {
+        OutlinedButton(onClick = { showDatePicker = true }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp)) {
             Icon(Icons.Default.DateRange, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
             Text(text = formatDate(date))
@@ -807,20 +809,6 @@ fun ExpenseBottomSheetContent(
     }
 }
 
-@Composable
-fun DeleteBottomSheetContent(expense: Expense, onCancel: () -> Unit, onConfirm: () -> Unit) {
-    Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
-        Text(text = "Delete Expense", style = MaterialTheme.typography.headlineSmall)
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(text = "Are you sure you want to delete '${expense.description}'?", style = MaterialTheme.typography.bodyMedium)
-        Spacer(modifier = Modifier.height(16.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-            Button(onClick = onConfirm, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) { Text("Delete") }
-            OutlinedButton(onClick = onCancel, modifier = Modifier.weight(1f)) { Text("Cancel") }
-        }
-        Spacer(modifier = Modifier.height(12.dp))
-    }
-}
 
 @Composable
 fun ExpenseSummaryHeader(expenses: List<Expense>) {

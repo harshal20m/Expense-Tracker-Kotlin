@@ -35,8 +35,6 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -45,7 +43,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -73,6 +70,7 @@ import com.example.paisatracker.R
 import com.example.paisatracker.PaisaTrackerViewModel
 import com.example.paisatracker.data.Category
 import com.example.paisatracker.data.Project
+import com.example.paisatracker.ui.common.DatePickerSheet
 import com.example.paisatracker.ui.common.EmojiPickerSheet
 import com.example.paisatracker.ui.common.ToastType
 import java.text.SimpleDateFormat
@@ -111,7 +109,6 @@ fun QuickAddSheet(
 
     // Date picker state
     var showDatePicker by remember { mutableStateOf(false) }
-    val datePickerState = rememberDatePickerState(initialSelectedDateMillis = selectedDate)
 
     // Focus amount on open
     val amountFocus = remember { FocusRequester() }
@@ -126,6 +123,14 @@ fun QuickAddSheet(
         } else if (submitResult is QuickAddResult.Error) {
             viewModel.showToast((submitResult as QuickAddResult.Error).message, ToastType.ERROR)
         }
+    }
+
+    if (showDatePicker) {
+        DatePickerSheet(
+            initialSelectedDateMillis = selectedDate,
+            onDateSelected = { vm.selectedDate.value = it },
+            onDismiss = { showDatePicker = false }
+        )
     }
 
     Column(
@@ -270,24 +275,6 @@ fun QuickAddSheet(
         }
 
         Spacer(modifier = Modifier.height(12.dp))
-    }
-
-    // ── Date picker dialog ────────────────────────────────────────────────────
-    if (showDatePicker) {
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    datePickerState.selectedDateMillis?.let { vm.selectedDate.value = it }
-                    showDatePicker = false
-                }) { Text("OK") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
-            }
-        ) {
-            DatePicker(state = datePickerState)
-        }
     }
 }
 

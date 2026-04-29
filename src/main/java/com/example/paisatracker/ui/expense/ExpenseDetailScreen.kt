@@ -42,6 +42,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.paisatracker.ui.common.DeleteConfirmationSheetContent
+import com.example.paisatracker.ui.common.DatePickerSheet
 import coil.compose.AsyncImage
 import com.example.paisatracker.PaisaTrackerViewModel
 import com.example.paisatracker.ui.common.ToastType
@@ -163,31 +165,20 @@ fun ExpenseDetailScreen(
 
     // ── Delete confirmation dialog ────────────────────────────────────────────
     if (showDeleteDialog && expense != null) {
-        AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            icon  = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
-            title = { Text("Delete Expense?") },
-            text  = {
-                Text(
-                    "\"${expense!!.description}\" will be permanently deleted along with all its assets.",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        viewModel.deleteExpense(expense!!)
-                        showDeleteDialog = false
-                        navController.navigateUp()
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) { Text("Delete") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") }
-            },
-            shape = RoundedCornerShape(16.dp)
-        )
+        ModalBottomSheet(
+            onDismissRequest = { showDeleteDialog = false }
+        ) {
+            DeleteConfirmationSheetContent(
+                title = "Delete Expense?",
+                message = "\"${expense!!.description}\" will be permanently deleted along with all its assets.",
+                onConfirm = {
+                    viewModel.deleteExpense(expense!!)
+                    showDeleteDialog = false
+                    navController.navigateUp()
+                },
+                onDismiss = { showDeleteDialog = false }
+            )
+        }
     }
 }
 
@@ -206,17 +197,18 @@ private fun EditExpenseSheetContent(
     var date        by remember { mutableStateOf(expense.date) }
     var paymentMethod by remember { mutableStateOf(expense.paymentMethod ?: "") }
     var dropdownExpanded by remember { mutableStateOf(false) }
+    var showDatePicker   by remember { mutableStateOf(false) }
 
     val context  = LocalContext.current
     val calendar = Calendar.getInstance().apply { timeInMillis = date }
 
-    val datePicker = android.app.DatePickerDialog(
-        context,
-        { _, y, m, d -> calendar.set(y, m, d); date = calendar.timeInMillis },
-        calendar.get(Calendar.YEAR),
-        calendar.get(Calendar.MONTH),
-        calendar.get(Calendar.DAY_OF_MONTH)
-    )
+    if (showDatePicker) {
+        DatePickerSheet(
+            initialSelectedDateMillis = date,
+            onDateSelected = { date = it },
+            onDismiss = { showDatePicker = false }
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -274,7 +266,7 @@ private fun EditExpenseSheetContent(
         }
 
         // Date picker
-        OutlinedButton(onClick = { datePicker.show() }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) {
+        OutlinedButton(onClick = { showDatePicker = true }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) {
             Icon(Icons.Default.DateRange, null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
             Text(SimpleDateFormat("EEE, dd MMM yyyy", Locale.getDefault()).format(Date(date)))
@@ -320,6 +312,7 @@ private fun String.toIconKey(): String? = when (this) {
 
 // ─── Detail content (unchanged from previous, included for completeness) ──────
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ExpenseDetailContent(
     expense: Expense,
@@ -401,15 +394,19 @@ private fun ExpenseDetailContent(
     zoomImagePath?.let { ZoomableImageDialog(imageModel = it, onDismiss = { zoomImagePath = null }) }
 
     assetToDelete?.let { asset ->
-        AlertDialog(
-            onDismissRequest = { assetToDelete = null },
-            icon    = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
-            title   = { Text("Delete asset?") },
-            text    = { Text("This image will be removed from this expense and from the assets gallery.") },
-            confirmButton = { Button(onClick = { onDeleteAsset(asset); assetToDelete = null }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) { Text("Delete") } },
-            dismissButton = { TextButton(onClick = { assetToDelete = null }) { Text("Cancel") } },
-            shape   = RoundedCornerShape(16.dp)
-        )
+        ModalBottomSheet(
+            onDismissRequest = { assetToDelete = null }
+        ) {
+            DeleteConfirmationSheetContent(
+                title = "Delete asset?",
+                message = "This image will be removed from this expense and from the assets gallery.",
+                onConfirm = {
+                    onDeleteAsset(asset)
+                    assetToDelete = null
+                },
+                onDismiss = { assetToDelete = null }
+            )
+        }
     }
 }
 

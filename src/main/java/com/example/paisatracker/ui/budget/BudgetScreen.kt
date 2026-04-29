@@ -36,7 +36,8 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
-import androidx.compose.material3.AlertDialog
+import com.example.paisatracker.ui.common.DeleteConfirmationSheetContent
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -242,27 +243,19 @@ fun BudgetScreen(
         )
     }
     budgetToDelete?.let { budget ->
-        AlertDialog(
-            onDismissRequest = { budgetToDelete = null },
-            title = { Text("Delete \"${budget.name}\"?") },
-            text = { Text("This budget and its history will be permanently removed.") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.deleteBudget(budget)
-                        budgetToDelete = null
-                    },
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text("Delete")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { budgetToDelete = null }) {
-                    Text("Cancel")
-                }
-            }
-        )
+        ModalBottomSheet(
+            onDismissRequest = { budgetToDelete = null }
+        ) {
+            DeleteConfirmationSheetContent(
+                title = "Delete \"${budget.name}\"?",
+                message = "This budget and its history will be permanently removed.",
+                onConfirm = {
+                    viewModel.deleteBudget(budget)
+                    budgetToDelete = null
+                },
+                onDismiss = { budgetToDelete = null }
+            )
+        }
     }
 }
 @Composable
