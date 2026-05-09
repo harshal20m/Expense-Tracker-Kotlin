@@ -35,6 +35,9 @@ interface ExpenseDao {
 
     @Query("SELECT * FROM expenses WHERE id = :id LIMIT 1")
     fun getExpenseById(id: Long): Flow<Expense?>
+    
+    @Query("SELECT * FROM expenses WHERE id = :id LIMIT 1")
+    suspend fun getExpenseByIdOnce(id: Long): Expense?
 
     @Update
     suspend fun updateExpense(expense: Expense)

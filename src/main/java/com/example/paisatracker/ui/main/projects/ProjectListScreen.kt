@@ -13,9 +13,11 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.ViewList
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -48,6 +50,7 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
 
     // ── Projects + custom ordering ────────────────────────────────────────────
     var showCompleted by remember { mutableStateOf(false) }
+    var useMasonryLayout by remember { mutableStateOf(true) } // Default to masonry grid
     val activeProjects by viewModel.getAllProjectsWithTotal().collectAsState(initial = emptyList())
     val completedProjects by viewModel.getCompletedProjectsWithTotal().collectAsState(initial = emptyList())
     
@@ -130,119 +133,169 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
                 subtitle = if (activeProjects.isNotEmpty()) "${activeProjects.size} active" else "Track your goals",
                 icon = Icons.Default.Folder,
                 action = {
-                    HeaderActionButton(
-                        icon = Icons.Default.Add,
-                        label = "Create Project",
-                        onClick = {
-                            currentSheetType = SheetType.ADD
-                            projectToEdit = null
-                            projectToDelete = null
-                            showSheet = true
-                            scope.launch { sheetState.show() }
-                        },
-                        contentDescription = "Add Project",
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary
-                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        // Layout Toggle Button
+                        IconButton(
+                            onClick = { useMasonryLayout = !useMasonryLayout },
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            Icon(
+                                if (useMasonryLayout) Icons.Default.ViewList else Icons.Default.GridView,
+                                contentDescription = if (useMasonryLayout) "Switch to List" else "Switch to Grid",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        HeaderActionButton(
+                            icon = Icons.Default.Add,
+                            label = "Create Project",
+                            onClick = {
+                                currentSheetType = SheetType.ADD
+                                projectToEdit = null
+                                projectToDelete = null
+                                showSheet = true
+                                scope.launch { sheetState.show() }
+                            },
+                            contentDescription = "Add Project",
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
                 }
             )
 
-            LazyColumn(
-                state               = listState,
-                modifier            = Modifier.fillMaxSize(),
-                contentPadding      = PaddingValues(top = 0.dp, bottom = 80.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+            // ── Tabs (Browser-like) ───────────────────────────────────────────
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                // ── Tabs (Browser-like) ───────────────────────────────────────────
-                item {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        BrowserTab(
-                            text = "Active",
-                            count = activeProjects.size,
-                            isSelected = !showCompleted,
-                            onClick = { showCompleted = false },
-                            modifier = Modifier.weight(1f)
-                        )
-                        BrowserTab(
-                            text = "Completed",
-                            count = completedProjects.size,
-                            isSelected = showCompleted,
-                            onClick = { showCompleted = true },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
+                BrowserTab(
+                    text = "Active",
+                    count = activeProjects.size,
+                    isSelected = !showCompleted,
+                    onClick = { showCompleted = false },
+                    modifier = Modifier.weight(1f)
+                )
+                BrowserTab(
+                    text = "Completed",
+                    count = completedProjects.size,
+                    isSelected = showCompleted,
+                    onClick = { showCompleted = true },
+                    modifier = Modifier.weight(1f)
+                )
+            }
 
-                // ── Project list ─────────────────────────────────
-                if (orderedProjects.isEmpty()) {
-                    item {
-                        Box(
-                            modifier         = Modifier.fillMaxWidth().height(400.dp),
-                            contentAlignment = Alignment.Center
-                        ) { EmptyProjectsState() }
-                    }
-                } else {
-                    itemsIndexed(orderedProjects, key = { _, it -> it.project.id }) { index, pwt ->
-                        Box(modifier = Modifier.padding(horizontal = 16.dp)) {
-                            ProjectListItemWithReorder(
-                                projectWithTotal = pwt,
-                                currentIndex     = index,
-                                totalItems       = orderedProjects.size,
-                                onReorder        = { from, to ->
-                                    val newMap = mutableMapOf<Long, Int>()
-                                    orderedProjects.forEachIndexed { i, p ->
-                                        newMap[p.project.id] = when {
-                                            i == from            -> to
-                                            i in to..<from       -> i + 1
-                                            i in (from + 1)..to  -> i - 1
-                                            else                 -> i
-                                        }
-                                    }
-                                    customOrderMap = newMap
-                                    with(sharedPrefs.edit()) {
-                                        newMap.forEach { (id, pos) -> putInt("project_$id", pos) }
-                                        apply()
-                                    }
-                                },
-                                onProjectClick   = {
-                                    viewModel.updateProject(pwt.project.copy(lastModified = System.currentTimeMillis()), notify = false)
-                                    val newMap = mutableMapOf<Long, Int>()
-                                    newMap[pwt.project.id] = 0
-                                    orderedProjects.forEachIndexed { i, p ->
-                                        if (p.project.id != pwt.project.id) newMap[p.project.id] = i + 1
-                                    }
-                                    customOrderMap = newMap
-                                    with(sharedPrefs.edit()) {
-                                        newMap.forEach { (id, pos) -> putInt("project_$id", pos) }
-                                        apply()
-                                    }
-                                    navController.navigate("project_details/${pwt.project.id}")
-                                },
-                                onEditClick      = {
-                                    projectToEdit    = pwt
-                                    currentSheetType = SheetType.EDIT
-                                    showSheet        = true
-                                    scope.launch { sheetState.show() }
-                                },
-                                onDeleteClick    = {
-                                    projectToDelete  = pwt
-                                    currentSheetType = SheetType.DELETE
-                                    showSheet        = true
-                                    scope.launch { sheetState.show() }
-                                },
-                                onCompleteToggleClick = {
-                                    viewModel.updateProjectStatus(
-                                        pwt.project.id,
-                                        !pwt.project.isCompleted,
-                                        pwt.project.name
-                                    )
-                                }
+            // ── Project list (Conditional Layout) ─────────────────────────────
+            if (orderedProjects.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) { EmptyProjectsState() }
+            } else {
+                if (useMasonryLayout) {
+                    // Masonry Grid Layout
+                    ProjectMasonryGrid(
+                        projects = orderedProjects,
+                        onProjectClick = { pwt ->
+                            viewModel.updateProject(pwt.project.copy(lastModified = System.currentTimeMillis()), notify = false)
+                            val newMap = mutableMapOf<Long, Int>()
+                            newMap[pwt.project.id] = 0
+                            orderedProjects.forEachIndexed { i, p ->
+                                if (p.project.id != pwt.project.id) newMap[p.project.id] = i + 1
+                            }
+                            customOrderMap = newMap
+                            with(sharedPrefs.edit()) {
+                                newMap.forEach { (id, pos) -> putInt("project_$id", pos) }
+                                apply()
+                            }
+                            navController.navigate("project_details/${pwt.project.id}")
+                        },
+                        onEditClick = { pwt ->
+                            projectToEdit = pwt
+                            currentSheetType = SheetType.EDIT
+                            showSheet = true
+                            scope.launch { sheetState.show() }
+                        },
+                        onDeleteClick = { pwt ->
+                            projectToDelete = pwt
+                            currentSheetType = SheetType.DELETE
+                            showSheet = true
+                            scope.launch { sheetState.show() }
+                        },
+                        onCompleteToggleClick = { pwt ->
+                            viewModel.updateProjectStatus(
+                                pwt.project.id,
+                                !pwt.project.isCompleted,
+                                pwt.project.name
                             )
+                        }
+                    )
+                } else {
+                    // List Layout
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(top = 0.dp, bottom = 80.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        itemsIndexed(orderedProjects, key = { _, it -> it.project.id }) { index, pwt ->
+                            Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                                ProjectListItemWithReorder(
+                                    projectWithTotal = pwt,
+                                    currentIndex = index,
+                                    totalItems = orderedProjects.size,
+                                    onReorder = { from, to ->
+                                        val newMap = mutableMapOf<Long, Int>()
+                                        orderedProjects.forEachIndexed { i, p ->
+                                            newMap[p.project.id] = when {
+                                                i == from -> to
+                                                i in to..<from -> i + 1
+                                                i in (from + 1)..to -> i - 1
+                                                else -> i
+                                            }
+                                        }
+                                        customOrderMap = newMap
+                                        with(sharedPrefs.edit()) {
+                                            newMap.forEach { (id, pos) -> putInt("project_$id", pos) }
+                                            apply()
+                                        }
+                                    },
+                                    onProjectClick = {
+                                        viewModel.updateProject(pwt.project.copy(lastModified = System.currentTimeMillis()), notify = false)
+                                        val newMap = mutableMapOf<Long, Int>()
+                                        newMap[pwt.project.id] = 0
+                                        orderedProjects.forEachIndexed { i, p ->
+                                            if (p.project.id != pwt.project.id) newMap[p.project.id] = i + 1
+                                        }
+                                        customOrderMap = newMap
+                                        with(sharedPrefs.edit()) {
+                                            newMap.forEach { (id, pos) -> putInt("project_$id", pos) }
+                                            apply()
+                                        }
+                                        navController.navigate("project_details/${pwt.project.id}")
+                                    },
+                                    onEditClick = {
+                                        projectToEdit = pwt
+                                        currentSheetType = SheetType.EDIT
+                                        showSheet = true
+                                        scope.launch { sheetState.show() }
+                                    },
+                                    onDeleteClick = {
+                                        projectToDelete = pwt
+                                        currentSheetType = SheetType.DELETE
+                                        showSheet = true
+                                        scope.launch { sheetState.show() }
+                                    },
+                                    onCompleteToggleClick = {
+                                        viewModel.updateProjectStatus(
+                                            pwt.project.id,
+                                            !pwt.project.isCompleted,
+                                            pwt.project.name
+                                        )
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -391,79 +444,4 @@ fun BrowserTab(
     }
 }
 
-
-// ── Original 2×2 toggle grid ──────────────────────────────────────────────────
-
-@Composable
-private fun ProjectActionGrid(
-    summaryExpanded: Boolean,
-    searchExpanded:  Boolean,
-    recentExpanded:  Boolean,
-    onSummaryClick:  () -> Unit,
-    onSearchClick:   () -> Unit,
-    onRecentClick:   () -> Unit,
-    onAssetsClick:   () -> Unit,
-    onBinClick:      () -> Unit
-) {
-    androidx.compose.foundation.layout.Box(
-        modifier         = Modifier.fillMaxWidth(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            modifier            = Modifier
-                .widthIn(max = 500.dp)
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Row(
-                modifier              = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                ActionToggleCard(
-                    title      = "Summary",
-                    icon       = Icons.Default.KeyboardArrowDown,
-                    isExpanded = summaryExpanded,
-                    onClick    = onSummaryClick,
-                    modifier   = Modifier.weight(1f),
-                    emojiLabel = "📊"
-                )
-                ActionToggleCard(
-                    title      = "Search",
-                    icon       = Icons.Default.Search,
-                    isExpanded = searchExpanded,
-                    onClick    = onSearchClick,
-                    modifier   = Modifier.weight(1f)
-                )
-                ActionToggleCard(
-                    title        = "Assets",
-                    icon         = Icons.Default.Image,
-                    isExpanded   = false,
-                    onClick      = onAssetsClick,
-                    modifier     = Modifier.weight(1f),
-                    isNavigation = true
-                )
-            }
-            Row(
-                modifier              = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                ActionToggleCard(
-                    title      = "Recent",
-                    icon       = Icons.Default.DateRange,
-                    isExpanded = recentExpanded,
-                    onClick    = onRecentClick,
-                    modifier   = Modifier.weight(2f)
-                )
-                ActionToggleCard(
-                    title        = "Bin",
-                    icon         = Icons.Default.DeleteSweep,
-                    isExpanded   = false,
-                    onClick      = onBinClick,
-                    modifier     = Modifier.weight(1f),
-                    isNavigation = true
-                )
-            }
-        }
-    }
-}
+// Made with Bob

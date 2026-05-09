@@ -333,14 +333,43 @@ class PaisaTrackerRepository(
     fun getExpenseById(id: Long): Flow<Expense?> = expenseDao.getExpenseById(id)
 
     suspend fun insertExpense(expense: Expense): Long {
-        return expenseDao.insert(expense)
+        val expenseId = expenseDao.insert(expense)
+        
+        // Deduct expense amount from bank account if linked
+        expense.bankAccountId?.let { accountId ->
+            decrementBankAccountBalance(accountId, expense.amount)
+        }
+        
+        return expenseId
     }
 
     suspend fun updateExpense(expense: Expense) {
+        // Get the old expense to compare bank account changes
+        val oldExpense = expenseDao.getExpenseByIdOnce(expense.id)
+        
+        // Update the expense
         expenseDao.updateExpense(expense)
+        
+        // Handle bank account balance adjustments
+        if (oldExpense != null) {
+            // If old expense had a bank account, refund the old amount
+            oldExpense.bankAccountId?.let { oldAccountId ->
+                incrementBankAccountBalance(oldAccountId, oldExpense.amount)
+            }
+            
+            // If new expense has a bank account, deduct the new amount
+            expense.bankAccountId?.let { newAccountId ->
+                decrementBankAccountBalance(newAccountId, expense.amount)
+            }
+        }
     }
 
     suspend fun deleteExpense(expense: Expense) {
+        // Refund the expense amount back to the bank account if linked
+        expense.bankAccountId?.let { accountId ->
+            incrementBankAccountBalance(accountId, expense.amount)
+        }
+        
         expenseDao.deleteExpense(expense)
     }
 
