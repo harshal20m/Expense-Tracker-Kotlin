@@ -6,6 +6,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -39,6 +40,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -70,6 +72,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.paisatracker.PaisaTrackerApplication
 import com.example.paisatracker.PaisaTrackerViewModel
+import com.example.paisatracker.data.BankAccount
 import com.example.paisatracker.data.SalaryRecord
 import com.example.paisatracker.util.formatCurrency
 import java.text.SimpleDateFormat
@@ -103,6 +106,7 @@ fun SalaryTrackerSection(
     val remaining by vm.remainingBalance.collectAsState()
     val spendPct by vm.spendPercentage.collectAsState()
     val history by vm.allSalaryRecords.collectAsState()
+    val activeAccounts by vm.activeBankAccounts.collectAsState()
     val allExpenses by viewModel.getAllExpensesWithDetails().collectAsState(initial = emptyList())
     val allProjects by viewModel.getAllProjects().collectAsState(initial = emptyList())
     val allCategories by viewModel.getAllCategories().collectAsState(initial = emptyList())
@@ -156,44 +160,125 @@ fun SalaryTrackerSection(
                 .take(8)
         }
     }
-    Column(modifier = Modifier.padding(horizontal = 0.dp)) {
-        Row(
+    Column(
+        modifier = Modifier,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { expanded = !expanded }
-                .padding(vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .clickable { expanded = !expanded },
+            shape = RoundedCornerShape(22.dp),
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
+            border = BorderStroke(
+                1.dp,
+                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
+            )
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Icon(Icons.Default.AccountBalanceWallet, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
-                Text("Monthly Budget", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                if (currentSalary == null) {
-                    Surface(shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.errorContainer) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Surface(
+                        modifier = Modifier.size(42.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.18f),
+                        border = BorderStroke(
+                            1.dp,
+                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+                        )
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Default.AccountBalanceWallet,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(3.dp)
+                    ) {
                         Text(
-                            "Not set",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                            "Monthly Budget",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            if (currentSalary == null) {
+                                "Set salary once to track spending and monthly balance."
+                            } else {
+                                "Track salary, spending, account credit, and recurring auto-add."
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
+
+                    if (currentSalary == null) {
+                        Surface(
+                            shape = RoundedCornerShape(999.dp),
+                            color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.8f)
+                        ) {
+                            Text(
+                                "Not set",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                            )
+                        }
+                    }
                 }
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { showAddSheet = true }, modifier = Modifier.size(32.dp)) {
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        onClick = { showAddSheet = true },
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.18f),
+                        border = BorderStroke(
+                            1.dp,
+                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                if (currentSalary != null) Icons.Default.Edit else Icons.Default.Add,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                if (currentSalary != null) "Edit" else "Setup",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
                     Icon(
-                        if (currentSalary != null) Icons.Default.Edit else Icons.Default.Add,
-                        null,
-                        modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.primary
+                        if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
                     )
                 }
-                Icon(
-                    if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    null,
-                    modifier = Modifier.size(20.dp),
-                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
-                )
             }
         }
         AnimatedVisibility(
@@ -204,8 +289,12 @@ fun SalaryTrackerSection(
             if (currentSalary == null) {
                 Card(
                     modifier = Modifier.fillMaxWidth().clickable { showAddSheet = true },
-                    shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)),
+                    shape = RoundedCornerShape(22.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f)),
+                    border = BorderStroke(
+                        1.dp,
+                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
+                    ),
                     elevation = CardDefaults.cardElevation(0.dp)
                 ) {
                     Column(
@@ -213,7 +302,19 @@ fun SalaryTrackerSection(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text("💰", fontSize = 32.sp)
+                        Surface(
+                            modifier = Modifier.size(64.dp),
+                            shape = RoundedCornerShape(20.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.18f),
+                            border = BorderStroke(
+                                1.dp,
+                                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+                            )
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text("💰", fontSize = 28.sp)
+                            }
+                        }
                         Text("Set your salary to track spending", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                         Text(
                             "PaisaTracker will show how much you've spent and what's left each month.",
@@ -221,7 +322,7 @@ fun SalaryTrackerSection(
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                             textAlign = TextAlign.Center
                         )
-                        Button(onClick = { showAddSheet = true }, shape = RoundedCornerShape(12.dp)) {
+                        Button(onClick = { showAddSheet = true }, shape = RoundedCornerShape(14.dp)) {
                             Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(6.dp))
                             Text("Add salary for this month")
@@ -231,9 +332,13 @@ fun SalaryTrackerSection(
             } else {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(18.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    elevation = CardDefaults.cardElevation(3.dp)
+                    shape = RoundedCornerShape(22.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f)),
+                    border = BorderStroke(
+                        1.dp,
+                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
+                    ),
+                    elevation = CardDefaults.cardElevation(0.dp)
                 ) {
                     Column(
                         modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -349,17 +454,38 @@ fun SalaryTrackerSection(
         ) {
             AddSalarySheet(
                 existing = currentSalary,
+                activeAccounts = activeAccounts,
+                totalSpent = totalSpent,
+                remaining = remaining,
                 onDismiss = { showAddSheet = false },
-                onSave = { amount, note, resetTracking ->
+                onSave = { amount, note, resetTracking, isRecurring, recurringAccountId ->
                     if (currentSalary != null) {
                         val updated = if (resetTracking) {
-                            currentSalary!!.copy(amount = amount, note = note, receivedAt = System.currentTimeMillis())
+                            currentSalary!!.copy(
+                                amount = amount,
+                                note = note,
+                                receivedAt = System.currentTimeMillis(),
+                                isRecurring = isRecurring,
+                                recurringAccountId = recurringAccountId
+                            )
                         } else {
-                            currentSalary!!.copy(amount = amount, note = note)
+                            currentSalary!!.copy(
+                                amount = amount,
+                                note = note,
+                                isRecurring = isRecurring,
+                                recurringAccountId = recurringAccountId
+                            )
                         }
                         vm.updateSalary(updated)
                     } else {
-                        vm.addSalary(amount, note)
+                        vm.addSalary(
+                            amount = amount,
+                            linkedAccountId = recurringAccountId ?: 0,
+                            sourceName = note.ifBlank { "Monthly Salary" },
+                            sourceType = com.example.paisatracker.data.SalarySourceType.PRIMARY,
+                            note = note,
+                            isRecurring = isRecurring
+                        )
                     }
                     showAddSheet = false
                 }
@@ -504,12 +630,18 @@ private fun HistoryRow(record: SalaryRecord, onDelete: () -> Unit) {
 @Composable
 private fun AddSalarySheet(
     existing: SalaryRecord?,
+    activeAccounts: List<BankAccount>,
+    totalSpent: Double,
+    remaining: Double,
     onDismiss: () -> Unit,
-    onSave: (Double, String, Boolean) -> Unit
+    onSave: (Double, String, Boolean, Boolean, Long?) -> Unit
 ) {
     var amountText by remember { mutableStateOf(existing?.amount?.let { "%.0f".format(it) } ?: "") }
     var note by remember { mutableStateOf(existing?.note ?: "") }
     var resetTracking by remember { mutableStateOf(false) }
+    var creditToAccount by remember { mutableStateOf(existing?.recurringAccountId != null) }
+    var isRecurring by remember { mutableStateOf(existing?.isRecurring == true) }
+    var selectedAccountId by remember { mutableStateOf(existing?.recurringAccountId) }
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -540,6 +672,103 @@ private fun AddSalarySheet(
             shape = RoundedCornerShape(14.dp),
             modifier = Modifier.fillMaxWidth()
         )
+        // Salary Usage Progress Bar
+        val enteredAmount = amountText.toDoubleOrNull() ?: 0.0
+        val showProgressBar = existing != null || (enteredAmount > 0 && totalSpent > 0)
+        
+        if (showProgressBar) {
+            val currentAmount = if (existing != null) existing.amount else enteredAmount
+            val usagePercentage = if (currentAmount > 0) {
+                (totalSpent / currentAmount).coerceIn(0.0, 1.0).toFloat()
+            } else {
+                0f
+            }
+            
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f),
+                border = BorderStroke(
+                    1.dp,
+                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "Salary Usage",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Text(
+                            "${(usagePercentage * 100).toInt()}%",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = when {
+                                usagePercentage >= 1.0f -> MaterialTheme.colorScheme.error
+                                usagePercentage > 0.8f -> MaterialTheme.colorScheme.secondary
+                                else -> MaterialTheme.colorScheme.primary
+                            }
+                        )
+                    }
+                    
+                    LinearProgressIndicator(
+                        progress = { usagePercentage },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(10.dp)
+                            .clip(RoundedCornerShape(5.dp)),
+                        color = when {
+                            usagePercentage >= 1.0f -> MaterialTheme.colorScheme.error
+                            usagePercentage > 0.8f -> MaterialTheme.colorScheme.secondary
+                            else -> MaterialTheme.colorScheme.primary
+                        },
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                        strokeCap = StrokeCap.Round
+                    )
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column {
+                            Text(
+                                "Spent",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            )
+                            Text(
+                                formatCurrency(totalSpent),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(
+                                "Remaining",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            )
+                            Text(
+                                formatCurrency(remaining),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (remaining < 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary
+                            )
+                        }
+                    }
+                }
+            }
+        }
         if (existing != null) {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
@@ -598,9 +827,12 @@ private fun AddSalarySheet(
         Button(
             onClick = {
                 val a = amountText.toDoubleOrNull()
-                if (a != null && a > 0) onSave(a, note.trim(), resetTracking)
+                if (a != null && a > 0) {
+                    onSave(a, note.trim(), resetTracking, false, null)
+                }
             },
-            enabled = amountText.toDoubleOrNull()?.let { it > 0 } == true,
+            enabled = amountText.toDoubleOrNull()?.let { it > 0 } == true &&
+                (!creditToAccount || selectedAccountId != null || activeAccounts.isEmpty()),
             modifier = Modifier.fillMaxWidth().height(52.dp),
             shape = RoundedCornerShape(14.dp)
         ) {

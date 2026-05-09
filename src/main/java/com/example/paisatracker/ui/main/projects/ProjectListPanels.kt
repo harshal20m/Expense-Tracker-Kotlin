@@ -3,6 +3,7 @@ package com.example.paisatracker.ui.main.projects
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -11,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Delete
@@ -27,6 +29,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -173,7 +176,7 @@ private fun RecentGridTile(expense: RecentExpense, onClick: () -> Unit, modifier
 // ── Search results card ───────────────────────────────────────────────────────
 
 @Composable
-fun SearchResultsCard(results: List<RecentExpense>, isActive: Boolean) {
+fun SearchResultsCard(results: List<RecentExpense>, isActive: Boolean, onExpenseClick: (RecentExpense) -> Unit) {
     Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
         if (results.isEmpty()) {
             Column(modifier = Modifier.fillMaxWidth().padding(vertical = 28.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -196,7 +199,7 @@ fun SearchResultsCard(results: List<RecentExpense>, isActive: Boolean) {
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f), thickness = 0.5.dp)
                 results.chunked(2).forEach { row ->
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        row.forEach { SearchResultItemCard(it, Modifier.weight(1f)) }
+                        row.forEach { SearchResultItemCard(it, onClick = { onExpenseClick(it) }, modifier = Modifier.weight(1f)) }
                         if (row.size == 1) Spacer(Modifier.weight(1f))
                     }
                 }
@@ -206,8 +209,8 @@ fun SearchResultsCard(results: List<RecentExpense>, isActive: Boolean) {
 }
 
 @Composable
-fun SearchResultItemCard(expense: RecentExpense, modifier: Modifier = Modifier) {
-    Surface(onClick = {}, modifier = modifier, shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)) {
+fun SearchResultItemCard(expense: RecentExpense, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Surface(onClick = onClick, modifier = modifier, shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)) {
         Box(modifier = Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(
             MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.15f),
             MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.10f)
@@ -268,6 +271,67 @@ fun SearchFilterCard(
                 Button(onClick = onSearch, modifier = Modifier.height(50.dp), shape = RoundedCornerShape(12.dp), contentPadding = PaddingValues(horizontal = 16.dp)) {
                     Text("Apply", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun DummyCreateProjectCard(onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .clickable { onClick() },
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+        ),
+        border = BorderStroke(
+            1.5.dp,
+            MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                modifier = Modifier.size(64.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text("🚀", fontSize = 32.sp)
+                }
+            }
+            
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    "Welcome to PaisaTracker!",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
+                )
+                Text(
+                    "Create your first project to start tracking expenses.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+            }
+
+            Button(
+                onClick = onClick,
+                shape = RoundedCornerShape(12.dp),
+                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
+            ) {
+                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Get Started", fontWeight = FontWeight.Bold)
             }
         }
     }

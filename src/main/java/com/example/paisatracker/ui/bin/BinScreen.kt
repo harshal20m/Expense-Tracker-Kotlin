@@ -9,6 +9,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.*
+import com.example.paisatracker.ui.common.ScreenHeader
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -114,9 +115,12 @@ fun BinSheetContent(viewModel: PaisaTrackerViewModel, onDismiss: () -> Unit) {
         }
     }
 
+    val clearSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
     if (showClearConfirm) {
         ModalBottomSheet(
-            onDismissRequest = { showClearConfirm = false }
+            onDismissRequest = { showClearConfirm = false },
+            sheetState = clearSheetState
         ) {
             DeleteConfirmationSheetContent(
                 title = "Clear Bin?",
@@ -137,13 +141,10 @@ fun BinSheetContent(viewModel: PaisaTrackerViewModel, onDismiss: () -> Unit) {
 fun BinScreen(viewModel: PaisaTrackerViewModel, navController: NavController) {
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Recycle Bin") },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                }
+            ScreenHeader(
+                title = "Recycle Bin",
+                subtitle = "Recently deleted items",
+                onBackClick = { navController.popBackStack() }
             )
         }
     ) { padding ->
@@ -305,9 +306,12 @@ fun BinItemRow(
         }
     }
 
+    val deleteSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
     if (showDeleteConfirm) {
         ModalBottomSheet(
-            onDismissRequest = { showDeleteConfirm = false }
+            onDismissRequest = { showDeleteConfirm = false },
+            sheetState = deleteSheetState
         ) {
             DeleteConfirmationSheetContent(
                 title = "Delete Permanently?",

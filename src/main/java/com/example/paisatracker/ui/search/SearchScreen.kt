@@ -63,6 +63,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -78,6 +79,7 @@ import com.example.paisatracker.PaisaTrackerApplication
 import com.example.paisatracker.data.RecentExpense
 import com.example.paisatracker.util.formatCurrency
 import java.text.SimpleDateFormat
+import com.example.paisatracker.ui.common.ScreenHeader
 import java.util.Date
 import java.util.Locale
 
@@ -88,8 +90,9 @@ fun SearchScreen(
     application: PaisaTrackerApplication,
     navController: NavController
 ) {
+    val context = LocalContext.current
     val viewModel: SearchViewModel = viewModel(
-        factory = SearchViewModelFactory(application.repository)
+        factory = SearchViewModelFactory(application.repository, context)
     )
 
     val searchQuery by viewModel.searchQuery.collectAsState()
@@ -99,7 +102,14 @@ fun SearchScreen(
     var advancedFiltersVisible by remember { mutableStateOf(false) }
 
     Scaffold(
-        containerColor = Color.Transparent
+        containerColor = Color.Transparent,
+        topBar = {
+            ScreenHeader(
+                title = "Search",
+                subtitle = "Find expenses across all projects",
+                onBackClick = { navController.popBackStack() }
+            )
+        }
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -114,8 +124,6 @@ fun SearchScreen(
                 )
                 .padding(paddingValues)
         ) {
-            // Header Section
-            HeaderSection()
 
             // Search Input Card
             Card(
@@ -352,30 +360,6 @@ fun SearchScreen(
     }
 }
 
-@Composable
-private fun HeaderSection() {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 16.dp)
-    ) {
-        Text(
-            text = "Search",
-            style = MaterialTheme.typography.headlineLarge,
-            fontWeight = FontWeight.Bold,
-            fontSize = 32.sp,
-            letterSpacing = (-0.5).sp,
-            color = MaterialTheme.colorScheme.onBackground
-        )
-        Text(
-            text = "Find expenses across all projects",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontSize = 14.sp,
-            modifier = Modifier.padding(top = 4.dp)
-        )
-    }
-}
 
 @Composable
 private fun ModernExpenseCard(expense: RecentExpense) {

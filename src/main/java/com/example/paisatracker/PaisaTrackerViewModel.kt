@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.paisatracker.data.ActionHistory
 import com.example.paisatracker.data.Asset
 import com.example.paisatracker.data.BackupMetadata
+import com.example.paisatracker.data.BankAccount
 import com.example.paisatracker.data.Budget
 import com.example.paisatracker.data.BudgetPeriod
 import com.example.paisatracker.data.BudgetWithSpending
@@ -35,6 +36,14 @@ import com.example.paisatracker.data.serializeNotes
 import com.example.paisatracker.ui.common.ToastMessage
 import com.example.paisatracker.ui.common.ToastType
 import com.google.gson.Gson
+import com.itextpdf.kernel.geom.PageSize
+import com.itextpdf.kernel.pdf.PdfDocument
+import com.itextpdf.kernel.pdf.PdfWriter
+import com.itextpdf.layout.Document
+import com.itextpdf.layout.element.Cell
+import com.itextpdf.layout.element.Paragraph
+import com.itextpdf.layout.element.Table
+import com.itextpdf.layout.properties.UnitValue
 import com.opencsv.CSVReader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -441,7 +450,7 @@ class PaisaTrackerViewModel(
         repository.getRecentExpensesWithDetails(limit)
     }
     fun loadMoreRecentExpenses() {
-        _recentExpensesLimit.value += 10
+        _recentExpensesLimit.value += 5
     }
     fun getAllExpensesWithDetails(): Flow<List<RecentExpense>> {
         return repository.getAllExpensesWithDetails()
@@ -578,7 +587,8 @@ class PaisaTrackerViewModel(
         }
     }
     suspend fun getExpensesForExport(projectId: Long): String {
-        val rows = repository.getExportRows(projectId)
+        val exportProjectId = if (projectId == 0L) null else projectId
+        val rows = repository.getExportRows(exportProjectId)
         val sb = StringBuilder()
         sb.appendLine("Project,Project Emoji,Category,Category Emoji,Description,Amount,Date,Payment Method,Payment Method Emoji")
         val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
@@ -623,6 +633,68 @@ class PaisaTrackerViewModel(
         )
         return sb.toString()
     }
+
+    suspend fun exportToPdf(context: Context, uri: Uri, projectId: Long): Boolean {
+        return try {
+            val exportProjectId = if (projectId == 0L) null else projectId
+            val rows = repository.getExportRows(exportProjectId)
+            val project = if (exportProjectId != null) {
+                repository.getProjectById(exportProjectId).first()
+            } else {
+                null
+            }
+            val currency = currentCurrency.value.symbol
+            val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+
+            context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                val writer = PdfWriter(outputStream)
+                val pdf = PdfDocument(writer)
+                val document = Document(pdf, PageSize.A4)
+
+                val title = if (project != null) {
+                    "Export Report: ${project.name} ${project.emoji}"
+                } else {
+                    "Export Report: All Projects"
+                }
+
+                document.add(Paragraph(title).setBold().setFontSize(18f))
+                document.add(Paragraph("Generated on: ${sdf.format(Date())}"))
+                document.add(Paragraph("\n"))
+
+                val table = Table(UnitValue.createPointArray(floatArrayOf(80f, 150f, 70f, 80f, 80f)))
+                table.setWidth(UnitValue.createPercentValue(100f))
+
+                table.addHeaderCell(Cell().add(Paragraph("Date").setBold()))
+                table.addHeaderCell(Cell().add(Paragraph("Category & Description").setBold()))
+                table.addHeaderCell(Cell().add(Paragraph("Amount ($currency)").setBold()))
+                table.addHeaderCell(Cell().add(Paragraph("Payment").setBold()))
+                table.addHeaderCell(Cell().add(Paragraph("Project").setBold()))
+
+                var totalAmount = 0.0
+                rows.forEach { r ->
+                    totalAmount += r.amount
+                    table.addCell(Cell().add(Paragraph(sdf.format(Date(r.date)))))
+                    table.addCell(Cell().add(Paragraph("${r.categoryEmoji ?: ""} ${r.categoryName}\n${r.description}")))
+                    table.addCell(Cell().add(Paragraph(String.format(Locale.US, "%.2f", r.amount))))
+                    table.addCell(Cell().add(Paragraph("${r.paymentMethodEmoji ?: ""} ${r.paymentMethod ?: ""}")))
+                    table.addCell(Cell().add(Paragraph("${r.projectEmoji ?: ""} ${r.projectName ?: ""}")))
+                }
+
+                table.addCell(Cell(1, 2).add(Paragraph("TOTAL").setBold()))
+                table.addCell(Cell().add(Paragraph(String.format(Locale.US, "%.2f $currency", totalAmount)).setBold()))
+                table.addCell(Cell(1, 2).add(Paragraph("")))
+
+                document.add(table)
+                document.close()
+            }
+            showToast("PDF Exported successfully")
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            showToast("PDF Export failed", ToastType.ERROR)
+            false
+        }
+    }
     private suspend fun getOrCreateCategoryAndGetId(
         categoryName: String,
         projectId: Long,
@@ -644,7 +716,7 @@ class PaisaTrackerViewModel(
             repository.insertCategory(newCategory)
         }
     }
-    suspend fun importFromCsv(context: Context, uri: Uri, projectId: Long): Boolean {
+    suspend fun importFromCsv(context: Context, uri: Uri, selectedProjectId: Long?): Boolean {
         return try {
             context.contentResolver.openInputStream(uri)?.use { inputStream ->
                 CSVReader(InputStreamReader(inputStream)).use { reader ->
@@ -653,35 +725,66 @@ class PaisaTrackerViewModel(
                     header.forEachIndexed { index, rawName ->
                         val name = rawName.trim().lowercase()
                         when {
-                            name == "emoji" -> indexMap["categoryEmoji"] = index
+                            name == "project" || name == "project name" -> indexMap["project"] = index
                             name == "project emoji" -> indexMap["projectEmoji"] = index
-                            name == "category emoji" -> indexMap["categoryEmoji"] = index
-                            name in listOf("category", "category name") -> indexMap["category"] = index
+                            name == "category" || name == "category name" -> indexMap["category"] = index
+                            name == "category emoji" || name == "emoji" -> indexMap["categoryEmoji"] = index
                             name in listOf("description", "details", "note") -> indexMap["description"] = index
                             name in listOf("amount", "price", "value") -> indexMap["amount"] = index
                             name in listOf("date", "txn date", "transaction date") -> indexMap["date"] = index
                             name in listOf("payment method", "payment", "method") -> indexMap["paymentMethod"] = index
                         }
                     }
+
                     val catIdx = indexMap["category"] ?: return false
                     val descIdx = indexMap["description"] ?: return false
                     val amountIdx = indexMap["amount"] ?: return false
+                    
+                    val projectIdx = indexMap["project"]
+                    val projectEmojiIdx = indexMap["projectEmoji"]
                     val categoryEmojiIdx = indexMap["categoryEmoji"]
                     val dateIdx = indexMap["date"]
                     val paymentIdx = indexMap["paymentMethod"]
+
                     val dateFormat = SimpleDateFormat("dd/MM/yy", Locale.getDefault())
                     val altDateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+                    
                     var row: Array<String>?
                     while (reader.readNext().also { row = it } != null) {
                         val tokens = row ?: continue
                         if (tokens.isEmpty()) continue
+                        
                         fun getSafe(i: Int?): String? =
                             if (i != null && i >= 0 && i < tokens.size) tokens[i].trim() else null
+
+                        val csvProjectName = getSafe(projectIdx)
+                        val csvProjectEmoji = getSafe(projectEmojiIdx)
+                        
+                        // Resolve Project ID
+                        val targetProjectId = if (!csvProjectName.isNullOrBlank()) {
+                            val existingProject = repository.getProjectByName(csvProjectName)
+                            if (existingProject != null) {
+                                existingProject.id
+                            } else {
+                                repository.insertProject(
+                                    Project(
+                                        name = csvProjectName,
+                                        emoji = csvProjectEmoji?.takeIf { it.isNotBlank() } ?: "📁"
+                                    )
+                                )
+                            }
+                        } else {
+                            selectedProjectId ?: -1L
+                        }
+
+                        if (targetProjectId == -1L) continue
+
                         val categoryName = getSafe(catIdx)?.takeIf { it.isNotBlank() } ?: continue
                         val description = getSafe(descIdx) ?: ""
                         val amountStr = getSafe(amountIdx) ?: continue
                         val amount = amountStr.toDoubleOrNull() ?: continue
-                        val emoji = getSafe(categoryEmojiIdx)
+                        val catEmoji = getSafe(categoryEmojiIdx)
+                        
                         val dateStr = getSafe(dateIdx)
                         val millis = if (!dateStr.isNullOrBlank()) {
                             try {
@@ -696,9 +799,12 @@ class PaisaTrackerViewModel(
                         } else {
                             System.currentTimeMillis()
                         }
+                        
                         val paymentMethod = getSafe(paymentIdx)?.takeIf { it.isNotBlank() }
-                        val categoryId = getOrCreateCategoryAndGetId(categoryName, projectId, emoji)
+                        
+                        val categoryId = getOrCreateCategoryAndGetId(categoryName, targetProjectId, catEmoji)
                         if (categoryId == -1L) continue
+
                         val expense = Expense(
                             description = description,
                             amount = amount,
@@ -708,7 +814,7 @@ class PaisaTrackerViewModel(
                         )
                         repository.insertExpense(expense)
                     }
-                    showToast("Imported successfully")
+                    showToast("Imported successfully", ToastType.SUCCESS)
                 }
             }
             true
@@ -717,6 +823,15 @@ class PaisaTrackerViewModel(
             showToast("Import failed", ToastType.ERROR)
             false
         }
+    }
+
+    // ── Bank Account Methods ──────────────────────────────────────────────────
+    fun getBankAccountById(accountId: Long): Flow<BankAccount?> {
+        return repository.getBankAccountById(accountId)
+    }
+
+    fun getExpensesByBankAccount(bankAccountId: Long): Flow<List<RecentExpense>> {
+        return repository.getExpensesByBankAccount(bankAccountId)
     }
 }
 class PaisaTrackerViewModelFactory(

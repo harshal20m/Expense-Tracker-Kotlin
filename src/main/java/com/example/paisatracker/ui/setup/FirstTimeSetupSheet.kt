@@ -39,7 +39,10 @@ fun FirstTimeSetupSheet(
                 onSetupComplete(false) 
             }
         },
-        sheetState = rememberModalBottomSheetState(confirmValueChange = { !isImporting }),
+        sheetState = rememberModalBottomSheetState(
+            skipPartiallyExpanded = true,
+            confirmValueChange = { !isImporting }
+        ),
         dragHandle = { BottomSheetDefaults.DragHandle() }
     ) {
         Column(

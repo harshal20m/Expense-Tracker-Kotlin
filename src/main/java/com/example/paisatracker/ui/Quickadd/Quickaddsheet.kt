@@ -28,10 +28,12 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.RocketLaunch
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -68,6 +70,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.paisatracker.PaisaTrackerApplication
 import com.example.paisatracker.R
 import com.example.paisatracker.PaisaTrackerViewModel
+import com.example.paisatracker.data.BankAccount
 import com.example.paisatracker.data.Category
 import com.example.paisatracker.data.Project
 import com.example.paisatracker.ui.common.DatePickerSheet
@@ -100,12 +103,14 @@ fun QuickAddSheet(
     val selectedCat     by vm.selectedCategory.collectAsState()
     val paymentMethod   by vm.paymentMethod.collectAsState()
     val selectedDate    by vm.selectedDate.collectAsState()
+    val selectedBankAccount by vm.selectedBankAccount.collectAsState()
     val isFormValid     by vm.isFormValid.collectAsState()
     val submitResult    by vm.submitResult.collectAsState()
     val recentProjects  by vm.recentProjects.collectAsState()
     val filteredCats    by vm.filteredCategories.collectAsState()
     val recentCats      by vm.recentCategories.collectAsState()
     val isCreatingCat   by vm.isCreatingCategory.collectAsState()
+    val bankAccounts    by vm.activeBankAccounts.collectAsState()
 
     // Date picker state
     var showDatePicker by remember { mutableStateOf(false) }
@@ -188,11 +193,19 @@ fun QuickAddSheet(
 
         // ── Project selection ─────────────────────────────────────────────────
         SectionLabel(text = "Project")
-        ProjectSelector(
-            selectedProject = selectedProject,
-            recentProjects = recentProjects.take(5),
-            onProjectSelected = { vm.onProjectSelected(it) }
-        )
+        if (recentProjects.isEmpty()) {
+            ProjectPrompt(onCreateProject = {
+                // Ideally we'd navigate to project creation, but for now we show a prompt
+                // In QuickAddSheet we could potentially show the AddProjectSheetContent inline
+                // but let's just show a clear prompt.
+            })
+        } else {
+            ProjectSelector(
+                selectedProject = selectedProject,
+                recentProjects = recentProjects.take(5),
+                onProjectSelected = { vm.onProjectSelected(it) }
+            )
+        }
 
         Spacer(modifier = Modifier.height(14.dp))
 
@@ -234,6 +247,17 @@ fun QuickAddSheet(
         )
 
         Spacer(modifier = Modifier.height(14.dp))
+
+        // ── Bank Account (Optional) ───────────────────────────────────────────
+        if (bankAccounts.isNotEmpty()) {
+            SectionLabel(text = "Bank Account (Optional)")
+            BankAccountSelector(
+                selectedAccount = selectedBankAccount,
+                accounts = bankAccounts,
+                onAccountSelected = { vm.selectedBankAccount.value = it }
+            )
+            Spacer(modifier = Modifier.height(14.dp))
+        }
 
         // ── Date ──────────────────────────────────────────────────────────────
         SectionLabel(text = "Date")
@@ -859,6 +883,43 @@ private fun DateSelector(selectedDateMillis: Long, onClick: () -> Unit) {
     }
 }
 
+@Composable
+private fun ProjectPrompt(onCreateProject: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f))
+            .padding(16.dp)
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(
+                Icons.Default.RocketLaunch,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error,
+                modifier = Modifier.size(24.dp)
+            )
+            Text(
+                "No projects found!",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.error
+            )
+            Text(
+                "You need at least one project to add an expense.",
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
 // ── Reusable pill composable ──────────────────────────────────────────────────
 @Composable
 private fun SelectionPill(
@@ -891,5 +952,88 @@ private fun SelectionPill(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
+    }
+}
+
+// ── Bank Account selector ─────────────────────────────────────────────────────
+@Composable
+private fun BankAccountSelector(
+    selectedAccount: BankAccount?,
+    accounts: List<BankAccount>,
+    onAccountSelected: (BankAccount?) -> Unit
+) {
+    Column(modifier = Modifier.padding(horizontal = 20.dp)) {
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(end = 4.dp)
+        ) {
+            // "None" option to clear selection
+            item {
+                Box(
+                    modifier = Modifier
+                        .height(42.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(
+                            if (selectedAccount == null) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        )
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) { onAccountSelected(null) }
+                        .padding(horizontal = 14.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "None",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = if (selectedAccount == null) FontWeight.Bold else FontWeight.Normal,
+                        color = if (selectedAccount == null) MaterialTheme.colorScheme.onPrimary
+                        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        fontSize = 13.sp
+                    )
+                }
+            }
+            
+            // Bank account options
+            items(accounts) { account ->
+                val isSelected = selectedAccount?.id == account.id
+                Box(
+                    modifier = Modifier
+                        .height(42.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(
+                            if (isSelected) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        )
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) { onAccountSelected(account) }
+                        .padding(horizontal = 14.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = account.emoji,
+                            fontSize = 16.sp
+                        )
+                        Text(
+                            text = account.name,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isSelected) MaterialTheme.colorScheme.onPrimary
+                            else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                            fontSize = 13.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+        }
     }
 }

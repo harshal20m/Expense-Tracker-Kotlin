@@ -36,7 +36,10 @@ import com.example.paisatracker.data.CurrencyPreferencesRepository
 import com.example.paisatracker.data.DataSeeder
 import com.example.paisatracker.ui.applock.AppLockSettingsSheet
 import com.example.paisatracker.ui.applock.SetupPinSheet
-import com.example.paisatracker.ui.assets.CompactHeader
+import com.example.paisatracker.ui.export.ExportBottomSheet
+import com.example.paisatracker.ui.common.ScreenHeader
+import com.example.paisatracker.ui.settings.CurrencySelectionBottomSheet
+import com.example.paisatracker.ui.settings.ThemeSelectionBottomSheet
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -63,6 +66,7 @@ fun SettingsScreen(
     var showThemeDialog           by remember { mutableStateOf(false) }
     var showCurrencyDialog        by remember { mutableStateOf(false) }
     var showResetDialog           by remember { mutableStateOf(false) }
+    var showDataManagement        by remember { mutableStateOf(false) }
     var isResetting               by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
@@ -78,7 +82,7 @@ fun SettingsScreen(
 
 
     Column(modifier = Modifier.fillMaxSize()) {
-        CompactHeader(
+        ScreenHeader(
             title    = "Settings",
             subtitle = "Customize your experience",
             icon     = Icons.Default.Settings
@@ -174,9 +178,20 @@ fun SettingsScreen(
             item {
                 MasonryCard(
                     icon     = Icons.Default.CloudSync,
-                    title    = "Backup",
-                    subtitle = "Export & restore data",
-                    onClick  = { navController.navigate("export") }
+                    title    = "Data",
+                    subtitle = "Export, Import & PDF",
+                    onClick  = { showDataManagement = true }
+                )
+            }
+
+            item(span = StaggeredGridItemSpan.FullLine) { MasonryLabel("Management") }
+
+            item(span = StaggeredGridItemSpan.FullLine) {
+                MasonryCardWide(
+                    icon     = Icons.Default.FolderOpen,
+                    title    = "Manage Projects & Categories",
+                    subtitle = "Organize, search, and bulk edit your projects and categories",
+                    onClick  = { navController.navigate("management") }
                 )
             }
 
@@ -251,6 +266,8 @@ fun SettingsScreen(
 
     // ── Dialogs ───────────────────────────────────────────────────────────────
 
+    val resetSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
     if (showPinSetupDialog) {
         SetupPinSheet(
             onDismiss = { showPinSetupDialog = false },
@@ -276,7 +293,8 @@ fun SettingsScreen(
 
     if (showResetDialog) {
         ModalBottomSheet(
-            onDismissRequest = { showResetDialog = false }
+            onDismissRequest = { showResetDialog = false },
+            sheetState = resetSheetState
         ) {
             Column(
                 modifier = Modifier
@@ -343,6 +361,7 @@ fun SettingsScreen(
     }
 
     if (showNotificationDialog) NotificationSettingsBottomSheet(viewModel = viewModel, onDismiss = { showNotificationDialog = false })
+    if (showDataManagement) ExportBottomSheet(viewModel = viewModel, navController = navController, onDismiss = { showDataManagement = false })
     if (showBatteryDialog)      BatteryOptimizationBottomSheet(onDismiss = { showBatteryDialog = false })
     if (showAboutDialog)        AboutBottomSheet(viewModel = viewModel, onDismiss = { showAboutDialog = false })
     if (showThemeDialog) {

@@ -16,6 +16,7 @@ import androidx.compose.material.icons.outlined.PieChart
 import androidx.compose.material.icons.outlined.TrendingUp
 import androidx.compose.material.icons.outlined.Category
 import androidx.compose.material3.*
+import com.example.paisatracker.ui.common.ScreenHeader
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,26 +57,10 @@ fun ProjectInsightsScreen(
 
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                    Text(
-                        "Insights",
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 18.sp
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                )
+            ScreenHeader(
+                title = "Insights",
+                subtitle = "Spending analytics",
+                onBackClick = { navController.popBackStack() }
             )
         }
     ) { padding ->

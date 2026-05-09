@@ -68,6 +68,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.paisatracker.ui.common.ScreenHeader
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import com.example.paisatracker.ui.common.DeleteConfirmationSheetContent
@@ -160,9 +161,8 @@ fun AssetsBottomSheet(
                 .fillMaxHeight(0.9f)
                 .navigationBarsPadding()
         ) {
-            CompactHeader(
+            ScreenHeader(
                 title = "Gallery",
-                // ... rest of your code ...
                 subtitle = if (assets.isNotEmpty()) "${assets.size} captures" else "Your visual memory",
                 icon = Icons.Default.Collections
             )
@@ -301,25 +301,6 @@ fun AddAssetActionCard(onCameraClick: () -> Unit, onGalleryClick: () -> Unit, mo
     }
 }
 
-@Composable
-fun CompactHeader(title: String, subtitle: String, icon: androidx.compose.ui.graphics.vector.ImageVector) {
-    Surface(modifier = Modifier.fillMaxWidth(), color = Color.Transparent) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp).padding(bottom = 8.dp),
-            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Box(
-                modifier = Modifier.size(44.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)),
-                contentAlignment = Alignment.Center
-            ) { Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp)) }
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, letterSpacing = (-0.5).sp)
-                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
-        }
-    }
-}
 
 @Composable
 private fun EmptyAssetsState(onCameraClick: () -> Unit, onGalleryClick: () -> Unit) {

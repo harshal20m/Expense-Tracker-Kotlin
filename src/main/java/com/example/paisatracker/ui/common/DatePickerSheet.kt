@@ -15,8 +15,11 @@ fun DatePickerSheet(
 ) {
     val datePickerState = rememberDatePickerState(initialSelectedDateMillis = initialSelectedDateMillis)
 
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
+        sheetState = sheetState,
         dragHandle = { BottomSheetDefaults.DragHandle() },
     ) {
         Column(
@@ -53,6 +56,97 @@ fun DatePickerSheet(
                     }
                 ) {
                     Text("OK")
+                }
+            }
+        }
+    }
+}
+ 
+/**
+ * Date Range Picker Sheet for selecting start and end dates
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DateRangePickerSheet(
+    initialStartDateMillis: Long? = null,
+    initialEndDateMillis: Long? = null,
+    onDateRangeSelected: (startMillis: Long, endMillis: Long) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val dateRangePickerState = rememberDateRangePickerState(
+        initialSelectedStartDateMillis = initialStartDateMillis,
+        initialSelectedEndDateMillis = initialEndDateMillis
+    )
+    
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        dragHandle = { BottomSheetDefaults.DragHandle() }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp)
+        ) {
+            DateRangePicker(
+                state = dateRangePickerState,
+                showModeToggle = false,
+                title = {
+                    Text(
+                        text = "Select Date Range",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(start = 24.dp, top = 16.dp)
+                    )
+                },
+                headline = {
+                    val startDate = dateRangePickerState.selectedStartDateMillis
+                    val endDate = dateRangePickerState.selectedEndDateMillis
+                    
+                    Text(
+                        text = when {
+                            startDate != null && endDate != null -> {
+                                val formatter = java.text.SimpleDateFormat("MMM dd, yyyy", java.util.Locale.getDefault())
+                                "${formatter.format(java.util.Date(startDate))} - ${formatter.format(java.util.Date(endDate))}"
+                            }
+                            startDate != null -> {
+                                val formatter = java.text.SimpleDateFormat("MMM dd, yyyy", java.util.Locale.getDefault())
+                                "From ${formatter.format(java.util.Date(startDate))}"
+                            }
+                            else -> "Select start and end dates"
+                        },
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 12.dp)
+                    )
+                },
+                modifier = Modifier.weight(1f, fill = false)
+            )
+            
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.End
+            ) {
+                TextButton(onClick = onDismiss) {
+                    Text("Cancel")
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Button(
+                    onClick = {
+                        val startMillis = dateRangePickerState.selectedStartDateMillis
+                        val endMillis = dateRangePickerState.selectedEndDateMillis
+                        
+                        if (startMillis != null && endMillis != null) {
+                            onDateRangeSelected(startMillis, endMillis)
+                            onDismiss()
+                        }
+                    },
+                    enabled = dateRangePickerState.selectedStartDateMillis != null && 
+                             dateRangePickerState.selectedEndDateMillis != null
+                ) {
+                    Text("Apply")
                 }
             }
         }

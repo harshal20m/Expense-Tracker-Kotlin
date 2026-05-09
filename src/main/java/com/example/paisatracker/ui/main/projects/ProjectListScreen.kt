@@ -1,24 +1,18 @@
 package com.example.paisatracker.ui.main.projects
 
 import android.content.Context
-import android.content.Intent
-import android.net.Uri
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.DeleteSweep
+import androidx.compose.material.icons.filled.FlashOn
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Search
@@ -27,20 +21,15 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.example.paisatracker.PaisaTrackerApplication
 import com.example.paisatracker.PaisaTrackerViewModel
 import com.example.paisatracker.data.Project
 import com.example.paisatracker.data.ProjectWithTotal
 import com.example.paisatracker.ui.assets.AssetsBottomSheet
-import com.example.paisatracker.ui.common.WeeklyDashboardCalendar
+import com.example.paisatracker.ui.common.HeaderActionButton
+import com.example.paisatracker.ui.common.ScreenHeader
 import com.example.paisatracker.ui.quickadd.QuickAddSheet
-import com.example.paisatracker.ui.search.SearchViewModel
-import com.example.paisatracker.ui.search.SearchViewModelFactory
-import com.example.paisatracker.ui.settings.UpdateRow
 import com.example.paisatracker.util.CurrentCurrency
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
@@ -51,27 +40,11 @@ private enum class SheetType { ADD, EDIT, DELETE }
 @Composable
 fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavController) {
     val context     = LocalContext.current
-    val application = context.applicationContext as PaisaTrackerApplication
     val scope       = rememberCoroutineScope()
-
-    // ── Search ────────────────────────────────────────────────────────────────
-    val searchViewModel: SearchViewModel = viewModel(
-        factory = SearchViewModelFactory(application.repository)
-    )
-    val searchQuery    by searchViewModel.searchQuery.collectAsState()
-    val minAmount      by searchViewModel.minAmount.collectAsState()
-    val maxAmount      by searchViewModel.maxAmount.collectAsState()
-    val searchResults  by searchViewModel.searchResults.collectAsState()
-    val isSearchActive by searchViewModel.isSearchActive.collectAsState()
 
     // ── Currency ──────────────────────────────────────────────────────────────
     val currency by viewModel.currentCurrency.collectAsState()
     LaunchedEffect(currency) { CurrentCurrency.set(currency) }
-
-    // ── Panel toggle state ────────────────────────────────────────────────────
-    var searchExpanded  by remember { mutableStateOf(false) }
-    var recentExpanded  by remember { mutableStateOf(false) }
-    var summaryExpanded by remember { mutableStateOf(false) }
 
     // ── Projects + custom ordering ────────────────────────────────────────────
     var showCompleted by remember { mutableStateOf(false) }
@@ -80,7 +53,7 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
     
     val projects = if (showCompleted) completedProjects else activeProjects
     val sharedPrefs = remember {
-        context.getSharedPreferences("project_order", android.content.Context.MODE_PRIVATE)
+        context.getSharedPreferences("project_order", Context.MODE_PRIVATE)
     }
     var customOrderMap by remember { mutableStateOf<Map<Long, Int>>(emptyMap()) }
 
@@ -110,11 +83,6 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
 
     // ── Scroll state ──────────────────────────────────────────────────────────
     val listState     = rememberLazyListState()
-    val labelsVisible by remember {
-        derivedStateOf {
-            listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset < 200
-        }
-    }
 
     // ── Sheet state ───────────────────────────────────────────────────────────
     var currentSheetType by remember { mutableStateOf<SheetType?>(null) }
@@ -128,145 +96,69 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
     val quickAddState    = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val binSheetState    = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    // ── Totals ────────────────────────────────────────────────────────────────
-    val totalSpent      = orderedProjects.sumOf { it.totalAmount }
-    val totalCategories = orderedProjects.sumOf { it.categoryCount }
-    val totalExpenses   = orderedProjects.sumOf { it.expenseCount }
-    val recentExpenses  by viewModel.recentExpenses.collectAsState(initial = emptyList())
-    val updateAvailable by viewModel.updateAvailable.collectAsState()
-
+    // ── UI ────────────────────────────────────────────────────────────────────
     if (showAssetsSheet) {
         AssetsBottomSheet(viewModel = viewModel, onDismiss = { showAssetsSheet = false })
     }
 
-    // ── UI ────────────────────────────────────────────────────────────────────
-    Column(modifier = Modifier.fillMaxSize()) {
-        ProjectListHeader(
-            onAddProjectClick = {
-                currentSheetType = SheetType.ADD
-                projectToEdit    = null
-                projectToDelete  = null
-                showSheet        = true
-                scope.launch { sheetState.show() }
-            },
-            onQuickAddClick = {
-                showQuickAdd = true
-                scope.launch { quickAddState.show() }
-            },
-            labelsVisible = labelsVisible
-        )
-
-        LazyColumn(
-            state               = listState,
-            modifier            = Modifier.fillMaxSize(),
-            contentPadding      = PaddingValues(top = 0.dp, bottom = 80.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            // ── Update Notification ───────────────────────────────────────────
-            item {
-                AnimatedVisibility(
-                    visible = updateAvailable != null,
-                    enter = expandVertically() + fadeIn(),
-                    exit = shrinkVertically() + fadeOut()
-                ) {
-                    updateAvailable?.let { release ->
-                        UpdateRow(
-                            tagName = release.tag_name,
-                            onClick = {
-                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(release.html_url))
-                                context.startActivity(intent)
-                            },
-                            onDismiss = { viewModel.dismissUpdate() }
-                        )
-                    }
-                }
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = {
+                    showQuickAdd = true
+                    scope.launch { quickAddState.show() }
+                },
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier
+                    .padding(bottom = 96.dp)
+                    .size(56.dp)
+            ) {
+                Icon(Icons.Default.FlashOn, contentDescription = "Quick Add")
             }
-
-            // ── Dashboard Components (Calendar, Actions, Panels, Filter) ──────
-            item {
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    WeeklyDashboardCalendar(
-                        expenses           = recentExpenses,
-                        onTransactionClick = { navController.navigate("expense_details/$it") }
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            ScreenHeader(
+                title = "Projects",
+                subtitle = if (activeProjects.isNotEmpty()) "${activeProjects.size} active" else "Track your goals",
+                icon = Icons.Default.Folder,
+                action = {
+                    HeaderActionButton(
+                        icon = Icons.Default.Add,
+                        label = "Create Project",
+                        onClick = {
+                            currentSheetType = SheetType.ADD
+                            projectToEdit = null
+                            projectToDelete = null
+                            showSheet = true
+                            scope.launch { sheetState.show() }
+                        },
+                        contentDescription = "Add Project",
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
                     )
+                }
+            )
 
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    ProjectActionGrid(
-                        summaryExpanded = summaryExpanded,
-                        searchExpanded  = searchExpanded,
-                        recentExpanded  = recentExpanded,
-                        onSummaryClick  = {
-                            summaryExpanded = !summaryExpanded
-                            if (summaryExpanded) { searchExpanded = false; recentExpanded = false }
-                        },
-                        onSearchClick   = {
-                            searchExpanded = !searchExpanded
-                            if (searchExpanded) { summaryExpanded = false; recentExpanded = false }
-                        },
-                        onRecentClick   = {
-                            recentExpanded = !recentExpanded
-                            if (recentExpanded) { summaryExpanded = false; searchExpanded = false }
-                        },
-                        onAssetsClick   = { showAssetsSheet = true },
-                        onBinClick      = {
-                            showBin = true
-                            scope.launch { binSheetState.show() }
-                        }
-                    )
-
-                    // ── Summary panel ─────────────────────────────────────────────────
-                    AnimatedVisibility(
-                        visible = summaryExpanded && orderedProjects.isNotEmpty(),
-                        enter   = expandVertically(spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMediumLow)) + fadeIn(tween(300)),
-                        exit    = shrinkVertically(spring(Spring.DampingRatioNoBouncy, Spring.StiffnessMedium)) + fadeOut(tween(200))
-                    ) {
-                        SummaryExpandedCard(
-                            totalSpent      = totalSpent,
-                            totalProjects   = orderedProjects.size,
-                            totalCategories = totalCategories,
-                            totalExpenses   = totalExpenses
-                        )
-                    }
-
-                    // ── Search panel ──────────────────────────────────────────────────
-                    AnimatedVisibility(
-                        visible = searchExpanded,
-                        enter   = expandVertically(spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMediumLow)) + fadeIn(tween(300)),
-                        exit    = shrinkVertically(spring(Spring.DampingRatioNoBouncy, Spring.StiffnessMedium)) + fadeOut(tween(200))
-                    ) {
-                        SearchFilterCard(
-                            searchQuery         = searchQuery,
-                            onSearchQueryChange = { searchViewModel.onSearchQueryChanged(it) },
-                            minAmount           = minAmount,
-                            onMinAmountChange   = { searchViewModel.onMinAmountChanged(it) },
-                            maxAmount           = maxAmount,
-                            onMaxAmountChange   = { searchViewModel.onMaxAmountChanged(it) },
-                            onSearch            = { searchViewModel.executeSearch() },
-                            onClear             = { searchViewModel.clearSearch(); searchExpanded = false },
-                            isSearchActive      = isSearchActive
-                        )
-                    }
-
-                    // ── Recent panel ──────────────────────────────────────────────────
-                    AnimatedVisibility(
-                        visible = recentExpanded,
-                        enter   = expandVertically(spring(Spring.DampingRatioMediumBouncy, Spring.StiffnessMediumLow)) + fadeIn(tween(300)),
-                        exit    = shrinkVertically(spring(Spring.DampingRatioNoBouncy, Spring.StiffnessMedium)) + fadeOut(tween(200))
-                    ) {
-                        RecentTransactionsPanel(
-                            expenses       = recentExpenses,
-                            onExpenseClick = { navController.navigate("expense_details/${it.id}") }
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // ── Tabs (Browser-like) ───────────────────────────────────────────
+            LazyColumn(
+                state               = listState,
+                modifier            = Modifier.fillMaxSize(),
+                contentPadding      = PaddingValues(top = 0.dp, bottom = 80.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // ── Tabs (Browser-like) ───────────────────────────────────────────
+                item {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         BrowserTab(
@@ -284,81 +176,74 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
                             modifier = Modifier.weight(1f)
                         )
                     }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
                 }
-            }
 
-            // ── Project list / search results ─────────────────────────────────
-            if (orderedProjects.isEmpty()) {
-                item {
-                    Box(
-                        modifier         = Modifier.fillMaxWidth().height(400.dp),
-                        contentAlignment = Alignment.Center
-                    ) { EmptyProjectsState() }
-                }
-            } else if (isSearchActive) {
-                item {
-                    SearchResultsCard(results = searchResults, isActive = isSearchActive)
-                }
-            } else {
-                itemsIndexed(orderedProjects, key = { _, it -> it.project.id }) { index, pwt ->
-                    Box(modifier = Modifier.padding(horizontal = 16.dp)) {
-                        ProjectListItemWithReorder(
-                            projectWithTotal = pwt,
-                            currentIndex     = index,
-                            totalItems       = orderedProjects.size,
-                            onReorder        = { from, to ->
-                                val newMap = mutableMapOf<Long, Int>()
-                                orderedProjects.forEachIndexed { i, p ->
-                                    newMap[p.project.id] = when {
-                                        i == from            -> to
-                                        i in to..<from       -> i + 1
-                                        i in (from + 1)..to  -> i - 1
-                                        else                 -> i
+                // ── Project list ─────────────────────────────────
+                if (orderedProjects.isEmpty()) {
+                    item {
+                        Box(
+                            modifier         = Modifier.fillMaxWidth().height(400.dp),
+                            contentAlignment = Alignment.Center
+                        ) { EmptyProjectsState() }
+                    }
+                } else {
+                    itemsIndexed(orderedProjects, key = { _, it -> it.project.id }) { index, pwt ->
+                        Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                            ProjectListItemWithReorder(
+                                projectWithTotal = pwt,
+                                currentIndex     = index,
+                                totalItems       = orderedProjects.size,
+                                onReorder        = { from, to ->
+                                    val newMap = mutableMapOf<Long, Int>()
+                                    orderedProjects.forEachIndexed { i, p ->
+                                        newMap[p.project.id] = when {
+                                            i == from            -> to
+                                            i in to..<from       -> i + 1
+                                            i in (from + 1)..to  -> i - 1
+                                            else                 -> i
+                                        }
                                     }
+                                    customOrderMap = newMap
+                                    with(sharedPrefs.edit()) {
+                                        newMap.forEach { (id, pos) -> putInt("project_$id", pos) }
+                                        apply()
+                                    }
+                                },
+                                onProjectClick   = {
+                                    viewModel.updateProject(pwt.project.copy(lastModified = System.currentTimeMillis()), notify = false)
+                                    val newMap = mutableMapOf<Long, Int>()
+                                    newMap[pwt.project.id] = 0
+                                    orderedProjects.forEachIndexed { i, p ->
+                                        if (p.project.id != pwt.project.id) newMap[p.project.id] = i + 1
+                                    }
+                                    customOrderMap = newMap
+                                    with(sharedPrefs.edit()) {
+                                        newMap.forEach { (id, pos) -> putInt("project_$id", pos) }
+                                        apply()
+                                    }
+                                    navController.navigate("project_details/${pwt.project.id}")
+                                },
+                                onEditClick      = {
+                                    projectToEdit    = pwt
+                                    currentSheetType = SheetType.EDIT
+                                    showSheet        = true
+                                    scope.launch { sheetState.show() }
+                                },
+                                onDeleteClick    = {
+                                    projectToDelete  = pwt
+                                    currentSheetType = SheetType.DELETE
+                                    showSheet        = true
+                                    scope.launch { sheetState.show() }
+                                },
+                                onCompleteToggleClick = {
+                                    viewModel.updateProjectStatus(
+                                        pwt.project.id,
+                                        !pwt.project.isCompleted,
+                                        pwt.project.name
+                                    )
                                 }
-                                customOrderMap = newMap
-                                with(sharedPrefs.edit()) {
-                                    newMap.forEach { (id, pos) -> putInt("project_$id", pos) }
-                                    apply()
-                                }
-                            },
-                            onProjectClick   = {
-                                viewModel.updateProject(pwt.project.copy(lastModified = System.currentTimeMillis()), notify = false)
-                                val newMap = mutableMapOf<Long, Int>()
-                                newMap[pwt.project.id] = 0
-                                orderedProjects.forEachIndexed { i, p ->
-                                    if (p.project.id != pwt.project.id) newMap[p.project.id] = i + 1
-                                }
-                                customOrderMap = newMap
-                                with(sharedPrefs.edit()) {
-                                    newMap.forEach { (id, pos) -> putInt("project_$id", pos) }
-                                    apply()
-                                }
-                                navController.navigate("project_details/${pwt.project.id}")
-                            },
-                            onEditClick      = {
-                                projectToEdit    = pwt
-                                currentSheetType = SheetType.EDIT
-                                showSheet        = true
-                                scope.launch { sheetState.show() }
-                            },
-                            onDeleteClick    = {
-                                projectToDelete  = pwt
-                                currentSheetType = SheetType.DELETE
-                                showSheet        = true
-                                scope.launch { sheetState.show() }
-                            },
-                            onCompleteToggleClick = {
-                                viewModel.updateProjectStatus(
-                                    pwt.project.id,
-                                    !pwt.project.isCompleted,
-                                    pwt.project.name
-                                )
-                            }
-                        )
+                            )
+                        }
                     }
                 }
             }
@@ -416,9 +301,9 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
                 SheetType.ADD -> AddProjectSheetContent(
                     viewModel = viewModel,
                     onCancel  = { showSheet = false; currentSheetType = null },
-                    onConfirm = { name, emoji ->
+                    onConfirm = { name, emoji, includeInSalary ->
                         if (name.isNotBlank()) {
-                            viewModel.insertProject(Project(name = name, emoji = emoji))
+                            viewModel.insertProject(Project(name = name, emoji = emoji, includeInSalary = includeInSalary))
                             scope.launch { sheetState.hide() }.invokeOnCompletion {
                                 showSheet = false; currentSheetType = null
                             }
@@ -429,10 +314,15 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
                     EditProjectSheetContent(
                         currentName  = pwt.project.name,
                         currentEmoji = pwt.project.emoji,
+                        currentIncludeInSalary = pwt.project.includeInSalary,
                         viewModel    = viewModel,
                         onCancel     = { showSheet = false; currentSheetType = null; projectToEdit = null },
-                        onConfirm    = { name, emoji ->
-                            viewModel.updateProject(pwt.project.copy(name = name, emoji = emoji))
+                        onConfirm    = { name, emoji, includeInSalary ->
+                            viewModel.updateProject(pwt.project.copy(
+                                name = name,
+                                emoji = emoji,
+                                includeInSalary = includeInSalary
+                            ))
                             scope.launch { sheetState.hide() }.invokeOnCompletion {
                                 showSheet = false; currentSheetType = null; projectToEdit = null
                             }
@@ -457,6 +347,50 @@ fun ProjectListScreen(viewModel: PaisaTrackerViewModel, navController: NavContro
         }
     }
 }
+
+@Composable
+fun BrowserTab(
+    text: String,
+    count: Int,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier.height(40.dp),
+        shape = RoundedCornerShape(12.dp),
+        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        border = if (isSelected) null else androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = if (isSelected) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Medium,
+                color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.width(6.dp))
+            Surface(
+                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f),
+                shape = CircleShape
+            ) {
+                Text(
+                    text = count.toString(),
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
 
 // ── Original 2×2 toggle grid ──────────────────────────────────────────────────
 

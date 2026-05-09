@@ -89,8 +89,10 @@ import androidx.navigation.NavController
 import androidx.core.content.FileProvider
 import coil.compose.AsyncImage
 import com.example.paisatracker.PaisaTrackerViewModel
-import com.example.paisatracker.ui.common.DatePickerSheet
+import com.example.paisatracker.ui.common.HeaderActionButton
+import com.example.paisatracker.ui.common.ScreenHeader
 import com.example.paisatracker.ui.common.DeleteConfirmationSheetContent
+import com.example.paisatracker.ui.common.DatePickerSheet
 import com.example.paisatracker.ui.common.ToastType
 import com.example.paisatracker.R
 import com.example.paisatracker.data.Expense
@@ -135,6 +137,7 @@ fun ExpenseListScreen(
     categoryId: Long,
     navController: NavController
 ) {
+    val category by viewModel.getCategoryById(categoryId).collectAsState(initial = null)
     val expenses by viewModel.getExpensesForCategory(categoryId)
         .collectAsState(initial = emptyList())
 
@@ -251,7 +254,7 @@ fun ExpenseListScreen(
         listOf<Expense?>(null) + sortedExpenses
     }
 
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     val onAddNewExpenseClick = {
         newExpenseDate = System.currentTimeMillis()
@@ -263,7 +266,21 @@ fun ExpenseListScreen(
     }
 
     Scaffold(
-        containerColor = Color.Transparent
+        containerColor = Color.Transparent,
+        topBar = {
+            ScreenHeader(
+                title = category?.name ?: "Expenses",
+                subtitle = "Transaction list",
+                onBackClick = { navController.popBackStack() },
+                action = {
+                    HeaderActionButton(
+                        icon = Icons.Default.Add,
+                        onClick = onAddNewExpenseClick,
+                        contentDescription = "Add Expense"
+                    )
+                }
+            )
+        }
     ) { paddingValues ->
         Box(
             modifier = Modifier

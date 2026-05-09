@@ -44,6 +44,8 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -79,10 +81,11 @@ import com.example.paisatracker.ui.common.EmojiChip
 fun AddProjectSheetContent(
     viewModel: PaisaTrackerViewModel,
     onCancel: () -> Unit,
-    onConfirm: (name: String, emoji: String) -> Unit
+    onConfirm: (name: String, emoji: String, includeInSalary: Boolean) -> Unit
 ) {
     var projectName   by remember { mutableStateOf("") }
     var selectedEmoji by remember { mutableStateOf("📁") }
+    var includeInSalary by remember { mutableStateOf(true) }
     var showEmojiPicker by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
 
@@ -253,6 +256,58 @@ fun AddProjectSheetContent(
             }
         }
 
+        // ── Include in Salary Toggle ──────────────────────────────────────────
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 16.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
+            )
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "💰",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Text(
+                            text = "Include in Salary",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Track this project's expenses against your salary",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                    )
+                }
+                Switch(
+                    checked = includeInSalary,
+                    onCheckedChange = { includeInSalary = it },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = MaterialTheme.colorScheme.primary,
+                        checkedTrackColor = MaterialTheme.colorScheme.primaryContainer
+                    )
+                )
+            }
+        }
+
         // ── Action buttons ────────────────────────────────────────────────────
         Row(
             modifier = Modifier
@@ -270,7 +325,7 @@ fun AddProjectSheetContent(
                 Text("Cancel", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
             }
             Button(
-                onClick = { onConfirm(projectName.trim(), selectedEmoji) },
+                onClick = { onConfirm(projectName.trim(), selectedEmoji, includeInSalary) },
                 enabled = projectName.isNotBlank(),
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(12.dp),
@@ -291,16 +346,18 @@ fun AddProjectSheetContent(
 fun EditProjectSheetContent(
     currentName: String,
     currentEmoji: String,
+    currentIncludeInSalary: Boolean = true,
     viewModel: PaisaTrackerViewModel,
     onCancel: () -> Unit,
-    onConfirm: (name: String, emoji: String) -> Unit
+    onConfirm: (name: String, emoji: String, includeInSalary: Boolean) -> Unit
 ) {
     var editedName    by remember { mutableStateOf(currentName) }
     var selectedEmoji by remember { mutableStateOf(currentEmoji) }
+    var includeInSalary by remember { mutableStateOf(currentIncludeInSalary) }
     var showEmojiPicker by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
 
-    val hasChanges = editedName.isNotBlank() && (editedName != currentName || selectedEmoji != currentEmoji)
+    val hasChanges = editedName.isNotBlank() && (editedName != currentName || selectedEmoji != currentEmoji || includeInSalary != currentIncludeInSalary)
 
     val suggestions by remember(editedName) {
         derivedStateOf {
@@ -432,6 +489,57 @@ fun EditProjectSheetContent(
             }
         }
 
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 16.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
+            )
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "💰",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Text(
+                            text = "Include in Salary",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Track this project's expenses against your salary",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                    )
+                }
+                Switch(
+                    checked = includeInSalary,
+                    onCheckedChange = { includeInSalary = it },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = MaterialTheme.colorScheme.primary,
+                        checkedTrackColor = MaterialTheme.colorScheme.primaryContainer
+                    )
+                )
+            }
+        }
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -446,7 +554,7 @@ fun EditProjectSheetContent(
                 Text("Cancel", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
             }
             Button(
-                onClick = { onConfirm(editedName.trim(), selectedEmoji) },
+                onClick = { onConfirm(editedName.trim(), selectedEmoji, includeInSalary) },
                 enabled = hasChanges,
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(12.dp),

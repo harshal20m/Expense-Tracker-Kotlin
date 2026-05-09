@@ -25,15 +25,19 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Dashboard
-import androidx.compose.material.icons.filled.ImportExport
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.AccountBalance
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Dashboard
-import androidx.compose.material.icons.outlined.ImportExport
+import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -69,6 +73,12 @@ data class NavItem(
 fun BottomNavigationBar(navController: NavController) {
     val items = listOf(
         NavItem(
+            route = "home",
+            label = "Home",
+            selectedIcon = Icons.Filled.Home,
+            unselectedIcon = Icons.Outlined.Home
+        ),
+        NavItem(
             route = "projects",
             label = "Projects",
             selectedIcon = Icons.Filled.Dashboard,
@@ -81,16 +91,10 @@ fun BottomNavigationBar(navController: NavController) {
             unselectedIcon = Icons.Outlined.CalendarMonth
         ),
         NavItem(
-            route = "budget",
-            label = "Budget",
+            route = "bank_accounts",
+            label = "Finance",
             selectedIcon = Icons.Filled.AccountBalanceWallet,
             unselectedIcon = Icons.Outlined.AccountBalanceWallet
-        ),
-        NavItem(
-            route = "export",
-            label = "Export",
-            selectedIcon = Icons.Filled.ImportExport,
-            unselectedIcon = Icons.Outlined.ImportExport
         ),
         NavItem(
             route = "settings",

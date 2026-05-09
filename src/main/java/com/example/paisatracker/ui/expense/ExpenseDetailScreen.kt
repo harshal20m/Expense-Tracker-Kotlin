@@ -42,10 +42,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.paisatracker.PaisaTrackerViewModel
 import com.example.paisatracker.ui.common.DeleteConfirmationSheetContent
 import com.example.paisatracker.ui.common.DatePickerSheet
 import coil.compose.AsyncImage
-import com.example.paisatracker.PaisaTrackerViewModel
+import com.example.paisatracker.ui.common.HeaderActionButton
+import com.example.paisatracker.ui.common.ScreenHeader
 import com.example.paisatracker.ui.common.ToastType
 import com.example.paisatracker.R
 import com.example.paisatracker.data.Asset
@@ -93,36 +95,26 @@ fun ExpenseDetailScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Expense Details", style = MaterialTheme.typography.titleLarge) },
-                navigationIcon = {
-                    IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
-                    }
-                },
-                actions = {
-                    // ── Edit button ───────────────────────────────────────────
-                    IconButton(onClick = { showEditSheet = true }) {
-                        Icon(
-                            Icons.Default.Edit,
-                            contentDescription = "Edit expense",
-                            tint = MaterialTheme.colorScheme.primary
+            ScreenHeader(
+                title = "Expense Details",
+                subtitle = expense?.description,
+                onBackClick = { navController.navigateUp() },
+                action = {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        HeaderActionButton(
+                            icon = Icons.Default.Edit,
+                            onClick = { showEditSheet = true },
+                            contentDescription = "Edit expense"
                         )
-                    }
-                    // ── Delete button ─────────────────────────────────────────
-                    IconButton(onClick = { showDeleteDialog = true }) {
-                        Icon(
-                            Icons.Default.Delete,
+                        HeaderActionButton(
+                            icon = Icons.Default.Delete,
+                            onClick = { showDeleteDialog = true },
                             contentDescription = "Delete expense",
-                            tint = MaterialTheme.colorScheme.error
+                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                            contentColor = MaterialTheme.colorScheme.error
                         )
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface
-                )
+                }
             )
         },
         containerColor = Color.Transparent
@@ -163,10 +155,13 @@ fun ExpenseDetailScreen(
         }
     }
 
+    val deleteSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
     // ── Delete confirmation dialog ────────────────────────────────────────────
     if (showDeleteDialog && expense != null) {
         ModalBottomSheet(
-            onDismissRequest = { showDeleteDialog = false }
+            onDismissRequest = { showDeleteDialog = false },
+            sheetState = deleteSheetState
         ) {
             DeleteConfirmationSheetContent(
                 title = "Delete Expense?",

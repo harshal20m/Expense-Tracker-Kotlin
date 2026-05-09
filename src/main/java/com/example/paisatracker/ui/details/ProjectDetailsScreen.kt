@@ -10,8 +10,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
+import com.example.paisatracker.ui.common.HeaderActionButton
+import com.example.paisatracker.ui.common.ScreenHeader
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,6 +31,7 @@ import com.example.paisatracker.data.CategoryWithTotal
 import com.example.paisatracker.ui.common.SortDropdown
 import com.example.paisatracker.ui.common.SortOption
 import com.example.paisatracker.ui.details.category.*
+import com.example.paisatracker.ui.main.projects.EditProjectSheetContent
 import com.example.paisatracker.ui.main.projects.SearchFilterCard
 import com.example.paisatracker.ui.main.projects.SearchResultsCard
 import com.example.paisatracker.ui.search.SearchViewModel
@@ -67,7 +71,7 @@ fun ProjectDetailsScreen(
 
     // ── Search ────────────────────────────────────────────────────────────────
     val searchViewModel: SearchViewModel = viewModel(
-        factory = SearchViewModelFactory(application.repository)
+        factory = SearchViewModelFactory(application.repository, context)
     )
     val searchQuery    by searchViewModel.searchQuery.collectAsState()
     val minAmount      by searchViewModel.minAmount.collectAsState()
@@ -85,12 +89,15 @@ fun ProjectDetailsScreen(
 
     var sortOption    by remember { mutableStateOf(SortOption.DATE_NEW_OLD) }
     var viewType      by remember { mutableStateOf(ViewType.GRID) }
-    var sheetMode     by remember { mutableStateOf<CategorySheetMode?>(null) }
+    var sheetMode      by remember { mutableStateOf<CategorySheetMode?>(null) }
     var searchExpanded by remember { mutableStateOf(false) }
+    var showProjectSettingsSheet by remember { mutableStateOf(false) }
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope      = rememberCoroutineScope()
+    val projectSettingsSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
+    val project by viewModel.getProjectById(projectId).collectAsState(initial = null)
     val totalSpent = categoriesWithTotal.sumOf { it.totalAmount }
 
     val sortedCategories = remember(categoriesWithTotal, sortOption) {
@@ -118,7 +125,26 @@ fun ProjectDetailsScreen(
         scope.launch { sheetState.hide() }.invokeOnCompletion { sheetMode = null }
     }
 
-    Scaffold(containerColor = Color.Transparent) { paddingValues ->
+    Scaffold(
+        containerColor = Color.Transparent,
+        topBar = {
+            ScreenHeader(
+                title = project?.name ?: "Project Details",
+                subtitle = "Overview & Categories",
+                onBackClick = { navController.popBackStack() },
+                action = {
+                    HeaderActionButton(
+                        icon = Icons.Default.Settings,
+                        onClick = {
+                            showProjectSettingsSheet = true
+                            scope.launch { projectSettingsSheetState.show() }
+                        },
+                        contentDescription = "Project Settings"
+                    )
+                }
+            )
+        }
+    ) { paddingValues ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -186,7 +212,11 @@ fun ProjectDetailsScreen(
 
             if (isSearchActive) {
                 item {
-                    SearchResultsCard(results = searchResults, isActive = isSearchActive)
+                    SearchResultsCard(
+                        results = searchResults,
+                        isActive = isSearchActive,
+                        onExpenseClick = { navController.navigate("expense_details/${it.id}") }
+                    )
                 }
             } else {
                 // Category grid / list
@@ -295,6 +325,37 @@ fun ProjectDetailsScreen(
                     )
                 }
             }
+        }
+    }
+    if (showProjectSettingsSheet && project != null) {
+        ModalBottomSheet(
+            onDismissRequest = { showProjectSettingsSheet = false },
+            sheetState = projectSettingsSheetState,
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+            dragHandle = { BottomSheetDefaults.DragHandle() },
+            containerColor = MaterialTheme.colorScheme.surface
+        ) {
+            EditProjectSheetContent(
+                currentName = project!!.name,
+                currentEmoji = project!!.emoji,
+                currentIncludeInSalary = project!!.includeInSalary,
+                viewModel = viewModel,
+                onCancel = {
+                    scope.launch { projectSettingsSheetState.hide() }
+                        .invokeOnCompletion { showProjectSettingsSheet = false }
+                },
+                onConfirm = { name, emoji, includeInSalary ->
+                    viewModel.updateProject(
+                        project!!.copy(
+                            name = name,
+                            emoji = emoji,
+                            includeInSalary = includeInSalary
+                        )
+                    )
+                    scope.launch { projectSettingsSheetState.hide() }
+                        .invokeOnCompletion { showProjectSettingsSheet = false }
+                }
+            )
         }
     }
 }

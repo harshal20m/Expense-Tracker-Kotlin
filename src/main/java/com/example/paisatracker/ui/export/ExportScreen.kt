@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Storage
@@ -42,6 +43,10 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedButton
@@ -61,13 +66,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import com.example.paisatracker.PaisaTrackerViewModel
 import com.example.paisatracker.data.BackupMetadata
 import com.example.paisatracker.data.ProjectWithTotal
-import com.example.paisatracker.ui.assets.CompactHeader
+import com.example.paisatracker.ui.common.ScreenHeader
 import com.example.paisatracker.ui.common.ToastType
 import com.example.paisatracker.util.BackupManager
 import com.example.paisatracker.util.formatCurrency
@@ -78,9 +85,10 @@ import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ExportScreen(
+fun ExportBottomSheet(
     viewModel: PaisaTrackerViewModel,
-    navController: NavHostController
+    navController: NavController,
+    onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -141,129 +149,227 @@ fun ExportScreen(
 
     val csvImportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         uri?.let {
-            selectedProject?.let { project ->
+            scope.launch {
+                isImportingCsv = true
+                if (viewModel.importFromCsv(context, it, selectedProject?.project?.id)) {
+                    viewModel.showToast("CSV Imported!", ToastType.SUCCESS)
+                } else {
+                    viewModel.showToast("Import Failed!", ToastType.ERROR)
+                }
+                isImportingCsv = false
+            }
+        }
+    }
+
+    val pdfExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            result.data?.data?.also { uri ->
                 scope.launch {
-                    isImportingCsv = true
-                    if (viewModel.importFromCsv(context, it, project.project.id)) viewModel.showToast("CSV Imported!", ToastType.SUCCESS)
-                    else viewModel.showToast("Import Failed!", ToastType.ERROR)
-                    isImportingCsv = false
+                    isBackingUp = true
+                    selectedProject?.let { project ->
+                        if (viewModel.exportToPdf(context, uri, project.project.id)) {
+                            viewModel.showToast("PDF Exported!", ToastType.SUCCESS)
+                        } else {
+                            viewModel.showToast("PDF Export Failed!", ToastType.ERROR)
+                        }
+                    }
+                    isBackingUp = false
                 }
             }
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        CompactHeader(
-            title = "Data Management",
-            subtitle = "Backup or export your data",
-            icon = Icons.Default.CloudSync
-        )
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-        if (isBackingUp) LoadingOverlay("Creating backup...")
-        if (isRestoring) LoadingOverlay("Restoring data...")
-        if (isImportingCsv) LoadingOverlay("Importing CSV...")
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        dragHandle = { BottomSheetDefaults.DragHandle() },
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        modifier = Modifier.fillMaxHeight()
+    ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            ScreenHeader(
+                title = "Data Management",
+                subtitle = "Backup or export your data",
+                icon = Icons.Default.CloudSync
+            )
 
-    if (showRestoreWarning) {
-        RestoreWarningSheet(
-            onDismiss = { showRestoreWarning = false; pendingRestoreUri = null },
-            onConfirm = {
-                showRestoreWarning = false
-                pendingRestoreUri?.let { uri ->
-                    scope.launch {
-                        isRestoring = true
-                        if (backupManager.restoreFromBackup(uri)) {
-                            viewModel.showToast("Restore Successful! Restarting...", ToastType.SUCCESS)
-                            kotlinx.coroutines.delay(1500)
-                            com.example.paisatracker.util.AppUtils.restartApp(context)
-                        } else {
-                            viewModel.showToast("Restore Failed!", ToastType.ERROR)
+            if (isBackingUp) LoadingOverlay("Processing request...")
+            if (isRestoring) LoadingOverlay("Restoring data...")
+            if (isImportingCsv) LoadingOverlay("Importing CSV...")
+
+            if (showRestoreWarning) {
+                RestoreWarningSheet(
+                    onDismiss = { showRestoreWarning = false; pendingRestoreUri = null },
+                    onConfirm = {
+                        showRestoreWarning = false
+                        pendingRestoreUri?.let { uri ->
+                            scope.launch {
+                                isRestoring = true
+                                if (backupManager.restoreFromBackup(uri)) {
+                                    viewModel.showToast("Restore Successful! Restarting...", ToastType.SUCCESS)
+                                    kotlinx.coroutines.delay(1500)
+                                    com.example.paisatracker.util.AppUtils.restartApp(context)
+                                } else {
+                                    viewModel.showToast("Restore Failed!", ToastType.ERROR)
+                                }
+                                isRestoring = false
+                            }
                         }
-                        isRestoring = false
+                        pendingRestoreUri = null
                     }
-                }
-                pendingRestoreUri = null
-            }
-        )
-    }
-
-    if (showDeleteBackupDialog && backupToDelete != null) {
-        DeleteBackupSheet(backupToDelete!!, { showDeleteBackupDialog = false }, {
-            scope.launch {
-                if (backupManager.deleteBackupFile(backupToDelete!!)) viewModel.showToast("Backup deleted", ToastType.INFO)
-            }
-            showDeleteBackupDialog = false
-        })
-    }
-
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 110.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
-        ) {
-            item {
-                SectionTitle("System Backup")
-                CleanBackupCard(
-                    onBackup = {
-                        val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
-                            addCategory(Intent.CATEGORY_OPENABLE)
-                            type = "application/octet-stream"
-                            putExtra(Intent.EXTRA_TITLE, "PaisaTracker_${SimpleDateFormat("yyyyMMdd_HHmm", Locale.getDefault()).format(Date())}.backup")
-                        }
-                        fullBackupLauncher.launch(intent)
-                    },
-                    onRestore = { fullRestoreLauncher.launch("*/*") }
                 )
             }
 
-            if (recentBackups.isNotEmpty()) {
-                item { SectionTitle("Recent Backups") }
-                items(recentBackups) { backup ->
-                    CleanBackupItem(
-                        backup = backup,
-                        backupManager = backupManager,
-                        onRestore = { pendingRestoreUri = Uri.parse(backup.filePath); showRestoreWarning = true },
-                        onDelete = { backupToDelete = backup; showDeleteBackupDialog = true },
-                        onShare = {
-                            try {
-                                val uri = Uri.parse(backup.filePath)
+            if (showDeleteBackupDialog && backupToDelete != null) {
+                DeleteBackupSheet(backupToDelete!!, { showDeleteBackupDialog = false }, {
+                    scope.launch {
+                        if (backupManager.deleteBackupFile(backupToDelete!!)) viewModel.showToast("Backup deleted", ToastType.INFO)
+                    }
+                    showDeleteBackupDialog = false
+                })
+            }
+
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 40.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                item {
+                    SectionTitle("System Backup")
+                    CleanBackupCard(
+                        onBackup = {
+                            val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                                addCategory(Intent.CATEGORY_OPENABLE)
+                                type = "application/octet-stream"
+                                putExtra(Intent.EXTRA_TITLE, "PaisaTracker_${SimpleDateFormat("yyyyMMdd_HHmm", Locale.getDefault()).format(Date())}.backup")
+                            }
+                            fullBackupLauncher.launch(intent)
+                        },
+                        onRestore = { fullRestoreLauncher.launch("*/*") }
+                    )
+                }
+
+                if (recentBackups.isNotEmpty()) {
+                    item { SectionTitle("Recent Backups") }
+                    items(recentBackups) { backup ->
+                        CleanBackupItem(
+                            backup = backup,
+                            backupManager = backupManager,
+                            onRestore = { pendingRestoreUri = Uri.parse(backup.filePath); showRestoreWarning = true },
+                            onDelete = { backupToDelete = backup; showDeleteBackupDialog = true },
+                            onShare = {
+                                try {
+                                    val uri = Uri.parse(backup.filePath)
+                                    val intent = Intent(Intent.ACTION_SEND).apply {
+                                        type = "application/octet-stream"
+                                        putExtra(Intent.EXTRA_STREAM, uri)
+                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                    }
+                                    context.startActivity(Intent.createChooser(intent, "Share Backup"))
+                                } catch (e: Exception) { viewModel.showToast("Share Failed", ToastType.ERROR) }
+                            }
+                        )
+                    }
+                }
+
+                item {
+                    SectionTitle("Export & Import")
+                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        CleanProjectSelector(
+                            projects = projects,
+                            selectedProject = selectedProject,
+                            isExpanded = isProjectSelectorExpanded,
+                            onExpandChange = { isProjectSelectorExpanded = it },
+                            onProjectSelected = { selectedProject = it; lastExportedUri = null },
+                            onNoProjectsClick = { onDismiss(); navController.navigate("projects") }
+                        )
+
+                        // Feature 5: Export Validation & Feature 8: UX guidance
+                        val hasNoData = selectedProject != null && selectedProject!!.expenseCount == 0
+                        val canExport = selectedProject != null && !hasNoData
+
+                        if (hasNoData) {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+                                    Text(
+                                        "Selected project has no transactions to export.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                }
+                            }
+                        } else if (selectedProject == null) {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Icon(Icons.Default.Info, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                                    Text(
+                                        "Select a project above to enable export options.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+                            }
+                        }
+
+                        CleanCsvRow(
+                            lastExportedUri = lastExportedUri,
+                            canExport = canExport,
+                            onExport = {
+                                selectedProject?.let { project ->
+                                    val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                                        addCategory(Intent.CATEGORY_OPENABLE)
+                                        type = "text/csv"
+                                        putExtra(Intent.EXTRA_TITLE, "${project.project.name}_expenses.csv")
+                                    }
+                                    csvExportLauncher.launch(intent)
+                                }
+                            },
+                            onImport = { csvImportLauncher.launch("*/*") },
+                            onShare = { uri ->
                                 val intent = Intent(Intent.ACTION_SEND).apply {
-                                    type = "application/octet-stream"
+                                    type = "text/csv"
                                     putExtra(Intent.EXTRA_STREAM, uri)
                                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                 }
-                                context.startActivity(Intent.createChooser(intent, "Share Backup"))
-                            } catch (e: Exception) { viewModel.showToast("Share Failed", ToastType.ERROR) }
-                        }
-                    )
-                }
-            }
-
-            item {
-                SectionTitle("CSV Export & Import")
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    CleanProjectSelector(projects, selectedProject, isProjectSelectorExpanded, { isProjectSelectorExpanded = it }, { selectedProject = it; lastExportedUri = null }, { navController.navigate("projects") })
-                    CleanCsvRow(selectedProject, lastExportedUri, {
-                        selectedProject?.let { project ->
-                            val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
-                                addCategory(Intent.CATEGORY_OPENABLE)
-                                type = "text/csv"
-                                putExtra(Intent.EXTRA_TITLE, "${project.project.name}_expenses.csv")
+                                context.startActivity(Intent.createChooser(intent, "Share CSV"))
+                            },
+                            onExportPdf = {
+                                selectedProject?.let { project ->
+                                    val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                                        addCategory(Intent.CATEGORY_OPENABLE)
+                                        type = "application/pdf"
+                                        putExtra(Intent.EXTRA_TITLE, "${project.project.name}_report.pdf")
+                                    }
+                                    pdfExportLauncher.launch(intent)
+                                }
                             }
-                            csvExportLauncher.launch(intent)
-                        }
-                    }, { csvImportLauncher.launch("*/*") }, { uri ->
-                        val intent = Intent(Intent.ACTION_SEND).apply {
-                            type = "text/csv"
-                            putExtra(Intent.EXTRA_STREAM, uri)
-                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                        }
-                        context.startActivity(Intent.createChooser(intent, "Share CSV"))
-                    })
+                        )
+                    }
                 }
             }
         }
     }
 }
+
 
 @Composable
 private fun SectionTitle(title: String) {
@@ -354,21 +460,68 @@ private fun CleanProjectSelector(projects: List<ProjectWithTotal>, selectedProje
 }
 
 @Composable
-private fun CleanCsvRow(selectedProject: ProjectWithTotal?, lastExportedUri: Uri?, onExport: () -> Unit, onImport: () -> Unit, onShare: (Uri) -> Unit) {
+private fun CleanCsvRow(
+    lastExportedUri: Uri?,
+    canExport: Boolean,
+    onExport: () -> Unit,
+    onImport: () -> Unit,
+    onShare: (Uri) -> Unit,
+    onExportPdf: () -> Unit
+) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Surface(modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surface, tonalElevation = 1.dp) {
             Column(modifier = Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Icon(Icons.Default.FileUpload, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
-                Text("Export CSV", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
-                Button(onClick = onExport, enabled = selectedProject != null, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(8.dp)) { Text("Export", fontSize = 12.sp) }
-                if (lastExportedUri != null) OutlinedButton(onClick = { onShare(lastExportedUri) }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(8.dp)) { Icon(Icons.Default.Share, null, modifier = Modifier.size(14.dp)); Spacer(Modifier.width(4.dp)); Text("Share", fontSize = 12.sp) }
+                Text("Export Data", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                
+                Button(
+                    onClick = onExport,
+                    enabled = canExport,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(0.dp)
+                ) {
+                    Text("CSV", fontSize = 11.sp)
+                }
+
+                Button(
+                    onClick = onExportPdf,
+                    enabled = canExport,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(0.dp)
+                ) {
+                    Text("PDF Report", fontSize = 11.sp)
+                }
+
+                if (lastExportedUri != null) {
+                    OutlinedButton(
+                        onClick = { onShare(lastExportedUri) },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(0.dp)
+                    ) {
+                        Icon(Icons.Default.Share, null, modifier = Modifier.size(12.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Share", fontSize = 11.sp)
+                    }
+                }
             }
         }
         Surface(modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surface, tonalElevation = 1.dp) {
             Column(modifier = Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Icon(Icons.Default.FileDownload, null, tint = MaterialTheme.colorScheme.secondary, modifier = Modifier.size(24.dp))
                 Text("Import CSV", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
-                Button(onClick = onImport, enabled = selectedProject != null, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary), shape = RoundedCornerShape(8.dp)) { Text("Import", fontSize = 12.sp) }
+                Text("Supports project mapping", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
+                Spacer(Modifier.weight(1f))
+                Button(
+                    onClick = onImport,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("Import", fontSize = 12.sp)
+                }
             }
         }
     }

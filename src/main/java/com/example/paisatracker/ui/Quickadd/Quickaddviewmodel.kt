@@ -3,6 +3,7 @@ package com.example.paisatracker.ui.quickadd
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.paisatracker.data.BankAccount
 import com.example.paisatracker.data.Category
 import com.example.paisatracker.data.Expense
 import com.example.paisatracker.data.PaisaTrackerRepository
@@ -39,6 +40,7 @@ class QuickAddViewModel(
     val paymentMethod   = MutableStateFlow("UPI")
     val paymentIcon     = MutableStateFlow("UPI")
     val selectedDate    = MutableStateFlow(System.currentTimeMillis())
+    val selectedBankAccount = MutableStateFlow<BankAccount?>(null)
 
     // ── New-category inline creation ──────────────────────────────────────────
     val isCreatingCategory  = MutableStateFlow(false)
@@ -53,6 +55,9 @@ class QuickAddViewModel(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val allCategories: StateFlow<List<Category>> = repository.getAllCategories()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val activeBankAccounts: StateFlow<List<BankAccount>> = repository.getActiveBankAccounts()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     // Categories filtered to selected project
@@ -141,7 +146,8 @@ class QuickAddViewModel(
                     date          = selectedDate.value,
                     categoryId    = category.id,
                     paymentMethod = paymentMethod.value,
-                    paymentIcon = paymentMethod.value.toPaymentIconKey()
+                    paymentIcon = paymentMethod.value.toPaymentIconKey(),
+                    bankAccountId = selectedBankAccount.value?.id
                 )
                 repository.insertExpense(expense)
                 submitResult.value = QuickAddResult.Success
