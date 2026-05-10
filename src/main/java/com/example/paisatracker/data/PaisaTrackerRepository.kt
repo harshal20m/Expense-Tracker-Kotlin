@@ -300,6 +300,13 @@ class PaisaTrackerRepository(
     suspend fun insertProject(project: Project): Long {
         return projectDao.insertProject(project)
     }
+    
+    suspend fun isProjectNameExists(name: String, excludeId: Long? = null): Boolean {
+        val projects = getAllProjectsList()
+        return projects.any {
+            it.name.equals(name, ignoreCase = true) && it.id != excludeId
+        }
+    }
 
     suspend fun updateProject(project: Project) {
         projectDao.updateProject(project)

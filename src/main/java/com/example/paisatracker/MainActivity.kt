@@ -112,6 +112,7 @@ class MainActivity : FragmentActivity() {
 
                 if (showFirstTimeSetup && !isFinishing) {
                     FirstTimeSetupSheet(
+                        viewModel = viewModel,
                         onSetupComplete = { shouldSeed ->
                             lifecycleScope.launch {
                                 dataSeeder.seedInitialDataIfUserAccepts(

@@ -65,9 +65,8 @@ fun SettingsScreen(
     var showAboutDialog           by remember { mutableStateOf(false) }
     var showThemeDialog           by remember { mutableStateOf(false) }
     var showCurrencyDialog        by remember { mutableStateOf(false) }
-    var showResetDialog           by remember { mutableStateOf(false) }
+    var showDefaultDataDialog     by remember { mutableStateOf(false) }
     var showDataManagement        by remember { mutableStateOf(false) }
-    var isResetting               by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
 
@@ -127,11 +126,17 @@ fun SettingsScreen(
 
             // Currency card
             item {
-                MasonryCard(
-                    icon     = Icons.Default.AttachMoney,
+                MasonryCardWithCustomIcon(
+                    customIcon = {
+                        Text(
+                            text = selectedCurrency.symbol,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    },
                     title    = "Currency",
                     subtitle = "${selectedCurrency.flag} ${selectedCurrency.code}",
-                    badge    = selectedCurrency.symbol,
                     onClick  = { showCurrencyDialog = true }
                 )
             }
@@ -186,11 +191,11 @@ fun SettingsScreen(
 
             item(span = StaggeredGridItemSpan.FullLine) { MasonryLabel("Management") }
 
-            item(span = StaggeredGridItemSpan.FullLine) {
-                MasonryCardWide(
+            item {
+                MasonryCard(
                     icon     = Icons.Default.FolderOpen,
-                    title    = "Manage Projects & Categories",
-                    subtitle = "Organize, search, and bulk edit your projects and categories",
+                    title    = "Management",
+                    subtitle = "Projects & Categories",
                     onClick  = { navController.navigate("management") }
                 )
             }
@@ -257,16 +262,14 @@ fun SettingsScreen(
                 MasonryCardWide(
                     icon     = Icons.Default.Restore,
                     title    = "Add default data",
-                    subtitle = "Add sample projects & categories (won't delete existing data)",
-                    onClick  = { showResetDialog = true }
+                    subtitle = "Choose projects & categories to add",
+                    onClick  = { showDefaultDataDialog = true }
                 )
             }
         }
     }
 
     // ── Dialogs ───────────────────────────────────────────────────────────────
-
-    val resetSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     if (showPinSetupDialog) {
         SetupPinSheet(
@@ -291,73 +294,11 @@ fun SettingsScreen(
         )
     }
 
-    if (showResetDialog) {
-        ModalBottomSheet(
-            onDismissRequest = { showResetDialog = false },
-            sheetState = resetSheetState
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp)
-                    .padding(bottom = 40.dp, top = 8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Text(
-                    "📊",
-                    fontSize = 48.sp
-                )
-                Text(
-                    "Add default data?",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    "Adds sample projects and categories. Your existing data will not be deleted.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = { showResetDialog = false },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text("Cancel")
-                    }
-
-                    Button(
-                        onClick = {
-                            scope.launch {
-                                isResetting = true
-                                DataSeeder.getInstance(application.repository)
-                                    .seedInitialDataIfUserAccepts(context, true)
-                                isResetting = false
-                                showResetDialog = false
-                                viewModel.showToast("Default data added!", com.example.paisatracker.ui.common.ToastType.SUCCESS)
-                            }
-                        },
-                        modifier = Modifier.weight(1f),
-                        enabled = !isResetting,
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        if (isResetting) {
-                            CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                        } else {
-                            Text("Add defaults")
-                        }
-                    }
-                }
-            }
-        }
+    if (showDefaultDataDialog) {
+        DefaultDataSelectionBottomSheet(
+            viewModel = viewModel,
+            onDismiss = { showDefaultDataDialog = false }
+        )
     }
 
     if (showNotificationDialog) NotificationSettingsBottomSheet(viewModel = viewModel, onDismiss = { showNotificationDialog = false })
@@ -443,6 +384,43 @@ private fun MasonryCard(
                         Text(it, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
                     }
                 }
+            }
+            Text(title,    style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            Text(subtitle, style = MaterialTheme.typography.bodySmall,  color = MaterialTheme.colorScheme.onSurfaceVariant, lineHeight = 16.sp)
+            extra?.invoke()
+        }
+    }
+}
+
+/**
+ * Masonry card with custom icon composable — allows dynamic content like currency symbols.
+ * Used when you need to display text or custom content instead of a standard icon.
+ */
+@Composable
+private fun MasonryCardWithCustomIcon(
+    customIcon: @Composable () -> Unit,
+    title: String,
+    subtitle: String,
+    extra: (@Composable () -> Unit)? = null,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier  = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        shape     = RoundedCornerShape(18.dp),
+        colors    = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(2.dp),
+        border    = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+    ) {
+        Column(
+            modifier            = Modifier.fillMaxWidth().padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Box(
+                modifier = Modifier.size(38.dp).clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)),
+                contentAlignment = Alignment.Center
+            ) {
+                customIcon()
             }
             Text(title,    style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
             Text(subtitle, style = MaterialTheme.typography.bodySmall,  color = MaterialTheme.colorScheme.onSurfaceVariant, lineHeight = 16.sp)

@@ -518,14 +518,45 @@ class PaisaTrackerViewModel(
     fun getCategoryById(categoryId: Long): Flow<Category> = repository.getCategoryById(categoryId)
     fun insertProject(project: Project) {
         viewModelScope.launch {
+            // Check for duplicate project name
+            if (repository.isProjectNameExists(project.name, excludeId = null)) {
+                showToast("Project '${project.name}' already exists", ToastType.ERROR)
+                return@launch
+            }
             repository.insertProject(project)
             showToast("Project '${project.name}' created")
         }
     }
     fun updateProject(project: Project, notify: Boolean = true) {
         viewModelScope.launch {
+            // Check for duplicate project name (excluding current project)
+            if (repository.isProjectNameExists(project.name, excludeId = project.id)) {
+                showToast("Project name '${project.name}' already exists", ToastType.ERROR)
+                return@launch
+            }
             repository.updateProject(project)
             if (notify) showToast("Project updated")
+        }
+    }
+    
+    // Helper methods for default data selection
+    suspend fun getAllProjectsList(): List<Project> = repository.getAllProjectsList()
+    
+    suspend fun insertProjectWithCategories(project: Project, categories: List<Category>): Boolean {
+        return try {
+            // Check for duplicate before inserting
+            val existingProjects = repository.getAllProjectsList()
+            if (existingProjects.any { it.name.equals(project.name, ignoreCase = true) }) {
+                return false
+            }
+            
+            val projectId = repository.insertProject(project)
+            categories.forEach { category ->
+                repository.insertCategory(category.copy(projectId = projectId))
+            }
+            true
+        } catch (e: Exception) {
+            false
         }
     }
 
